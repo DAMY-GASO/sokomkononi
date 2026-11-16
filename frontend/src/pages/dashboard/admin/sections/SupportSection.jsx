@@ -16,7 +16,7 @@ import {
   Search, Trash2, Clock, User, Send, CheckCircle,
   ChevronDown, ChevronUp, Paperclip, Headphones, Inbox,
   UserCheck, Loader2, MessageSquare, AlertTriangle,
-  Lightbulb, Star, RefreshCw,
+  Lightbulb, Star, RefreshCw, Zap, Reply,
 } from "lucide-react";
 import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -87,10 +87,432 @@ function AttachmentPreview({ att }) {
   );
 }
 
+
+// ============================================================
+// CANNED RESPONSES (templates za majibu)
+// - Defaults zimejengwa ndani (SW/EN)
+// - Custom templates zinahifadhiwa kwenye localStorage ya browser hii
+//   (si za pamoja kati ya staff — zikihitajika kushirikiwa, backend
+//   endpoint inahitajika).
+// ============================================================
+const CANNED_STORAGE_KEY = "smk_admin_canned_responses_v1";
+
+const DEFAULT_CANNED = [
+  {
+    id: "d-received",
+    label: { sw: "Tumepokea ombi", en: "Request received" },
+    text: {
+      sw: "Habari, asante kwa kuwasiliana nasi. Tumepokea ombi lako na tunalifanyia kazi. Tutakujulisha hivi karibuni.",
+      en: "Hello, thank you for contacting us. We have received your request and are working on it. We will update you shortly.",
+    },
+  },
+  {
+    id: "d-more-info",
+    label: { sw: "Tunahitaji taarifa zaidi", en: "Need more info" },
+    text: {
+      sw: "Ili tukusaidie vizuri, tafadhali tuma taarifa zaidi kuhusu tatizo lako (picha/skrini, namba ya muamala, au maelezo ya kina).",
+      en: "To help you better, please send more details about your issue (screenshots, transaction number, or a detailed description).",
+    },
+  },
+  {
+    id: "d-refund",
+    label: { sw: "Refund inashughulikiwa", en: "Refund in progress" },
+    text: {
+      sw: "Ombi lako la refund linashughulikiwa. Utapokea taarifa pindi malipo yatakapokamilika.",
+      en: "Your refund request is being processed. You will be notified once the payment is completed.",
+    },
+  },
+  {
+    id: "d-resolved",
+    label: { sw: "Tatizo limetatuliwa", en: "Issue resolved" },
+    text: {
+      sw: "Tatizo lako limetatuliwa. Tafadhali tujulishe kama bado unahitaji msaada wowote.",
+      en: "Your issue has been resolved. Please let us know if you need any further help.",
+    },
+  },
+];
+
+function loadCustomCanned() {
+  try {
+    const raw = localStorage.getItem(CANNED_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((c) => c && typeof c.text === "string" && c.text.trim())
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCustomCanned(list) {
+  try {
+    localStorage.setItem(CANNED_STORAGE_KEY, JSON.stringify(list));
+  } catch {
+    /* storage haipatikani — templates zitadumu kwa session hii tu */
+  }
+}
+
+function useCannedResponses() {
+  const [custom, setCustom] = useState(loadCustomCanned);
+
+  // Sawazisha kati ya TicketCard nyingi / tabs
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === CANNED_STORAGE_KEY) setCustom(loadCustomCanned());
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  const add = (label, text) => {
+    const item = {
+      id: `c-${Date.now()}`,
+      label: label.trim() || text.trim().slice(0, 30),
+      text: text.trim(),
+    };
+    setCustom((prev) => {
+      const next = [...prev, item];
+      saveCustomCanned(next);
+      return next;
+    });
+  };
+
+  const remove = (id) => {
+    setCustom((prev) => {
+      const next = prev.filter((c) => c.id !== id);
+      saveCustomCanned(next);
+      return next;
+    });
+  };
+
+  return { custom, add, remove };
+}
+
+function CannedPicker({ lang, currentText = "", onPick, disabled = false }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const { custom, add, remove } = useCannedResponses();
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ left: 8, bottom: 8 });
+  const wrapRef = useRef(null);
+  const btnRef = useRef(null);
+
+  // Popover inatumia position: fixed ili isikatwe na `overflow-hidden`
+  // ya kadi ya ticket.
+  const openMenu = () => {
+    const r = btnRef.current?.getBoundingClientRect();
+    if (r) {
+      const width = 256; // w-64
+      setPos({
+        left: Math.max(8, Math.min(r.left, window.innerWidth - width - 8)),
+        bottom: window.innerHeight - r.top + 8,
+      });
+    }
+    setOpen(true);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    const close = () => setOpen(false);
+    document.addEventListener("mousedown", onDown);
+    window.addEventListener("resize", close);
+    window.addEventListener("scroll", close, true);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      window.removeEventListener("resize", close);
+      window.removeEventListener("scroll", close, true);
+    };
+  }, [open]);
+
+  const items = [
+    ...DEFAULT_CANNED.map((d) => ({
+      id: d.id,
+      label: d.label[lang] || d.label.sw,
+      text: d.text[lang] || d.text.sw,
+      removable: false,
+    })),
+    ...custom.map((c) => ({
+      id: c.id,
+      label: c.label,
+      text: c.text,
+      removable: true,
+    })),
+  ];
+
+  const handleSaveCurrent = () => {
+    const text = currentText.trim();
+    if (!text) return;
+    const label = window.prompt(
+      t("Jina la template:", "Template name:"),
+      text.slice(0, 30)
+    );
+    if (label === null) return;
+    add(label, text);
+  };
+
+  return (
+    <div ref={wrapRef} className="relative shrink-0">
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => (open ? setOpen(false) : openMenu())}
+        disabled={disabled}
+        title={t("Majibu ya haraka", "Canned responses")}
+        aria-label={t("Majibu ya haraka", "Canned responses")}
+        className="w-9 h-9 rounded-full flex items-center justify-center text-muted hover:text-secondary border disabled:opacity-50"
+        style={{ borderColor: COLORS.sandLine, background: "white" }}
+      >
+        <Zap size={14} />
+      </button>
+
+      {open && (
+        <div
+          style={{
+            borderColor: COLORS.sandLine,
+            background: "white",
+            position: "fixed",
+            left: pos.left,
+            bottom: pos.bottom,
+          }}
+          className="z-50 w-64 max-w-[calc(100vw-16px)] rounded-xl border shadow-lg p-1.5"
+        >
+          <p className="text-[10px] font-semibold text-secondary uppercase px-2 py-1">
+            {t("Majibu ya haraka", "Canned responses")}
+          </p>
+          <div className="max-h-56 overflow-y-auto">
+            {items.map((it) => (
+              <div
+                key={it.id}
+                className="group flex items-center gap-1 rounded-lg hover:bg-gray-50"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    onPick(it.text);
+                    setOpen(false);
+                  }}
+                  className="flex-1 min-w-0 text-left px-2 py-1.5"
+                >
+                  <p className="text-xs font-semibold text-primary truncate">
+                    {it.label}
+                  </p>
+                  <p className="text-[10px] text-muted line-clamp-2 break-words">
+                    {it.text}
+                  </p>
+                </button>
+                {it.removable && (
+                  <button
+                    type="button"
+                    onClick={() => remove(it.id)}
+                    aria-label={t("Ondoa template", "Remove template")}
+                    className="p-1.5 text-muted hover:text-[#C1502E] shrink-0"
+                  >
+                    <Trash2 size={11} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={handleSaveCurrent}
+            disabled={!currentText.trim()}
+            className="w-full mt-1 text-[11px] font-semibold px-2 py-1.5 rounded-lg border disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
+          >
+            {t("Hifadhi andiko la sasa kama template", "Save current text as template")}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// FEEDBACK ANALYTICS — rating trend (miezi 6) + mgawanyo wa nyota
+// Inahesabiwa kwenye client kutoka kwa feedback iliyopo (createdAt + rating).
+// ============================================================
+function FeedbackAnalytics({ feedback, lang }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const [open, setOpen] = useState(true);
+
+  const { months, dist, ratedCount, overall } = useMemo(() => {
+    const rated = feedback.filter(
+      (f) => f.rating != null && f.createdAt && !Number.isNaN(new Date(f.createdAt).getTime())
+    );
+
+    // miezi 6 ya mwisho (ikiwemo huu)
+    const now = new Date();
+    const buckets = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      buckets.push({
+        key: `${d.getFullYear()}-${d.getMonth()}`,
+        label: d.toLocaleDateString(lang === "sw" ? "sw-TZ" : "en-US", {
+          month: "short",
+        }),
+        sum: 0,
+        count: 0,
+      });
+    }
+    const byKey = Object.fromEntries(buckets.map((b) => [b.key, b]));
+
+    const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    let total = 0;
+    rated.forEach((f) => {
+      const d = new Date(f.createdAt);
+      const b = byKey[`${d.getFullYear()}-${d.getMonth()}`];
+      if (b) {
+        b.sum += f.rating;
+        b.count += 1;
+      }
+      const r = Math.round(Number(f.rating));
+      if (distribution[r] != null) distribution[r] += 1;
+      total += Number(f.rating);
+    });
+
+    return {
+      months: buckets.map((b) => ({
+        ...b,
+        avg: b.count ? b.sum / b.count : null,
+      })),
+      dist: distribution,
+      ratedCount: rated.length,
+      overall: rated.length ? total / rated.length : null,
+    };
+  }, [feedback, lang]);
+
+  if (ratedCount === 0) return null;
+
+  // Mwelekeo: mwezi wa mwisho wenye data vs ule uliotangulia wenye data
+  const withData = months.filter((m) => m.avg != null);
+  const last = withData[withData.length - 1];
+  const prev = withData[withData.length - 2];
+  const delta = last && prev ? last.avg - prev.avg : null;
+  const maxDist = Math.max(...Object.values(dist), 1);
+  const BAR_H = 72;
+
+  return (
+    <div
+      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      className="rounded-xl border p-3 sm:p-4 mb-5 w-full min-w-0"
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between gap-2 text-left"
+      >
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-primary">
+            {t("Uchambuzi wa Rating", "Rating Analytics")}
+          </p>
+          <p className="text-[11px] text-muted">
+            {t(
+              `Wastani ${overall.toFixed(1)}/5 kutoka maoni ${ratedCount}`,
+              `Average ${overall.toFixed(1)}/5 from ${ratedCount} ratings`
+            )}
+            {delta != null && (
+              <span
+                style={{ color: delta >= 0 ? COLORS.green : COLORS.rust }}
+                className="font-semibold ml-1"
+              >
+                {delta >= 0 ? "▲" : "▼"} {Math.abs(delta).toFixed(1)}{" "}
+                {t("dhidi ya mwezi uliopita", "vs previous month")}
+              </span>
+            )}
+          </p>
+        </div>
+        {open ? (
+          <ChevronUp size={16} className="text-muted shrink-0" />
+        ) : (
+          <ChevronDown size={16} className="text-muted shrink-0" />
+        )}
+      </button>
+
+      {open && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-4">
+          {/* Trend */}
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold text-secondary uppercase mb-2">
+              {t("Mwelekeo (miezi 6)", "Trend (6 months)")}
+            </p>
+            <div className="flex items-end justify-between gap-1.5" style={{ height: BAR_H + 34 }}>
+              {months.map((m) => (
+                <div key={m.key} className="flex-1 min-w-0 flex flex-col items-center justify-end">
+                  <span className="text-[10px] font-bold text-primary mb-0.5">
+                    {m.avg != null ? m.avg.toFixed(1) : "—"}
+                  </span>
+                  <div
+                    title={
+                      m.avg != null
+                        ? `${m.label}: ${m.avg.toFixed(2)} (${m.count})`
+                        : m.label
+                    }
+                    style={{
+                      height: m.avg != null ? Math.max(3, (m.avg / 5) * BAR_H) : 3,
+                      background: m.avg != null ? COLORS.gold : COLORS.sandLine,
+                    }}
+                    className="w-full max-w-[28px] rounded-t"
+                  />
+                  <span className="text-[10px] text-muted mt-1 truncate w-full text-center">
+                    {m.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Distribution */}
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold text-secondary uppercase mb-2">
+              {t("Mgawanyo wa nyota", "Star distribution")}
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {[5, 4, 3, 2, 1].map((n) => (
+                <div key={n} className="flex items-center gap-2 text-[11px]">
+                  <span className="w-6 flex items-center gap-0.5 text-secondary shrink-0">
+                    {n}
+                    <Star size={10} fill={COLORS.gold} color={COLORS.gold} />
+                  </span>
+                  <div
+                    className="flex-1 h-2 rounded-full overflow-hidden"
+                    style={{ background: COLORS.sandLine }}
+                  >
+                    <div
+                      style={{
+                        width: `${(dist[n] / maxDist) * 100}%`,
+                        background: COLORS.gold,
+                      }}
+                      className="h-full rounded-full"
+                    />
+                  </div>
+                  <span className="w-6 text-right text-muted shrink-0">
+                    {dist[n]}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ============================================================
 // TICKET CARD
 // ============================================================
-function TicketCard({ ticket, lang, defaultExpanded = false, highlight = false }) {
+function TicketCard({
+  ticket,
+  lang,
+  defaultExpanded = false,
+  highlight = false,
+  selectable = false,
+  selected = false,
+  onToggleSelect,
+}) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [replyText, setReplyText] = useState("");
   const [replyFiles, setReplyFiles] = useState([]);
@@ -237,6 +659,16 @@ function TicketCard({ ticket, lang, defaultExpanded = false, highlight = false }
     >
       <div className="p-3 sm:p-4 w-full min-w-0">
         <div className="flex items-start gap-2 sm:gap-3 w-full min-w-0">
+          {selectable && (
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={() => onToggleSelect?.(ticket.id)}
+              disabled={ticket.status === "closed"}
+              aria-label={t("Chagua ticket", "Select ticket")}
+              className="w-4 h-4 mt-2.5 rounded shrink-0 disabled:opacity-40"
+            />
+          )}
           <div
             style={{ background: catColors?.bg || "#F5F3EC" }}
             className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
@@ -281,7 +713,7 @@ function TicketCard({ ticket, lang, defaultExpanded = false, highlight = false }
                   style={{ background: "rgba(193,80,46,0.2)", color: COLORS.rust }}
                   className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
                 >
-                  ⏰ SLA IMEPITA
+                  ⏰ {t("SLA IMEPITA", "SLA OVERDUE")}
                 </span>
               )}
             </div>
@@ -414,6 +846,14 @@ function TicketCard({ ticket, lang, defaultExpanded = false, highlight = false }
                 >
                   <Paperclip size={14} />
                 </button>
+                <CannedPicker
+                  lang={lang}
+                  currentText={replyText}
+                  disabled={isBusy("reply")}
+                  onPick={(text) =>
+                    setReplyText((prev) => (prev.trim() ? `${prev.trim()} ${text}` : text))
+                  }
+                />
                 <input
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
@@ -818,6 +1258,13 @@ export default function SupportSection() {
   const [feedbackQuery, setFeedbackQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
+  // ── Bulk reply ──
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkText, setBulkText] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkResult, setBulkResult] = useState(null); // { ok, failed }
+
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   // ✅ Hydrate tickets kwenye mount + auto-refresh kila 30s
@@ -852,6 +1299,57 @@ export default function SupportSection() {
     setRefreshing(true);
     await hydrateTicketsFromApi();
     setRefreshing(false);
+  };
+
+  // ── Bulk reply handlers ──
+  const toggleSelect = (id) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const exitBulkMode = () => {
+    setBulkMode(false);
+    setSelectedIds(new Set());
+    setBulkText("");
+    setBulkResult(null);
+  };
+
+  const handleBulkSend = async () => {
+    const text = bulkText.trim();
+    const ids = [...selectedIds];
+    if (!text || ids.length === 0 || bulkBusy) return;
+    if (
+      !window.confirm(
+        t(
+          `Tuma jibu hili kwa tickets ${ids.length}?`,
+          `Send this reply to ${ids.length} tickets?`
+        )
+      )
+    )
+      return;
+
+    setBulkBusy(true);
+    setBulkResult(null);
+    const failed = [];
+    let okCount = 0;
+    // Mfuatano (si sambamba) ili kuepuka rate-limit na kuhifadhi mpangilio
+    for (const id of ids) {
+      try {
+        const res = await addTicketMessageAsync(id, { text, files: [] });
+        if (res?.ok) okCount += 1;
+        else failed.push(id);
+      } catch {
+        failed.push(id);
+      }
+    }
+    setBulkBusy(false);
+    setBulkResult({ ok: okCount, failed: failed.length });
+    // Zilizofanikiwa ziondolewe; zilizoshindwa zibaki zimechaguliwa ili kujaribu tena
+    setSelectedIds(new Set(failed));
+    if (failed.length === 0) setBulkText("");
   };
 
   // ── Ticket counts ──
@@ -1134,6 +1632,127 @@ export default function SupportSection() {
             </div>
           )}
 
+          {tickets.length > 0 && (
+            <div className="mb-4 w-full min-w-0">
+              {!bulkMode ? (
+                <button
+                  onClick={() => setBulkMode(true)}
+                  style={{ borderColor: COLORS.sandLine, color: "var(--text-primary)" }}
+                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border bg-white"
+                >
+                  <Reply size={13} />
+                  {t("Jibu kwa Wingi", "Bulk Reply")}
+                </button>
+              ) : (
+                <div
+                  style={{ borderColor: COLORS.gold, background: "white" }}
+                  className="rounded-xl border-2 p-3 sm:p-4 flex flex-col gap-2.5 w-full min-w-0"
+                >
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <p className="text-sm font-semibold text-primary">
+                      {t("Jibu kwa Wingi", "Bulk Reply")} · {selectedIds.size}{" "}
+                      {t("zimechaguliwa", "selected")}
+                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() =>
+                          setSelectedIds(
+                            new Set(
+                              filteredTickets
+                                .filter((tk) => tk.status !== "closed")
+                                .map((tk) => tk.id)
+                            )
+                          )
+                        }
+                        disabled={bulkBusy}
+                        style={{ borderColor: COLORS.sandLine }}
+                        className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border disabled:opacity-50"
+                      >
+                        {t("Chagua zote zilizoonyeshwa", "Select all shown")}
+                      </button>
+                      <button
+                        onClick={() => setSelectedIds(new Set())}
+                        disabled={bulkBusy || selectedIds.size === 0}
+                        style={{ borderColor: COLORS.sandLine }}
+                        className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border disabled:opacity-50"
+                      >
+                        {t("Ondoa", "Clear")}
+                      </button>
+                      <button
+                        onClick={exitBulkMode}
+                        disabled={bulkBusy}
+                        style={{ borderColor: COLORS.sandLine, color: COLORS.rust }}
+                        className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border disabled:opacity-50"
+                      >
+                        {t("Funga", "Exit")}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-end gap-2 min-w-0">
+                    <CannedPicker
+                      lang={lang}
+                      currentText={bulkText}
+                      disabled={bulkBusy}
+                      onPick={(text) =>
+                        setBulkText((prev) => (prev.trim() ? `${prev.trim()} ${text}` : text))
+                      }
+                    />
+                    <textarea
+                      value={bulkText}
+                      onChange={(e) => setBulkText(e.target.value)}
+                      rows={2}
+                      disabled={bulkBusy}
+                      placeholder={t(
+                        "Andika jibu litakalotumwa kwa tickets zote zilizochaguliwa...",
+                        "Write the reply to send to all selected tickets..."
+                      )}
+                      style={{ borderColor: COLORS.sandLine }}
+                      className="flex-1 min-w-0 rounded-lg border px-3 py-2 text-xs outline-none bg-white resize-none disabled:opacity-50"
+                    />
+                    <button
+                      onClick={handleBulkSend}
+                      disabled={bulkBusy || !bulkText.trim() || selectedIds.size === 0}
+                      style={{ background: COLORS.gold, color: COLORS.night }}
+                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {bulkBusy ? (
+                        <Loader2 size={13} className="animate-spin" />
+                      ) : (
+                        <Send size={13} />
+                      )}
+                      {t("Tuma", "Send")}
+                    </button>
+                  </div>
+
+                  {bulkResult && (
+                    <p
+                      style={{
+                        background:
+                          bulkResult.failed > 0
+                            ? "rgba(193,80,46,0.1)"
+                            : "rgba(47,109,79,0.1)",
+                        color: bulkResult.failed > 0 ? COLORS.rust : COLORS.green,
+                      }}
+                      className="text-xs font-semibold px-3 py-2 rounded-lg"
+                    >
+                      {t(
+                        `Imetumwa: ${bulkResult.ok}. Imeshindwa: ${bulkResult.failed}.`,
+                        `Sent: ${bulkResult.ok}. Failed: ${bulkResult.failed}.`
+                      )}
+                      {bulkResult.failed > 0 &&
+                        " " +
+                          t(
+                            "Zilizoshindwa zimebaki zimechaguliwa — jaribu tena.",
+                            "Failed ones remain selected — try again."
+                          )}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {filteredTickets.length === 0 ? (
             <div
               style={{ borderColor: COLORS.sandLine, background: "white" }}
@@ -1160,6 +1779,9 @@ export default function SupportSection() {
                   lang={lang}
                   defaultExpanded={ticket.id === focusedTicketId}
                   highlight={ticket.id === focusedTicketId}
+                  selectable={bulkMode}
+                  selected={selectedIds.has(ticket.id)}
+                  onToggleSelect={toggleSelect}
                 />
               ))}
             </div>
@@ -1188,6 +1810,8 @@ export default function SupportSection() {
               <p className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words" style={{ color: COLORS.gold }}>{avgRating}</p>
             </div>
           </div>
+
+          <FeedbackAnalytics feedback={feedback} lang={lang} />
 
           {feedback.length > 0 && (
             <div className="flex justify-center gap-2 mb-3 overflow-x-auto pb-2 w-full min-w-0">

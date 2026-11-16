@@ -14,9 +14,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   Home, Clock, Rocket, Search, Smartphone, Plus, AlertTriangle,
-  Pencil, Info, Loader2, RefreshCw, Trash2, TrendingUp,
+  Pencil, Info, Loader2, RefreshCw, Trash2, TrendingUp, Eye, History,
 } from "lucide-react";
-import { COLORS } from "../shared/constants.js";
+import { COLORS, timeAgo } from "../shared/constants.js";
+import { useAuditLogs, AUDIT_ACTIONS } from "../../../../config/auditLogsStore.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import EditableAmount from "../components/Revenue/EditableAmount.jsx";
 import EditablePercent from "../components/Revenue/EditablePercent.jsx";
@@ -193,6 +194,363 @@ function ToggleSwitch({
         />
       </button>
     </div>
+  );
+}
+
+
+// ============================================================
+// FEE PREVIEW — jinsi ada zitakavyoonekana kwa mtumiaji
+// Inahesabu kwenye client kwa kutumia settings zilizopo kwenye stores.
+// MUHIMU (assumptions):
+//  - Listing fee (asilimia): `Chini/Juu` zinatumika kama KIKOMO cha ada
+//    (fee = clamp(bei × rate, min, max)). Kama backend inazitumia kama
+//    safu ya bei ambapo rule inatumika, badilisha `computeListingFee`.
+//  - Success fee: asilimia ya bei, na min_fee/max_fee kama vikomo
+//    (0 = hakuna kikomo).
+// ============================================================
+function computeListingFee(cfg, price) {
+  if (!cfg) return null;
+  if (cfg.isActive === false) return { free: true };
+  if (cfg.feeMode === "FLAT") return { amount: Number(cfg.flatFee) || 0 };
+  let fee = price * (Number(cfg.rate) || 0);
+  const min = Number(cfg.min) || 0;
+  const max = Number(cfg.max) || 0;
+  if (min > 0) fee = Math.max(fee, min);
+  if (max > 0) fee = Math.min(fee, max);
+  return { amount: Math.round(fee) };
+}
+
+function computeSuccessFee(cfg, price) {
+  if (!cfg || cfg.is_enabled === false) return { free: true };
+  let fee = (price * (Number(cfg.percentage) || 0)) / 100;
+  const min = Number(cfg.min_fee) || 0;
+  const max = Number(cfg.max_fee) || 0;
+  if (min > 0) fee = Math.max(fee, min);
+  if (max > 0) fee = Math.min(fee, max);
+  return { amount: Math.round(fee) };
+}
+
+function isPkgActive(pkg) {
+  return !(
+    pkg.is_active === false ||
+    pkg.active === false ||
+    pkg.isActive === false
+  );
+}
+
+function FeePreviewCard({
+  lang,
+  listingFeeConfigs,
+  successFee,
+  reservationSettings,
+  reservationTiers,
+  boostFee,
+  boostPackages,
+  leadingFee,
+  leadingPackages,
+  adFee,
+  advertisementPackages,
+}) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const [price, setPrice] = useState(500000);
+  const [catKey, setCatKey] = useState("");
+
+  const selected =
+    listingFeeConfigs.find((c) => String(c.key) === String(catKey)) ||
+    listingFeeConfigs[0] ||
+    null;
+
+  const labelOf = (c) =>
+    safeStr(getCategory(c.key)?.label, lang) ||
+    safeStr(c.name, lang) ||
+    safeStr(c.backendKey, lang) ||
+    safeStr(c.key, lang) ||
+    "—";
+
+  const money = (n) => `TZS ${Number(n || 0).toLocaleString("en-US")}`;
+  const FreeBadge = ({ children }) => (
+    <span
+      style={{ background: `${COLORS.green}15`, color: COLORS.successText }}
+      className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+    >
+      {children || t("BURE", "FREE")}
+    </span>
+  );
+  const Row = ({ label, children }) => (
+    <div className="flex items-center justify-between gap-3 py-1.5 text-xs">
+      <span className="text-secondary min-w-0 truncate">{label}</span>
+      <span className="font-semibold text-primary shrink-0 text-right">
+        {children}
+      </span>
+    </div>
+  );
+
+  const listing = computeListingFee(selected, price);
+  const success = computeSuccessFee(successFee, price);
+
+  const pkgRows = (enabled, pkgs) =>
+    pkgs.filter(isPkgActive).map((pkg) => (
+      <Row
+        key={pkg.id ?? pkg.key}
+        label={`${safeStr(pkg.name, lang)}${
+          pkg.hours ? ` · ${pkg.hours}${t("saa", "h")}` : ""
+        }`}
+      >
+        {enabled === false ? <FreeBadge /> : money(pkg.price)}
+      </Row>
+    ));
+
+  const Section = ({ title, children }) => (
+    <div className="min-w-0">
+      <p className="text-[10px] font-semibold text-secondary uppercase tracking-wide mb-1">
+        {title}
+      </p>
+      <div className="divide-y divide-hairline">{children}</div>
+    </div>
+  );
+
+  const reservationRows =
+    reservationSettings.is_enabled === false
+      ? [
+          <Row key="free" label={t("Tiers zote", "All tiers")}>
+            <FreeBadge />
+          </Row>,
+        ]
+      : reservationTiers.filter(isPkgActive).map((tier) => (
+          <Row
+            key={tier.id}
+            label={
+              tier.hours % 24 === 0
+                ? t(`Siku ${tier.hours / 24}`, `${tier.hours / 24}d`)
+                : t(`Saa ${tier.hours}`, `${tier.hours}h`)
+            }
+          >
+            {money(tier.fee)}
+          </Row>
+        ));
+
+  return (
+    <RevenueCard accentColor={COLORS.gold}>
+      <div className="flex items-center gap-3 mb-3">
+        <div
+          style={{ background: `${COLORS.gold}15` }}
+          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+        >
+          <Eye size={18} style={{ color: COLORS.goldTextText }} />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-primary">
+            {t("Preview ya Ada kwa Mtumiaji", "User Fee Preview")}
+          </p>
+          <p className="text-xs text-secondary mt-0.5">
+            {t(
+              "Ona ada ambazo mtumiaji ataona kulingana na settings za sasa.",
+              "See the fees a user would see based on the current settings."
+            )}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+        <label className="flex flex-col gap-1 min-w-0">
+          <span className="text-[10px] text-muted uppercase tracking-wide font-semibold">
+            {t("Bei ya mali (TZS)", "Listing price (TZS)")}
+          </span>
+          <input
+            type="number"
+            min={0}
+            value={price}
+            onChange={(e) => setPrice(Math.max(0, Number(e.target.value) || 0))}
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] bg-card"
+          />
+        </label>
+        <label className="flex flex-col gap-1 min-w-0">
+          <span className="text-[10px] text-muted uppercase tracking-wide font-semibold">
+            {t("Category", "Category")}
+          </span>
+          <select
+            value={selected ? String(selected.key) : ""}
+            onChange={(e) => setCatKey(e.target.value)}
+            disabled={listingFeeConfigs.length === 0}
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none bg-card disabled:opacity-50"
+          >
+            {listingFeeConfigs.map((c) => (
+              <option key={c.id ?? c.key} value={String(c.key)}>
+                {labelOf(c)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+        <Section title={t("Ada ya Kuchapisha", "Listing Fee")}>
+          <Row label={selected ? labelOf(selected) : "—"}>
+            {!listing ? (
+              "—"
+            ) : listing.free ? (
+              <FreeBadge />
+            ) : (
+              money(listing.amount)
+            )}
+          </Row>
+          {selected && selected.feeMode !== "FLAT" && (
+            <p className="text-[10px] text-muted py-1.5">
+              {t(
+                "Chini/Juu zinatumika kama kikomo cha ada.",
+                "Min/Max are applied as fee limits."
+              )}
+            </p>
+          )}
+        </Section>
+
+        <Section title={t("Ada ya Mafanikio", "Success Fee")}>
+          <Row
+            label={t(
+              `${Number(successFee.percentage) || 0}% ya bei`,
+              `${Number(successFee.percentage) || 0}% of price`
+            )}
+          >
+            {success.free ? <FreeBadge /> : money(success.amount)}
+          </Row>
+        </Section>
+
+        <Section title={t("Reservation", "Reservation")}>
+          {reservationRows.length ? (
+            reservationRows
+          ) : (
+            <p className="text-[11px] text-muted py-1.5">—</p>
+          )}
+        </Section>
+
+        <Section title={t("Boost", "Boost")}>
+          {pkgRows(boostFee.enabled, boostPackages)}
+        </Section>
+
+        <Section title={t("Leading", "Leading")}>
+          {pkgRows(leadingFee.is_enabled, leadingPackages)}
+        </Section>
+
+        <Section title={t("Matangazo", "Advertisements")}>
+          {pkgRows(adFee.is_enabled, advertisementPackages)}
+        </Section>
+      </div>
+    </RevenueCard>
+  );
+}
+
+
+// ============================================================
+// FEE HISTORY — mabadiliko ya ada kutoka Audit Logs
+// Inachuja actions zinazoanza na "fee." (fee.created/updated/deleted).
+// Inaonyesha logs za hivi karibuni zilizopo kwenye auditLogsStore (200).
+// ============================================================
+function FeeHistoryCard({ lang }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const logs = useAuditLogs();
+  const [open, setOpen] = useState(false);
+
+  const feeLogs = logs
+    .filter((l) => typeof l.action === "string" && l.action.startsWith("fee."))
+    .sort((a, b) => new Date(b.at) - new Date(a.at));
+
+  const detailsOf = (l) => {
+    const sw = l.detailsSw ?? l.details_sw;
+    const en = l.detailsEn ?? l.details_en;
+    const raw = typeof l.details === "string" ? l.details : "";
+    return lang === "en" ? en || raw || sw || "" : sw || raw || en || "";
+  };
+  const targetOf = (l) => {
+    const v = l.target;
+    if (v && typeof v === "object") return v[lang] || v.sw || v.en || "";
+    return l.targetSw || l.targetEn
+      ? (lang === "en" ? l.targetEn || l.targetSw : l.targetSw || l.targetEn)
+      : v || "";
+  };
+
+  return (
+    <RevenueCard accentColor={COLORS.gold}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3 text-left"
+      >
+        <div
+          style={{ background: `${COLORS.gold}15` }}
+          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+        >
+          <History size={18} style={{ color: COLORS.goldTextText }} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-primary">
+            {t("Historia ya Mabadiliko ya Ada", "Fee Change History")}
+          </p>
+          <p className="text-xs text-secondary mt-0.5">
+            {t(
+              `${feeLogs.length} mabadiliko yaliyorekodiwa`,
+              `${feeLogs.length} recorded changes`
+            )}
+          </p>
+        </div>
+        <span className="text-[11px] font-semibold text-muted shrink-0">
+          {open ? t("Funga", "Hide") : t("Onyesha", "Show")}
+        </span>
+      </button>
+
+      {open && (
+        <div className="mt-3">
+          {feeLogs.length === 0 ? (
+            <p className="text-xs text-muted text-center py-3">
+              {t("Hakuna mabadiliko ya ada bado.", "No fee changes yet.")}
+            </p>
+          ) : (
+            <div className="divide-y divide-hairline">
+              {feeLogs.slice(0, 15).map((l) => {
+                const action = AUDIT_ACTIONS.find((a) => a.key === l.action);
+                return (
+                  <div key={l.id} className="py-2.5 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span
+                        style={{ background: `${COLORS.gold}20`, color: "#8A5A16" }}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+                      >
+                        {action?.label?.[lang] || action?.label?.sw || l.action}
+                      </span>
+                      <span className="text-[10px] text-muted whitespace-nowrap">
+                        {timeAgo(l.at, lang)}
+                      </span>
+                      {l.adminName && (
+                        <span className="text-[10px] text-muted truncate">
+                          · {l.adminName}
+                        </span>
+                      )}
+                    </div>
+                    {targetOf(l) && (
+                      <p className="text-xs font-medium text-primary mt-1 break-words">
+                        {targetOf(l)}
+                      </p>
+                    )}
+                    {detailsOf(l) && (
+                      <p className="text-[11px] text-secondary mt-0.5 break-words line-clamp-3">
+                        {detailsOf(l)}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {feeLogs.length > 15 && (
+            <p className="text-[10px] text-muted mt-2">
+              {t(
+                "Inaonyesha 15 za hivi karibuni. Tazama Audit Logs kwa zote.",
+                "Showing the latest 15. See Audit Logs for all."
+              )}
+            </p>
+          )}
+        </div>
+      )}
+    </RevenueCard>
   );
 }
 
@@ -1541,6 +1899,24 @@ export default function RevenueSection() {
             </div>
           )}
         </RevenueCard>
+
+        {/* 7. FEE PREVIEW */}
+        <FeePreviewCard
+          lang={lang}
+          listingFeeConfigs={listingFeeConfigs}
+          successFee={successFee}
+          reservationSettings={reservationSettings}
+          reservationTiers={reservationTiers}
+          boostFee={boostFee}
+          boostPackages={boostPackages}
+          leadingFee={leadingFee}
+          leadingPackages={leadingPackages}
+          adFee={adFee}
+          advertisementPackages={advertisementPackages}
+        />
+
+        {/* 8. FEE HISTORY */}
+        <FeeHistoryCard lang={lang} />
 
         <div
           className="rounded-xl border px-4 py-3 flex items-start gap-2.5"

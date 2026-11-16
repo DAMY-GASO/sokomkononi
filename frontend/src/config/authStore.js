@@ -5,6 +5,7 @@
 // FIX: normalizeUserFromApi inasoma current_role
 // FIX: auto-refresh kwenye event ya verifications
 // FIX: adminLoginAsync inatuma captcha_token kwa backend
+// FIX: admin 2FA — adminLoginAsync inarudisha requires2fa; verifyAdmin2faAsync inakamilisha login
 // ============================================================
 import { useEffect, useState } from "react";
 import { authApi, setUnauthorizedHandler } from "../api/index.js";
@@ -357,8 +358,31 @@ export async function verify2faLoginAsync({ codeToken, code, remember = true }) 
 }
 
 // ============================================================
-// ADMIN LOGIN — ✅ FIX: inapokea na kutuma captcha_token
+// ADMIN LOGIN — captcha_token + 2FA (hatua mbili)
+// Hatua 1: adminLoginAsync → kama backend inarudisha requires_2fa,
+//          tunarudisha { requires2fa, codeToken } (hakuna session bado).
+// Hatua 2: verifyAdmin2faAsync({ codeToken, code }) → session ya admin.
 // ============================================================
+
+// Inakamilisha session ya admin baada ya tokens kuwekwa (hatua 1 bila 2FA, au hatua 2).
+async function completeAdminSession() {
+  const me = await authApi.me();
+  if (!computeIsAdmin(me)) {
+    await authApi.logout().catch(() => {});
+    hardReset();
+    return {
+      ok: false,
+      error: new Error("Huna ruhusa ya kuingia kama admin"),
+    };
+  }
+  wipeDataCachesOnLogin();
+  const user = normalizeUserFromApi(me);
+  saveUser(user);
+  resetHydrateCache();
+  lastHydrateAt = Date.now();
+  return { ok: true, user };
+}
+
 export async function adminLoginAsync({ identifier, password, captcha_token }) {
   if (!identifier || !password) {
     return {
@@ -367,26 +391,34 @@ export async function adminLoginAsync({ identifier, password, captcha_token }) {
     };
   }
   try {
-    // ✅ Tuma captcha_token kwa backend (mfano: Cloudflare Turnstile token)
-    await authApi.login({ identifier, password, captcha_token });
-    const me = await authApi.me();
-    if (!computeIsAdmin(me)) {
-      await authApi.logout().catch(() => {});
-      hardReset();
-      return {
-        ok: false,
-        error: new Error("Huna ruhusa ya kuingia kama admin"),
-      };
+    // Tuma captcha_token kwa backend (mfano: Cloudflare Turnstile token)
+    const data = await authApi.login({ identifier, password, captcha_token });
+    // 2FA imewashwa: hakuna tokens bado — UI iombe code kisha iite verifyAdmin2faAsync
+    if (data?.requires_2fa) {
+      return { ok: false, requires2fa: true, codeToken: data.code_token };
     }
-    wipeDataCachesOnLogin();
-    const user = normalizeUserFromApi(me);
-    saveUser(user);
-    resetHydrateCache();
-    lastHydrateAt = Date.now();
-    return { ok: true, user };
+    return await completeAdminSession();
   } catch (err) {
     hardReset();
     console.warn("[authStore] adminLogin failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+export async function verifyAdmin2faAsync({ codeToken, code }) {
+  if (!codeToken || !code) {
+    return { ok: false, error: new Error("code inahitajika") };
+  }
+  try {
+    const data = await apiClient.post("/auth/2fa/login/", {
+      code_token: codeToken,
+      code: String(code).trim(),
+    });
+    if (data?.access) setTokens({ access: data.access, refresh: data.refresh });
+    return await completeAdminSession();
+  } catch (err) {
+    // Usifanye hardReset: admin anaweza kujaribu code tena (code_token bado halali)
+    console.warn("[authStore] admin 2fa failed:", err);
     return { ok: false, error: err };
   }
 }

@@ -46,6 +46,7 @@ import {
   resumePromotionAsync,
   cancelPromotionAsync,
 } from "../../../../config/promotionsStore.js";
+import { useRefunds } from "../../../../config/refundsStore.js";
 
 // ============================================================
 // PROMOTION TYPE CONFIG — REVENUE TYPES ZOTE 6
@@ -96,6 +97,41 @@ const PROMO_TYPES = {
 };
 
 // ============================================================
+// REFUND TRACKING — unganisha refundsStore na promotions
+// Refund inahusishwa na promotion kwa (promotionType, promotionId).
+// Backend inaweza kurudisha aina kama "BOOST" / "ADVERTISEMENT" n.k.,
+// kwa hiyo tunanormalize kabla ya kulinganisha.
+// ============================================================
+const REFUND_TYPE_ALIASES = {
+  boost: "boost",
+  boosting: "boost",
+  leading: "leading",
+  advertise: "advertise",
+  advertisement: "advertise",
+  advertisements: "advertise",
+  banner: "advertise",
+  reservation: "reservation",
+  reserved: "reservation",
+  reserve: "reservation",
+};
+
+function normalizePromoType(v) {
+  const k = String(v ?? "").trim().toLowerCase();
+  return REFUND_TYPE_ALIASES[k] || k;
+}
+
+function refundKey(type, id) {
+  return `${normalizePromoType(type)}:${String(id)}`;
+}
+
+const REFUND_STATUS_META = {
+  PENDING: { sw: "Refund: Haijalipwa", en: "Refund: Not Paid", bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
+  PROCESSING: { sw: "Refund: Inaendelea", en: "Refund: Processing", bg: "rgba(37,99,235,0.12)", fg: "#2563EB" },
+  COMPLETED: { sw: "Refund: Imelipwa", en: "Refund: Paid", bg: "rgba(47,109,79,0.14)", fg: COLORS.green },
+  FAILED: { sw: "Refund: Imeshindwa", en: "Refund: Failed", bg: "rgba(193,80,46,0.14)", fg: COLORS.rust },
+};
+
+// ============================================================
 // PROMOTION CARD — na pause/resume/cancel
 // ============================================================
 function PromotionCard({
@@ -107,6 +143,7 @@ function PromotionCard({
   onCancel,
   isBusy,
   isPaused,
+  refund,
   showActions = true,
 }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -158,6 +195,21 @@ function PromotionCard({
                 className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
               >
                 {t("IMESIMAMISHWA", "PAUSED")}
+              </span>
+            )}
+            {refund && REFUND_STATUS_META[refund.status] && (
+              <span
+                style={{
+                  background: REFUND_STATUS_META[refund.status].bg,
+                  color: REFUND_STATUS_META[refund.status].fg,
+                }}
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+                title={refund.amountPaid != null ? formatTZS(refund.amountPaid) : undefined}
+              >
+                {lang === "sw"
+                  ? REFUND_STATUS_META[refund.status].sw
+                  : REFUND_STATUS_META[refund.status].en}
+                {refund.amountPaid != null ? ` · ${formatTZS(refund.amountPaid)}` : ""}
               </span>
             )}
             {isUrgent && !isPaused && (
@@ -590,7 +642,14 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
 // ============================================================
 // CONFIRM ACTION MODAL
 // ============================================================
-function ConfirmActionModal({ action, lang, busy, onConfirm, onClose }) {
+function ConfirmActionModal({
+  action,
+  lang,
+  busy,
+  onConfirm,
+  onClose,
+  onRefundChange,
+}) {
   if (!action) return null;
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -638,9 +697,7 @@ function ConfirmActionModal({ action, lang, busy, onConfirm, onClose }) {
                 <input
                   type="checkbox"
                   checked={action.refund || false}
-                  onChange={(e) =>
-                    onConfirm({ ...action, refund: e.target.checked })
-                  }
+                  onChange={(e) => onRefundChange?.(e.target.checked)}
                   disabled={busy}
                   className="w-4 h-4"
                 />
@@ -658,6 +715,12 @@ function ConfirmActionModal({ action, lang, busy, onConfirm, onClose }) {
                 >
                   <Receipt size={12} className="shrink-0 mt-0.5" />
                   <span>
+                    {action.amount != null && (
+                      <strong className="block mb-0.5">
+                        {t("Kiasi cha refund", "Refund amount")}:{" "}
+                        {formatTZS(action.amount)}
+                      </strong>
+                    )}
                     {t(
                       "Refund itaundwa na admin atashughulikia kwenye Refunds section.",
                       "Refund will be created and admin will process it in Refunds section."
@@ -713,6 +776,27 @@ function ConfirmActionModal({ action, lang, busy, onConfirm, onClose }) {
 export default function PromotionsSection() {
   const { lang } = useLanguage();
   const promotions = usePromotions(lang);
+  const refunds = useRefunds();
+
+  // Ramani ya refund ya hivi karibuni kwa kila promotion (type:id)
+  const refundByPromotion = React.useMemo(() => {
+    const map = new Map();
+    (refunds || []).forEach((r) => {
+      const key = refundKey(r.promotionType, r.promotionId);
+      const prev = map.get(key);
+      if (
+        !prev ||
+        new Date(r.createdAt || 0).getTime() >=
+          new Date(prev.createdAt || 0).getTime()
+      ) {
+        map.set(key, r);
+      }
+    });
+    return map;
+  }, [refunds]);
+
+  const refundFor = (type, listing) =>
+    refundByPromotion.get(refundKey(type, listing.id)) || null;
 
   const [activeTab, setActiveTab] = useState("boost");
   const [editingCampaign, setEditingCampaign] = useState(null);
@@ -753,6 +837,7 @@ export default function PromotionsSection() {
       promotionType: type,
       id: listing.id,
       title: listing.title,
+      amount: listing.amount ?? null,
       refund: false,
     });
   };
@@ -941,6 +1026,7 @@ export default function PromotionsSection() {
               key={l.id}
               listing={l}
               {...promoListProps("boost")}
+              refund={refundFor("boost", l)}
               isBusy={isListingBusy(l.id)}
               isPaused={l.paused_by_admin || l.status === "PAUSED"}
             />
@@ -966,6 +1052,7 @@ export default function PromotionsSection() {
               key={l.id}
               listing={l}
               {...promoListProps("advertise")}
+              refund={refundFor("advertise", l)}
               isBusy={isListingBusy(l.id)}
               isPaused={l.paused_by_admin || l.active === false}
             />
@@ -991,6 +1078,7 @@ export default function PromotionsSection() {
               key={l.id}
               listing={l}
               {...promoListProps("leading")}
+              refund={refundFor("leading", l)}
               isBusy={isListingBusy(l.id)}
               isPaused={l.paused_by_admin || l.status === "PAUSED"}
             />
@@ -1016,6 +1104,7 @@ export default function PromotionsSection() {
               key={l.id}
               listing={l}
               {...promoListProps("reservation")}
+              refund={refundFor("reservation", l)}
               isBusy={isListingBusy(l.id)}
               isPaused={l.paused_by_admin || l.status === "PAUSED"}
             />
@@ -1253,7 +1342,13 @@ export default function PromotionsSection() {
         lang={lang}
         busy={!!actionBusy[`${confirmAction?.type}-${confirmAction?.id}`]}
         onConfirm={handleConfirmAction}
-        onClose={() => !actionBusy && setConfirmAction(null)}
+        onRefundChange={(checked) =>
+          setConfirmAction((a) => (a ? { ...a, refund: checked } : a))
+        }
+        onClose={() => {
+          const key = `${confirmAction?.type}-${confirmAction?.id}`;
+          if (!actionBusy[key]) setConfirmAction(null);
+        }}
       />
     </div>
   );

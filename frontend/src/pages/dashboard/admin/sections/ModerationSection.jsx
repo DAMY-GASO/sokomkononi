@@ -15,6 +15,7 @@ import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import {
   useModerationQueue,
   hydrateModerationQueueFromApi,
+  fetchModerationStatusCountsAsync,
   approveListingFromQueueAsync,
   rejectListingFromQueueAsync,
   requestEditListingAsync,
@@ -89,20 +90,6 @@ function isReservationExpired(l, now) {
   return secs - (now - fetchedAt) / 1000 <= 0;
 }
 
-// Statuses zote zinazopakiwa mara moja ili tabs ziwe na counts sahihi
-const ALL_STATUS_FETCH = [
-  "PENDING_APPROVAL",
-  "PAID_PENDING_APPROVAL",
-  "APPROVED_PENDING_PAYMENT",
-  "NEEDS_EDIT",
-  "LIVE",
-  "REJECTED",
-  "SOLD",
-  "EXPIRED",
-  "RESERVED",
-  "pending_payment", // inaomba PENDING_PAYMENT na DRAFT, matokeo yanaunganishwa
-];
-
 export default function ModerationSection() {
   const { lang } = useLanguage();
   const queue = useModerationQueue({ hydrate: false });
@@ -119,6 +106,8 @@ export default function ModerationSection() {
   const [releaseModal, setReleaseModal] = useState(null);
   const [imageListing, setImageListing] = useState(null);
   const [decided, setDecided] = useState({});
+  // Counts halisi kutoka backend (query moja) — null hadi zipakiwe
+  const [serverCounts, setServerCounts] = useState(null);
   const [showScrollLeft, setShowScrollLeft] = useState(false);
   // Saa ya sasa (inasasishwa kila sekunde 30) — kuficha badge ya Reserved
   // mara reservation inapoisha muda.
@@ -279,35 +268,6 @@ export default function ModerationSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, lang]);
 
-  // ✅ Pakia statuses zote mara moja (mara ya kwanza) ili tabs zote zionyeshe counts
-  useEffect(() => {
-    let cancelled = false;
-    Promise.all(ALL_STATUS_FETCH.map((st) => fetchListingsByStatusAsync(st))).then(
-      (results) => {
-        if (cancelled) return;
-        const fetched = results.flatMap((r) => r?.listings || []);
-        if (!fetched.length) return;
-        setHistory((prev) => {
-          const next = { ...prev };
-          fetched.forEach((l) => {
-            if (!l || l.id == null) return;
-            const old = prev[String(l.id)];
-            next[String(l.id)] = {
-              ...l,
-              ...(old || {}),
-              // weka muda wa kupakia mara moja tu, ulingane na data iliyobaki
-              _fetchedAt: old?._fetchedAt ?? Date.now(),
-            };
-          });
-          return next;
-        });
-      }
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   // Queue + history zimeunganishwa (queue ina data mpya zaidi). Status halisi
   // inabaki — hatulazimishi PENDING_APPROVAL, ili tangazo lililolipwa lisionekane jipya.
   const merged = useMemo(() => {
@@ -357,6 +317,21 @@ export default function ModerationSection() {
     return c;
   }, [merged]);
 
+  // ✅ Counts halisi za tabs: backend inahesabu (query moja). Tunazipakia mara ya
+  // kwanza, na kuzipakia upya (debounce) kila `statusCounts` ya ndani inapobadilika
+  // — yaani baada ya approve/reject/bulk/n.k. — ili namba zibaki sahihi.
+  useEffect(() => {
+    let cancelled = false;
+    const id = setTimeout(async () => {
+      const res = await fetchModerationStatusCountsAsync();
+      if (!cancelled && res.ok) setServerCounts(res.counts);
+    }, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
+  }, [statusCounts]);
+
   const baseFilters = [
     {
       key: "pending_approval",
@@ -386,7 +361,13 @@ export default function ModerationSection() {
   const filters = baseFilters.map((f) =>
     f.count !== undefined
       ? f
-      : { ...f, count: f.key === "zote" ? statusCounts._all : statusCounts[f.key] || 0 }
+      : {
+          ...f,
+          count:
+            f.key === "zote"
+              ? serverCounts?.all ?? statusCounts._all
+              : serverCounts?.[f.key] ?? statusCounts[f.key] ?? 0,
+        }
   );
 
     const clearBusy = (id) =>

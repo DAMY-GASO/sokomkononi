@@ -82,6 +82,17 @@ export function hydrateModerationQueueFromApi() {
   return hydrateInflight;
 }
 
+// ── Status counts (tabs za Moderation) ──────────────────────
+// Query moja ya backend badala ya kupakia kila status kuhesabu tabs.
+export async function fetchModerationStatusCountsAsync() {
+  try {
+    const data = await api.get("/admin/listings/status-counts/");
+    return { ok: true, counts: data || {} };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
 // ── Decisions ───────────────────────────────────────────────
 function recordDecision(entry) {
   const next = [

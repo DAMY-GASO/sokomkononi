@@ -5,6 +5,8 @@
 //  - Ongeza bulkToggleActiveAsync(keys, active)
 //  - Ongeza bulkTogglePopularAsync(keys, popular)
 //  - Ongeza bulkRemoveCategoriesAsync(keys, listingsByKey)
+//  - listingsCount kutoka backend (`listings_count`) + fetchCategoryStats()
+//  - Server inakataa kufuta category yenye listings (409 HAS_LISTINGS)
 // ============================================================
 import { useEffect, useState } from "react";
 import {
@@ -395,6 +397,7 @@ export async function addCategoryAsync(category) {
     active: true,
     extra: [],
     ordering: current.length,
+    listingsCount: 0,
     ...category,
   };
   saveLabelOverride(category.key, category);
@@ -604,14 +607,49 @@ export async function bulkRemoveCategoriesAsync(keys, listingsByKey = {}) {
 
   try {
     const res = await categoriesApi.bulk("delete", ids);
+    // Server ni chanzo cha ukweli: inaweza kuruka categories zenye listings
+    const skippedIds = new Set(
+      (Array.isArray(res?.skipped) ? res.skipped : []).map((x) => String(x.id))
+    );
+    if (skippedIds.size > 0) {
+      const restored = current.filter(
+        (c) => !deletable.includes(c.key) || skippedIds.has(String(c.id))
+      );
+      saveAll(restored);
+      for (const c of current) {
+        if (skippedIds.has(String(c.id))) {
+          const sk = res.skipped.find((x) => String(x.id) === String(c.id));
+          blocked.push({ key: c.key, listingsCount: sk?.listings_count ?? 0 });
+        }
+      }
+    }
     return {
       ok: true,
-      count: res?.count ?? ids.length,
+      count: res?.count ?? ids.length - skippedIds.size,
       blocked,
     };
   } catch (err) {
     saveAll(current); // rollback
+    // 409 HAS_LISTINGS — server imekataa zote
+    const skipped = err?.data?.skipped || err?.body?.skipped || [];
+    for (const x of skipped) {
+      const c = current.find((cc) => String(cc.id) === String(x.id));
+      if (c) blocked.push({ key: c.key, listingsCount: x.listings_count ?? 0 });
+    }
     return { ok: false, error: err, blocked };
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// STATS — GET /categories/stats/?days=N
+// Inarudisha { available, categories:[{id,slug,total,new_recent,views,by_status}], totals }
+// ══════════════════════════════════════════════════════════
+export async function fetchCategoryStats(days = 30) {
+  try {
+    const data = await api.get(`/categories/stats/?days=${Number(days) || 30}`);
+    return { ok: true, data };
+  } catch (err) {
+    return { ok: false, error: err, unsupported: err?.status === 404 };
   }
 }
 
@@ -766,6 +804,11 @@ function normalizeCategoryFromApi(raw) {
     isPopular: !!raw.is_popular,
     active: raw.is_active !== false,
     ordering: raw.ordering ?? 0,
+    // null = backend haijatuma (toleo la zamani) → UI itatumia fallback
+    listingsCount:
+      raw.listings_count === undefined || raw.listings_count === null
+        ? null
+        : Number(raw.listings_count) || 0,
     extra: SEED_EXTRA_BY_KEY[seedKey] || [],
     _backendExtra: extraData,
     createdAt: raw.created_at,
@@ -782,6 +825,7 @@ function preserveExtras(optimistic, fromApi) {
     isPopular: optimistic?.isPopular ?? fromApi?.isPopular ?? false,
     label: optimistic?.label || fromApi?.label,
     description: optimistic?.description || fromApi?.description,
+    listingsCount: fromApi?.listingsCount ?? optimistic?.listingsCount ?? null,
   };
 }
 

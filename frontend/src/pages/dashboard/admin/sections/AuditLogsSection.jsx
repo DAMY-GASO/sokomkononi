@@ -30,6 +30,7 @@ import {
   Monitor,
   Route,
   Hash,
+  Download,
 } from "lucide-react";
 import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -468,6 +469,46 @@ export default function AuditLogsSection() {
     }
   };
 
+  // ── Export CSV (logs zinazoonyeshwa sasa, kwa kuzingatia vichujio) ──
+  const handleExportCsv = () => {
+    if (filtered.length === 0) return;
+    // Zuia CSV/Excel formula injection (=, +, -, @ mwanzoni mwa seli)
+    const cell = (v) => {
+      let s = String(v ?? "").replace(/\r?\n/g, " ");
+      if (/^[=+\-@\t]/.test(s)) s = `'${s}`;
+      return `"${s.replace(/"/g, '""')}"`;
+    };
+    const header = [
+      "ID", t("Muda", "Time"), t("Msimamizi", "Admin"), t("Kitendo", "Action"),
+      "Action Key", t("Kitu", "Target"), "Target ID", t("Maelezo", "Details"),
+      "IP", "Method", "Path",
+    ];
+    const rows = filtered.map((l) => [
+      l.id,
+      l.at ? new Date(l.at).toISOString() : "",
+      l.adminName,
+      getActionLabel(l.action),
+      l.action,
+      pickText(l, "target", lang),
+      l.targetId,
+      pickText(l, "details", lang),
+      l.ipAddress,
+      l.requestMethod,
+      l.requestPath,
+    ]);
+    const csv = [header, ...rows].map((r) => r.map(cell).join(",")).join("\r\n");
+    // BOM ili Excel isome UTF-8 (Kiswahili) vizuri
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `audit-logs_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  };
+
   const getActionLabel = (key) => {
     const action = AUDIT_ACTIONS.find((a) => a.key === key);
     return action?.label?.[lang] || action?.label?.sw || key;
@@ -521,6 +562,21 @@ export default function AuditLogsSection() {
             )}
           </p>
         </div>
+        {logs.length > 0 && (
+          <button
+            onClick={handleExportCsv}
+            disabled={filtered.length === 0}
+            style={{ color: COLORS.ink }}
+            className="flex items-center gap-1 text-xs font-semibold shrink-0 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+            title={t(
+              "Pakua logs zinazoonyeshwa (kwa vichujio vya sasa) kama CSV",
+              "Download the currently shown logs (current filters) as CSV"
+            )}
+          >
+            <Download size={12} />
+            {t("Pakua CSV", "Export CSV")} ({filtered.length})
+          </button>
+        )}
         {logs.length > 0 && (
           <button
             onClick={() => setConfirmClear(true)}

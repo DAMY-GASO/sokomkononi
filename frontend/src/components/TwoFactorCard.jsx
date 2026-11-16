@@ -10,7 +10,7 @@ import RecoveryCodesCard from "./RecoveryCodesCard.jsx";
 const errMsg = (err, fallback) =>
   err?.data?.detail || err?.message || fallback;
 
-export default function TwoFactorCard({ lang }) {
+export default function TwoFactorCard({ lang, onStatusChange }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const [status, setStatus] = useState(null); // { enabled: bool }
   const [loading, setLoading] = useState(true);
@@ -30,7 +30,10 @@ export default function TwoFactorCard({ lang }) {
     (async () => {
       try {
         const s = await securityApi.twoFactorStatus();
-        if (!cancelled) setStatus({ enabled: !!s?.enabled, remaining: s?.recovery_codes_remaining ?? null });
+        if (!cancelled) {
+          setStatus({ enabled: !!s?.enabled, remaining: s?.recovery_codes_remaining ?? null });
+          onStatusChange?.(!!s?.enabled);
+        }
       } catch (err) {
         if (!cancelled) {
           // 404/405 = backend haina 2FA. Kosa lingine (mtandao/500) = jaribu tena,
@@ -66,6 +69,7 @@ export default function TwoFactorCard({ lang }) {
       // Recovery codes zinakuja moja kwa moja kwenye jibu la verify
       setRecovery(r?.recovery_codes || []);
       setStatus({ enabled: true, remaining: (r?.recovery_codes || []).length });
+      onStatusChange?.(true);
       setSetup(null);
       setCode("");
     } catch (err) {
@@ -82,6 +86,7 @@ export default function TwoFactorCard({ lang }) {
     try {
       await securityApi.twoFactorDisable({ password, code: code.trim() });
       setStatus({ enabled: false });
+      onStatusChange?.(false);
       setRecovery(null);
       setCode(""); setPassword("");
     } catch (err) {

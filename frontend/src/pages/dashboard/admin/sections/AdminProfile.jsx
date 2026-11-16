@@ -23,6 +23,11 @@ import {
   Info,
 } from "lucide-react";
 import SectionHeader from "../shared/SectionHeader.jsx";
+import TwoFactorCard from "../../../../components/TwoFactorCard.jsx";
+import {
+  useAdminTwoFactor,
+  setAdminTwoFactorEnabled,
+} from "../../../../config/adminTwoFactor.js";
 
 // ============================================================
 // AVATAR
@@ -59,6 +64,7 @@ function Avatar({ user, size = "lg" }) {
 export default function AdminProfile() {
   const { user } = useAuth();
   const { lang } = useLanguage();
+  const twofa = useAdminTwoFactor(user?.id ?? user?.email ?? "admin");
 
   const fileInputRef = useRef(null);
 
@@ -218,8 +224,8 @@ export default function AdminProfile() {
       <SectionHeader
         title={t("Wasifu wa Msimamizi", "Admin Profile")}
         subtitle={t(
-          "Badilisha taarifa zako, picha, na nenosiri.",
-          "Update your info, photo, and password."
+          "Badilisha taarifa zako, picha, nenosiri, na usalama wa akaunti (2FA).",
+          "Update your info, photo, password, and account security (2FA)."
         )}
       />
 
@@ -462,6 +468,28 @@ export default function AdminProfile() {
           </button>
         </div>
       </form>
+
+      {/* TWO-FACTOR AUTHENTICATION */}
+      <div className="mt-4" id="two-factor">
+        {twofa.status === "required" && (
+          <div className="alert alert-danger mb-3 font-medium">
+            {t(
+              "Akaunti yako ya admin haina 2FA. Washa 2FA hapa chini ili uendelee kutumia dashboard.",
+              "Your admin account has no 2FA. Turn it on below to keep using the dashboard."
+            )}
+          </div>
+        )}
+        <p className="text-[11px] text-muted flex items-start gap-1 mb-2">
+          <Info size={11} className="shrink-0 mt-0.5" />
+          <span>
+            {t(
+              "Akaunti za admin zinadhibiti pesa na data za mfumo mzima. Washa 2FA ili kuilinda.",
+              "Admin accounts control money and platform-wide data. Turn on 2FA to protect it."
+            )}
+          </span>
+        </p>
+        <TwoFactorCard lang={lang} onStatusChange={setAdminTwoFactorEnabled} />
+      </div>
     </div>
   );
 }

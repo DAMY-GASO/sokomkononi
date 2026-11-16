@@ -12,7 +12,7 @@ import {
   useListings,
   useHydratePublicListings,
 } from "../../../../config/listingsStore.js";
-import { getAccessToken } from "../../../../api/client.js";
+import { downloadFile } from "../../../../api/client.js";
 import { useDeals } from "../../../../config/dealsStore.js";
 import { usePlatformRevenue, localDayKey } from "../shared/revenue.js";
 import {
@@ -77,7 +77,6 @@ const LISTING_STATUS_COLORS = {
 };
 
 async function downloadReport(format, { period, from, to }) {
-  const base = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") || "/api";
   const params = new URLSearchParams();
   params.set("format", format);
   if (period === "custom") {
@@ -87,18 +86,9 @@ async function downloadReport(format, { period, from, to }) {
     params.set("period", period);
   }
   const path = `/finance/reports/export/?${params.toString()}`;
-  const token = getAccessToken?.();
-  const res = await fetch(`${base}${path}`, {
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      "Accept-Language": (typeof window !== "undefined" && window.__SMK_LANG__) || "sw",
-    },
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.detail || err?.error?.message || `Download failed (${res.status})`);
-  }
-  const data = await res.blob();
+  // downloadFile inaweka Authorization na ina-refresh session token
+  // (fetch ya moja kwa moja ilishindwa token ikiisha muda).
+  const data = await downloadFile(path);
   const url = window.URL.createObjectURL(data);
   const a = document.createElement("a");
   a.href = url;
@@ -121,6 +111,7 @@ function DownloadPanel({ lang }) {
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const todayStr = new Date().toISOString().slice(0, 10);
 
   const periods = [
     { key: "today", label: t("Leo", "Today") },
@@ -140,6 +131,15 @@ function DownloadPanel({ lang }) {
   const handleDownload = async (format) => {
     if (period === "custom" && (!from || !to)) {
       setError(t("Chagua tarehe ya kuanza na kumaliza.", "Select start and end date."));
+      return;
+    }
+    if (period === "custom" && from > to) {
+      setError(
+        t(
+          "Tarehe ya kuanza haiwezi kuwa baada ya tarehe ya mwisho.",
+          "Start date cannot be after end date."
+        )
+      );
       return;
     }
     setBusy(format);
@@ -211,6 +211,7 @@ function DownloadPanel({ lang }) {
             <input
               type="date"
               value={from}
+              max={to || todayStr}
               onChange={(e) => setFrom(e.target.value)}
               className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none w-full focus:border-[#FEA406] cursor-pointer"
               style={{ colorScheme: "light dark" }}
@@ -223,6 +224,8 @@ function DownloadPanel({ lang }) {
             <input
               type="date"
               value={to}
+              min={from || undefined}
+              max={todayStr}
               onChange={(e) => setTo(e.target.value)}
               className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none w-full focus:border-[#FEA406] cursor-pointer"
               style={{ colorScheme: "light dark" }}
@@ -736,13 +739,19 @@ export default function ReportsSection() {
             iconColor={COLORS.rust}
             hint={t("Kwa mwezi", "Per month")}
           >
-            <VBarChart
-              data={revenueByMonth.map((m) => ({ ...m, color: COLORS.rust }))}
-              height={180}
-              valueFormat={(v) =>
-                v >= 1_000_000 ? `${Math.round(v / 1_000_000)}M` : v >= 1000 ? `${Math.round(v / 1000)}k` : v
-              }
-            />
+            {revenueByMonth.length === 0 ? (
+              <p className="py-6 text-center text-xs text-muted">
+                {t("Hakuna mapato kwa miezi 6 iliyopita", "No revenue in the last 6 months")}
+              </p>
+            ) : (
+              <VBarChart
+                data={revenueByMonth.map((m) => ({ ...m, color: COLORS.rust }))}
+                height={180}
+                valueFormat={(v) =>
+                  v >= 1_000_000 ? `${Math.round(v / 1_000_000)}M` : v >= 1000 ? `${Math.round(v / 1000)}k` : v
+                }
+              />
+            )}
           </ChartCard>
         </div>
       </div>

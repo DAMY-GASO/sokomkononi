@@ -1,20 +1,23 @@
 // ============================================================
 // CategoriesPanel.jsx
 // Categories management — Add/Edit/Disable/Delete + REORDER
-// + SEARCH FILTER + BULK ACTIONS.
+// + SEARCH FILTER + BULK ACTIONS + LISTINGS COUNT + ANALYTICS.
 //
 // Marekebisho:
 //  - Search bar (jina SW/EN, key)
 //  - Filter tabs: Zote / Hai / Imesimamishwa / Maarufu
 //  - Bulk actions: select all, enable, disable, mark/unmark popular, delete
 //  - Bulk actions bar inaonekana kama kuna zilizochaguliwa
+//  - Idadi ya listings sasa inatoka backend (`listings_count`), si useListings
+//  - Kichujio "Tupu" + kadi ya Takwimu (GET /categories/stats/)
 // ============================================================
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   ShoppingBag, Plus, Trash2, Loader2,
   ChevronUp, ChevronDown, Search, CheckSquare, Square,
   Eye, EyeOff, Star, X, CheckCircle, AlertTriangle,
+  BarChart3, RefreshCw,
 } from "lucide-react";
 import { COLORS } from "../../shared/constants.js";
 import CategoryForm from "./CategoryForm.jsx";
@@ -31,6 +34,7 @@ import {
   bulkToggleActiveAsync,
   bulkTogglePopularAsync,
   bulkRemoveCategoriesAsync,
+  fetchCategoryStats,
 } from "../../../../../config/categoriesStore.js";
 import { useListings } from "../../../../../config/listingsStore.js";
 import { useToast } from "../../../../../components/Toast.jsx";
@@ -43,7 +47,173 @@ const FILTER_TABS = [
   { key: "active", label: { sw: "Hai", en: "Active" } },
   { key: "inactive", label: { sw: "Imesimamishwa", en: "Inactive" } },
   { key: "popular", label: { sw: "Maarufu", en: "Popular" } },
+  { key: "empty", label: { sw: "Tupu", en: "Empty" } },
 ];
+
+const STATS_PERIODS = [7, 30, 90];
+
+// Status za Listing (listings/models.py) → majina ya kusomeka
+const LISTING_STATUS_LABELS = {
+  DRAFT: { sw: "Rasimu", en: "Draft" },
+  PENDING_PAYMENT: { sw: "Inasubiri malipo", en: "Pending payment" },
+  PENDING_APPROVAL: { sw: "Inasubiri ukaguzi", en: "Pending review" },
+  NEEDS_EDIT: { sw: "Inahitaji marekebisho", en: "Needs edit" },
+  APPROVED_PENDING_PAYMENT: { sw: "Imeidhinishwa, inasubiri malipo", en: "Approved, awaiting payment" },
+  PAID_PENDING_APPROVAL: { sw: "Imelipwa, inasubiri idhini", en: "Paid, awaiting approval" },
+  LIVE: { sw: "Hai", en: "Live" },
+  RESERVED: { sw: "Imehifadhiwa", en: "Reserved" },
+  SOLD: { sw: "Imeuzwa", en: "Sold" },
+  PAUSED: { sw: "Imesimamishwa", en: "Paused" },
+  REJECTED: { sw: "Imekataliwa", en: "Rejected" },
+  EXPIRED: { sw: "Muda umeisha", en: "Expired" },
+  ARCHIVED: { sw: "Imehifadhiwa kumbukumbu", en: "Archived" },
+};
+
+// ============================================================
+// ANALYTICS CARD — takwimu za listings kwa category
+// ============================================================
+function CategoryAnalytics({ t, stats, loading, error, days, onDaysChange, onRefresh }) {
+  const rows = useMemo(
+    () =>
+      [...(stats?.categories || [])].sort((a, b) => b.total - a.total),
+    [stats]
+  );
+  const totals = stats?.totals || {};
+  const max = rows.length ? Math.max(1, rows[0].total) : 1;
+  const empties = rows.filter((r) => r.total === 0);
+
+  const Tile = ({ label, value }) => (
+    <div
+      className="rounded-lg border px-3 py-2"
+      style={{ borderColor: "rgb(var(--c-hairline))" }}
+    >
+      <p className="text-[10px] uppercase tracking-wide text-muted">{label}</p>
+      <p className="text-lg font-bold text-primary">{value ?? "—"}</p>
+    </div>
+  );
+
+  return (
+    <div
+      className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3"
+      style={{ borderColor: "rgb(var(--c-hairline))" }}
+    >
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <p className="text-xs font-semibold text-primary">
+          {t("Takwimu za Categories", "Category Analytics")}
+        </p>
+        <div className="flex items-center gap-1.5">
+          {STATS_PERIODS.map((d) => (
+            <button
+              key={d}
+              onClick={() => onDaysChange(d)}
+              disabled={loading}
+              className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border border-hairline disabled:opacity-50 ${
+                days === d ? "chip-active" : "bg-card text-primary"
+              }`}
+            >
+              {d}{t("s", "d")}
+            </button>
+          ))}
+          <button
+            onClick={onRefresh}
+            disabled={loading}
+            className="w-7 h-7 rounded-md border flex items-center justify-center disabled:opacity-50"
+            style={{ borderColor: "rgb(var(--c-hairline))" }}
+            aria-label={t("Onyesha upya", "Refresh")}
+          >
+            <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <p className="text-xs" style={{ color: COLORS.dangerText }}>
+          {error}
+        </p>
+      )}
+
+      {loading && !stats && (
+        <div className="flex items-center gap-2 text-xs text-secondary">
+          <Loader2 size={13} className="animate-spin" />
+          {t("Inapakia takwimu...", "Loading stats...")}
+        </div>
+      )}
+
+      {stats && stats.available === false && (
+        <p className="text-xs text-secondary">
+          {t(
+            "Backend haikuweza kupata model ya Listing. Angalia LISTING_MODEL_LABEL kwenye categories/stats.py.",
+            "Backend could not find the Listing model. Check LISTING_MODEL_LABEL in categories/stats.py."
+          )}
+        </p>
+      )}
+
+      {stats && stats.available !== false && (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <Tile label={t("Listings zote", "Total listings")} value={totals.listings} />
+            <Tile
+              label={t(`Mpya (siku ${stats.days})`, `New (${stats.days}d)`)}
+              value={stats.has_created_at ? totals.new_recent : null}
+            />
+            <Tile label={t("Categories tupu", "Empty categories")} value={totals.empty} />
+            <Tile
+              label={t("Views", "Views")}
+              value={stats.has_views ? totals.views : null}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {rows.map((r) => {
+              const pct = totals.listings
+                ? Math.round((r.total / totals.listings) * 100)
+                : 0;
+              const statusText = Object.entries(r.by_status || {})
+                .map(([k, v]) => {
+                  const l = LISTING_STATUS_LABELS[k];
+                  return `${l ? t(l.sw, l.en) : k}: ${v}`;
+                })
+                .join(" · ");
+              return (
+                <div key={r.id}>
+                  <div className="flex items-baseline justify-between gap-2 text-xs">
+                    <span className="font-semibold text-primary truncate">{r.name}</span>
+                    <span className="text-muted shrink-0">
+                      {r.total} ({pct}%)
+                      {stats.has_created_at && r.new_recent > 0 ? ` · +${r.new_recent}` : ""}
+                    </span>
+                  </div>
+                  <div
+                    className="h-1.5 rounded-full mt-1 overflow-hidden"
+                    style={{ background: "rgb(var(--c-ink) / 0.08)" }}
+                  >
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${Math.max(r.total ? 3 : 0, (r.total / max) * 100)}%`,
+                        background: COLORS.gold,
+                      }}
+                    />
+                  </div>
+                  {statusText && (
+                    <p className="text-[10px] text-muted mt-0.5">{statusText}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {empties.length > 0 && (
+            <p className="text-[11px] text-secondary">
+              {t("Hazina listings: ", "No listings: ")}
+              {empties.map((e) => e.name).join(", ")}
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
 
 export default function CategoriesPanel() {
   const { lang } = useLanguage();
@@ -68,8 +238,53 @@ export default function CategoriesPanel() {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  const listingsCountFor = (key) =>
-    listings.filter((l) => l.category === key).length;
+  // ⬇️ MPYA: takwimu
+  const [statsOpen, setStatsOpen] = useState(false);
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsError, setStatsError] = useState("");
+  const [statsDays, setStatsDays] = useState(30);
+
+  const loadStats = useCallback(
+    async (days) => {
+      setStatsLoading(true);
+      setStatsError("");
+      const res = await fetchCategoryStats(days);
+      if (res.ok) {
+        setStats(res.data);
+      } else {
+        setStatsError(
+          res.unsupported
+            ? lang === "sw"
+              ? "Endpoint ya takwimu haipo bado kwenye backend."
+              : "Stats endpoint is not available on the backend yet."
+            : res.error?.message ||
+                (lang === "sw" ? "Imeshindwa kupakia takwimu." : "Failed to load stats.")
+        );
+      }
+      setStatsLoading(false);
+    },
+    [lang]
+  );
+
+  useEffect(() => {
+    if (statsOpen) loadStats(statsDays);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statsOpen, statsDays]);
+
+  const statsById = useMemo(() => {
+    const m = new Map();
+    (stats?.categories || []).forEach((r) => m.set(String(r.id), r));
+    return m;
+  }, [stats]);
+
+  // Chanzo cha ukweli: `listings_count` ya backend. `useListings()` ni
+  // fallback tu (backend ya zamani) — inaweza kuwa na sehemu ya listings.
+  const listingsCountFor = (key) => {
+    const cat = categories.find((c) => c.key === key);
+    if (cat && cat.listingsCount != null) return cat.listingsCount;
+    return listings.filter((l) => l.category === key).length;
+  };
 
   // ══════════════════════════════════════════════════════════
   // SORTED + FILTERED
@@ -92,6 +307,8 @@ export default function CategoriesPanel() {
       result = result.filter((c) => c.active === false);
     } else if (filterTab === "popular") {
       result = result.filter((c) => c.isPopular === true);
+    } else if (filterTab === "empty") {
+      result = result.filter((c) => listingsCountFor(c.key) === 0);
     }
 
     // Search
@@ -107,7 +324,8 @@ export default function CategoriesPanel() {
     }
 
     return result;
-  }, [sortedCategories, filterTab, query]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortedCategories, filterTab, query, listings]);
 
   // ══════════════════════════════════════════════════════════
   // SELECTION HELPERS
@@ -442,19 +660,41 @@ export default function CategoriesPanel() {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => {
-            setAdding(true);
-            setEditing(null);
-            setError("");
-          }}
-          disabled={adding || !!editing || busy.saving}
-          style={{ background: COLORS.gold, color: "rgb(var(--c-night))" }}
-          className="flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-2 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Plus size={13} /> {lang === "sw" ? "Category Mpya" : "New Category"}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => setStatsOpen((v) => !v)}
+            className="flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-2 border bg-card text-primary"
+            style={{ borderColor: "rgb(var(--c-hairline))" }}
+            aria-expanded={statsOpen}
+          >
+            <BarChart3 size={13} /> {t("Takwimu", "Analytics")}
+          </button>
+          <button
+            onClick={() => {
+              setAdding(true);
+              setEditing(null);
+              setError("");
+            }}
+            disabled={adding || !!editing || busy.saving}
+            style={{ background: COLORS.gold, color: "rgb(var(--c-night))" }}
+            className="flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Plus size={13} /> {lang === "sw" ? "Category Mpya" : "New Category"}
+          </button>
+        </div>
       </div>
+
+      {statsOpen && (
+        <CategoryAnalytics
+          t={t}
+          stats={stats}
+          loading={statsLoading}
+          error={statsError}
+          days={statsDays}
+          onDaysChange={setStatsDays}
+          onRefresh={() => loadStats(statsDays)}
+        />
+      )}
 
       {/* Error banner */}
       {error && (
@@ -772,6 +1012,15 @@ export default function CategoriesPanel() {
                         : lang === "sw"
                           ? "listings"
                           : "listings"}
+                      {(() => {
+                        const st = cat.id != null ? statsById.get(String(cat.id)) : null;
+                        if (!st) return null;
+                        const parts = [];
+                        if (stats?.has_created_at && st.new_recent > 0)
+                          parts.push(`+${st.new_recent} / ${stats.days}${t("s", "d")}`);
+                        if (stats?.has_views && st.views > 0) parts.push(`${st.views} views`);
+                        return parts.length ? ` · ${parts.join(" · ")}` : null;
+                      })()}
                     </p>
                   </div>
                 </div>

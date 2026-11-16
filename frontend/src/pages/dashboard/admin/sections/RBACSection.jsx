@@ -20,11 +20,19 @@ import {
   Lock,
   UserCog,
   Loader2,
+  LayoutGrid,
+  History,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import { useUsers, hydrateUsersFromApi } from "../../../../config/usersStore.js";
+import {
+  useAuditLogs,
+  AUDIT_ACTIONS,
+} from "../../../../config/auditLogsStore.js";
 import {
   useRoles,
   useSubAdminsWithRoles,
@@ -44,6 +52,11 @@ import {
 const TABS = [
   { key: "roles", label: { sw: "Wadhifa", en: "Roles" }, icon: ShieldCheck },
   { key: "staff", label: { sw: "Wafanyakazi", en: "Staff" }, icon: UserCog },
+  {
+    key: "matrix",
+    label: { sw: "Matrix ya Ruhusa", en: "Permission Matrix" },
+    icon: LayoutGrid,
+  },
 ];
 
 // ============================================================
@@ -354,11 +367,131 @@ function RoleForm({ initial, lang, onSave, onCancel, saving }) {
   );
 }
 
+
+// ============================================================
+// AUDIT HELPERS (kwa staff activity)
+// ============================================================
+function logDetails(log, lang) {
+  const sw = log.detailsSw ?? log.details_sw;
+  const en = log.detailsEn ?? log.details_en;
+  const raw = typeof log.details === "string" ? log.details : "";
+  return lang === "en" ? en || raw || sw || "" : sw || raw || en || "";
+}
+
+// ============================================================
+// PERMISSION MATRIX — grid ya role × permission
+// ============================================================
+function PermissionMatrix({ roles, lang, busy, onToggle }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  if (roles.length === 0) {
+    return (
+      <p className="text-xs text-muted text-center py-6">
+        {t("Hakuna roles.", "No roles.")}
+      </p>
+    );
+  }
+
+  return (
+    <div
+      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      className="rounded-xl border w-full min-w-0 overflow-hidden"
+    >
+      <p className="text-[11px] text-secondary px-3 sm:px-4 pt-3">
+        {t(
+          "Bofya kisanduku kuwasha/kuzima ruhusa kwa role. Mabadiliko yanahifadhiwa mara moja.",
+          "Click a cell to grant/revoke a permission for a role. Changes save immediately."
+        )}
+      </p>
+      <div className="overflow-x-auto p-3 sm:p-4">
+        <table className="text-xs border-collapse min-w-full">
+          <thead>
+            <tr>
+              <th
+                className="text-left font-semibold text-secondary pr-4 pb-2 sticky left-0 z-10"
+                style={{ background: "white", minWidth: 160 }}
+              >
+                {t("Ruhusa", "Permission")}
+              </th>
+              {roles.map((role) => (
+                <th
+                  key={role.key}
+                  className="font-semibold text-primary px-2 pb-2 text-center whitespace-nowrap"
+                  style={{ minWidth: 90 }}
+                >
+                  <span className="block truncate max-w-[110px] mx-auto">
+                    {role.label?.[lang] || role.label?.sw || role.key}
+                  </span>
+                  {role.isSystem && (
+                    <Lock size={9} className="inline text-muted" />
+                  )}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {PERMISSIONS.map((perm) => (
+              <tr key={perm.key} style={{ borderTop: `1px solid ${COLORS.sandLine}` }}>
+                <td
+                  className="py-2 pr-4 text-primary sticky left-0 z-10"
+                  style={{ background: "white" }}
+                >
+                  {perm.label?.[lang] || perm.label?.sw || perm.key}
+                </td>
+                {roles.map((role) => {
+                  const checked = role.permissions.includes(perm.key);
+                  const key = `cell-${role.key}-${perm.key}`;
+                  const isBusy = !!busy[key];
+                  return (
+                    <td key={role.key} className="text-center py-2">
+                      {isBusy ? (
+                        <Loader2 size={13} className="animate-spin inline text-muted" />
+                      ) : (
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => onToggle(role, perm.key, !checked)}
+                          disabled={Object.keys(busy).some((k) => k.startsWith(`cell-${role.key}-`))}
+                          aria-label={`${role.key} · ${perm.key}`}
+                          className="w-4 h-4 rounded text-[#2F6D4F] focus:ring-[#2F6D4F] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        />
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+            <tr style={{ borderTop: `2px solid ${COLORS.sandLine}` }}>
+              <td className="py-2 pr-4 font-semibold text-secondary sticky left-0 z-10" style={{ background: "white" }}>
+                {t("Jumla", "Total")}
+              </td>
+              {roles.map((role) => (
+                <td key={role.key} className="text-center py-2 font-semibold text-secondary">
+                  {role.permissions.length}/{PERMISSIONS.length}
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ============================================================
 // STAFF CARD
 // ============================================================
-function StaffCard({ staff, roles, lang, onEdit, onRemove, isBusy }) {
+function StaffCard({
+  staff,
+  roles,
+  lang,
+  onEdit,
+  onRemove,
+  isBusy,
+  activity = [],
+}) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
+  const [showActivity, setShowActivity] = useState(false);
   const role = roles.find((r) => r.key === staff.roleKey);
   const roleLabel =
     role?.label?.[lang] || role?.label?.sw || staff.roleKey || "—";
@@ -409,6 +542,16 @@ function StaffCard({ staff, roles, lang, onEdit, onRemove, isBusy }) {
               {t("Aliongezwa", "Added")} {timeAgo(staff.addedAt, lang)}
             </p>
           )}
+
+          <button
+            type="button"
+            onClick={() => setShowActivity((v) => !v)}
+            className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-secondary hover:text-primary"
+          >
+            <History size={11} />
+            {t("Shughuli", "Activity")} ({activity.length})
+            {showActivity ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+          </button>
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
@@ -434,6 +577,57 @@ function StaffCard({ staff, roles, lang, onEdit, onRemove, isBusy }) {
           </button>
         </div>
       </div>
+
+      {showActivity && (
+        <div
+          className="mt-3 pt-3 border-t"
+          style={{ borderColor: COLORS.sandLine }}
+        >
+          {activity.length === 0 ? (
+            <p className="text-[11px] text-muted italic">
+              {t(
+                "Hakuna shughuli zilizorekodiwa kwa mfanyakazi huyu.",
+                "No recorded activity for this staff member."
+              )}
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {activity.slice(0, 8).map((log) => {
+                const action = AUDIT_ACTIONS.find((a) => a.key === log.action);
+                const details = logDetails(log, lang);
+                return (
+                  <li key={log.id} className="text-xs min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span
+                        style={{ background: `${COLORS.night}0D`, color: COLORS.night }}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+                      >
+                        {action?.label?.[lang] || action?.label?.sw || log.action}
+                      </span>
+                      <span className="text-[10px] text-muted whitespace-nowrap">
+                        {timeAgo(log.at, lang)}
+                      </span>
+                    </div>
+                    {details && (
+                      <p className="text-[11px] text-secondary mt-0.5 line-clamp-2 break-words">
+                        {details}
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {activity.length > 8 && (
+            <p className="text-[10px] text-muted mt-2">
+              {t(
+                `Inaonyesha 8 za hivi karibuni kati ya ${activity.length}. Tazama Audit Logs kwa zote.`,
+                `Showing latest 8 of ${activity.length}. See Audit Logs for all.`
+              )}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -611,6 +805,7 @@ export default function RBACSection() {
   const { lang } = useLanguage();
   const roles = useRoles();
   const staff = useSubAdminsWithRoles();
+  const auditLogs = useAuditLogs();
 
   const [activeTab, setActiveTab] = useState("roles");
   const [addingRole, setAddingRole] = useState(false);
@@ -627,6 +822,23 @@ export default function RBACSection() {
       delete n[key];
       return n;
     });
+
+  // Shughuli za kila staff kutoka audit logs (logs 200 za hivi karibuni).
+  // Inalinganisha kwa admin id kama ipo, vinginevyo kwa jina la msimamizi.
+  const activityByStaff = React.useMemo(() => {
+    const map = new Map();
+    staff.forEach((s) => {
+      const mine = (auditLogs || [])
+        .filter((l) => {
+          const lid = l.adminId ?? l.adminUserId ?? l.admin_id ?? null;
+          if (lid != null && s.userId != null) return String(lid) === String(s.userId);
+          return !!s.name && l.adminName === s.name;
+        })
+        .sort((a, b) => new Date(b.at) - new Date(a.at));
+      map.set(s.id, mine);
+    });
+    return map;
+  }, [staff, auditLogs]);
 
   // Hydrate roles + staff kwenye mount
   useEffect(() => {
@@ -704,6 +916,50 @@ export default function RBACSection() {
       setError(
         res.error?.message ||
           t("Imeshindwa kufuta role.", "Failed to delete role."),
+      );
+  };
+
+  // Matrix: washa/zima ruhusa moja kwa role moja
+  const handleToggleCell = async (role, permKey, grant) => {
+    const next = grant
+      ? [...role.permissions, permKey]
+      : role.permissions.filter((p) => p !== permKey);
+
+    // Role lazima iwe na ruhusa angalau moja (sawa na RoleForm)
+    if (next.length === 0) {
+      setError(
+        t(
+          "Role lazima iwe na ruhusa angalau moja.",
+          "A role must keep at least one permission."
+        )
+      );
+      return;
+    }
+    if (
+      role.isSystem &&
+      !window.confirm(
+        t(
+          `"${role.key}" ni role ya mfumo. Badilisha ruhusa zake?`,
+          `"${role.key}" is a system role. Change its permissions?`
+        )
+      )
+    )
+      return;
+
+    const busyKey = `cell-${role.key}-${permKey}`;
+    if (busy[busyKey]) return;
+    setBusy((b) => ({ ...b, [busyKey]: true }));
+    setError("");
+    const res = await updateRoleAsync(role.key, {
+      label: role.label,
+      description: role.description,
+      permissions: next,
+    });
+    clearBusy(busyKey);
+    if (!res.ok)
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kuhifadhi ruhusa.", "Failed to save permission.")
       );
   };
 
@@ -988,6 +1244,7 @@ export default function RBACSection() {
                 roles={roles}
                 lang={lang}
                 isBusy={!!busy[`staff-${member.id}`]}
+                activity={activityByStaff.get(member.id) || []}
                 onEdit={(s) => {
                   setEditingStaff(s);
                   setAddingStaff(false);
@@ -998,6 +1255,16 @@ export default function RBACSection() {
             ))
           )}
         </div>
+      )}
+
+      {/* ==================== MATRIX TAB ==================== */}
+      {activeTab === "matrix" && (
+        <PermissionMatrix
+          roles={roles}
+          lang={lang}
+          busy={busy}
+          onToggle={handleToggleCell}
+        />
       )}
     </div>
   );

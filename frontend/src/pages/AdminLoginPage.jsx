@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { adminLoginAsync, useAuth } from "../config/authStore.js";
+import { adminLoginAsync, verifyAdmin2faAsync, useAuth } from "../config/authStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { ADMIN_PATH } from "../config/adminPath.js";
 import Captcha, { isCaptchaEnabled } from "../components/Captcha.jsx";
@@ -77,6 +77,13 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // ✅ 2FA state (hatua ya pili ya login)
+  const [step, setStep] = useState("credentials"); // "credentials" | "2fa"
+  const [codeToken, setCodeToken] = useState("");
+  const [code, setCode] = useState("");
+  const [useRecovery, setUseRecovery] = useState(false);
+  const tx = (sw, en) => (lang === "sw" ? sw : en);
+
   // ✅ Captcha state
   const [captchaToken, setCaptchaToken] = useState("");
   const [captchaNonce, setCaptchaNonce] = useState(0);
@@ -115,6 +122,16 @@ export default function AdminLoginPage() {
     });
     setLoading(false);
 
+    // ✅ 2FA imewashwa kwa akaunti hii → nenda hatua ya code
+    if (res.requires2fa) {
+      setCodeToken(res.codeToken || "");
+      setCode("");
+      setUseRecovery(false);
+      setStep("2fa");
+      resetCaptcha(); // captcha token imetumika
+      return;
+    }
+
     if (!res.ok) {
       setError(
         getErrorMessage(
@@ -130,6 +147,41 @@ export default function AdminLoginPage() {
     navigate(`${ADMIN_PATH}/overview`);
   }
 
+  async function handleVerify2fa(e) {
+    e.preventDefault();
+    const clean = code.trim();
+    if (!clean) {
+      setError(tx("Weka msimbo wa 2FA.", "Enter your 2FA code."));
+      return;
+    }
+    setError("");
+    setLoading(true);
+    const res = await verifyAdmin2faAsync({ codeToken, code: clean });
+    setLoading(false);
+
+    if (!res.ok) {
+      setError(
+        getErrorMessage(
+          res.error,
+          tx("Msimbo si sahihi. Jaribu tena.", "Invalid code. Please try again.")
+        )
+      );
+      setCode("");
+      return;
+    }
+    navigate(`${ADMIN_PATH}/overview`);
+  }
+
+  function backToCredentials() {
+    setStep("credentials");
+    setCodeToken("");
+    setCode("");
+    setError("");
+    setUseRecovery(false);
+    setForm((f) => ({ ...f, password: "" }));
+    resetCaptcha();
+  }
+
   const leftHeading = t("admin_panel_heading");
   const leftSubtext = t("admin_panel_subtext");
 
@@ -140,8 +192,19 @@ export default function AdminLoginPage() {
     t("admin_feature4"),
   ].filter(Boolean);
 
-  const formHeading = t("admin_login_heading");
-  const formSubtext = t("admin_login_subtext");
+  const formHeading =
+    step === "2fa"
+      ? tx("Uthibitishaji wa Hatua Mbili", "Two-Factor Verification")
+      : t("admin_login_heading");
+  const formSubtext =
+    step === "2fa"
+      ? useRecovery
+        ? tx("Weka recovery code uliyohifadhi.", "Enter one of your saved recovery codes.")
+        : tx(
+            "Fungua app yako ya authenticator na weka msimbo wa tarakimu 6.",
+            "Open your authenticator app and enter the 6-digit code."
+          )
+      : t("admin_login_subtext");
 
   return (
     <div className="min-h-screen bg-gray-100 md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
@@ -200,6 +263,72 @@ export default function AdminLoginPage() {
               {formSubtext}
             </p>
 
+            {step === "2fa" ? (
+              <form onSubmit={handleVerify2fa} className="space-y-4">
+                <div>
+                  <label className="block text-body-sm font-semibold text-secondary mb-1.5">
+                    {useRecovery
+                      ? tx("Recovery code", "Recovery code")
+                      : tx("Msimbo wa 2FA", "2FA code")}
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none">
+                      {icons.shield}
+                    </span>
+                    <input
+                      type="text"
+                      autoFocus
+                      autoComplete="one-time-code"
+                      inputMode={useRecovery ? "text" : "numeric"}
+                      maxLength={useRecovery ? 32 : 6}
+                      className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-center font-mono tracking-widest focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
+                      placeholder={useRecovery ? "xxxx-xxxx" : "000000"}
+                      value={code}
+                      onChange={(e) =>
+                        setCode(
+                          useRecovery
+                            ? e.target.value
+                            : e.target.value.replace(/\D/g, "")
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+
+                {error && <p className="text-rust text-body-sm">{error}</p>}
+
+                <button
+                  type="submit"
+                  disabled={loading || !code.trim() || (!useRecovery && code.length !== 6)}
+                  className="w-full cta-gradient py-2.5 rounded-lg font-semibold text-btn disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? tx("Inathibitisha...", "Verifying...") : tx("Thibitisha", "Verify")}
+                </button>
+
+                <div className="flex items-center justify-between text-body-sm">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUseRecovery((v) => !v);
+                      setCode("");
+                      setError("");
+                    }}
+                    className="text-royal font-semibold hover:underline"
+                  >
+                    {useRecovery
+                      ? tx("Tumia msimbo wa app", "Use authenticator code")
+                      : tx("Tumia recovery code", "Use a recovery code")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={backToCredentials}
+                    className="text-secondary hover:text-primary"
+                  >
+                    {tx("Rudi nyuma", "Back")}
+                  </button>
+                </div>
+              </form>
+            ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-body-sm font-semibold text-secondary mb-1.5">
@@ -266,6 +395,7 @@ export default function AdminLoginPage() {
                   : t("admin_login_submit")}
               </button>
             </form>
+            )}
 
             <p className="mt-6 text-body-sm text-secondary text-center">
               <Link

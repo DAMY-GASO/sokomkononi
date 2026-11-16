@@ -15,6 +15,7 @@ import {
   CreditCard,
   User as UserIcon,
   ChevronRight,
+  Download,
 } from "lucide-react";
 import { COLORS, formatTZS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -27,6 +28,7 @@ import {
   failRefundAsync,
 } from "../../../../config/refundsStore.js";
 import UserDrawer from "../shared/UserDrawer.jsx";
+import { downloadRefundReceipt } from "./refundReceipt.js";
 
 // ============================================================
 // STATUS FILTERS — Not Paid / Paid
@@ -214,6 +216,17 @@ function RefundCard({ refund, lang, onComplete, onFail, onOpen, isBusy }) {
               · {timeAgo(refund.completedAt, lang)}
             </span>
           )}
+          <div className="mt-2">
+            <button
+              type="button"
+              onClick={() => downloadRefundReceipt(refund, lang, formatTZS)}
+              style={{ color: COLORS.night, borderColor: COLORS.sandLine }}
+              className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg border bg-white hover:bg-gray-50"
+            >
+              <Download size={12} />
+              {t("Pakua Risiti", "Download Receipt")}
+            </button>
+          </div>
         </div>
       )}
 

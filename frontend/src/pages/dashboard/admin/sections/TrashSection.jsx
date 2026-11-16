@@ -153,6 +153,8 @@ function TrashItemCard({
   onDelete,
   busyState,
   isProtected,
+  selected = false,
+  onToggleSelect,
 }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const typeConfig = getTypeConfig(item.type);
@@ -168,6 +170,16 @@ function TrashItemCard({
       className="rounded-xl border p-3 sm:p-4 w-full max-w-full min-w-0 overflow-hidden"
     >
       <div className="flex items-start gap-3 w-full min-w-0">
+        {onToggleSelect && (
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onToggleSelect}
+            disabled={isBusy}
+            aria-label={t("Chagua item", "Select item")}
+            className="w-4 h-4 mt-3 rounded shrink-0"
+          />
+        )}
         <div
           style={{ background: `${typeConfig.color}15` }}
           className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
@@ -288,6 +300,35 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [confirming, setConfirming] = useState(false);
+  const [itemQuery, setItemQuery] = useState("");
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  // Utafutaji ndani ya aina hii (jina, subtitle, maelezo, aliyefuta, id)
+  const shown = useMemo(() => {
+    const q = itemQuery.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((it) =>
+      [it.name, it.subtitle, it.details, it.deletedBy, it.id]
+        .filter((v) => v != null)
+        .some((v) => String(v).toLowerCase().includes(q))
+    );
+  }, [items, itemQuery]);
+
+  // Ondoa kwenye uchaguzi items ambazo hazipo tena (zimefutwa/kurudishwa)
+  const validSelected = useMemo(
+    () => items.filter((it) => selectedIds.has(it.id)),
+    [items, selectedIds]
+  );
+
+  const toggleSelect = (id) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const setItemBusy = (id, key, value) => {
     setBusy((b) => ({
@@ -329,6 +370,45 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
           : detail || t("Imeshindwa kufuta item.", "Failed to delete item.")
       );
     }
+  };
+
+  const summarize = (failed, total, verbSw, verbEn) => {
+    if (failed === 0) return "";
+    return t(
+      `${failed} kati ya ${total} zimeshindwa kuwa ${verbSw}.`,
+      `${failed} of ${total} failed to ${verbEn}.`
+    );
+  };
+
+  const handleBulkRestore = async () => {
+    const targets = [...validSelected];
+    if (targets.length === 0 || bulkBusy) return;
+    setBulkBusy(true);
+    setError("");
+    let failed = 0;
+    for (const it of targets) {
+      const res = await restoreTrashItemAsync(it.type, it.id);
+      if (!res.ok) failed += 1;
+    }
+    setBulkBusy(false);
+    setSelectedIds(new Set());
+    setError(summarize(failed, targets.length, "zimerudishwa", "restore"));
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    const targets = [...validSelected];
+    if (targets.length === 0 || bulkBusy) return;
+    setBulkBusy(true);
+    setError("");
+    let failed = 0;
+    for (const it of targets) {
+      const res = await permanentDeleteTrashItemAsync(it.type, it.id);
+      if (!res.ok) failed += 1;
+    }
+    setBulkBusy(false);
+    setConfirmBulkDelete(false);
+    setSelectedIds(new Set());
+    setError(summarize(failed, targets.length, "zimefutwa", "delete"));
   };
 
   if (loading && items.length === 0) {
@@ -407,6 +487,68 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
         </div>
       )}
 
+      {/* Search ndani ya aina */}
+      <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 w-full min-w-0">
+        <Search size={14} className="text-muted shrink-0" />
+        <input
+          value={itemQuery}
+          onChange={(e) => setItemQuery(e.target.value)}
+          placeholder={t("Tafuta kwenye items...", "Search items...")}
+          className="outline-none text-xs flex-1 min-w-0"
+        />
+        {itemQuery && (
+          <button
+            onClick={() => setItemQuery("")}
+            className="text-[11px] text-muted hover:text-secondary shrink-0"
+          >
+            {t("Futa", "Clear")}
+          </button>
+        )}
+      </div>
+
+      {/* Bulk bar */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <label className="flex items-center gap-1.5 text-xs text-secondary cursor-pointer">
+          <input
+            type="checkbox"
+            checked={shown.length > 0 && shown.every((it) => selectedIds.has(it.id))}
+            onChange={(e) =>
+              setSelectedIds(
+                e.target.checked ? new Set(shown.map((it) => it.id)) : new Set()
+              )
+            }
+            disabled={shown.length === 0 || bulkBusy}
+            className="w-4 h-4 rounded"
+          />
+          {t("Chagua zote zilizoonyeshwa", "Select all shown")}
+        </label>
+        {validSelected.length > 0 && (
+          <>
+            <span className="text-xs font-semibold text-primary">
+              {validSelected.length} {t("zimechaguliwa", "selected")}
+            </span>
+            <button
+              onClick={handleBulkRestore}
+              disabled={bulkBusy}
+              style={{ color: COLORS.green }}
+              className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border disabled:opacity-50"
+            >
+              {bulkBusy ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
+              {t("Rudisha", "Restore")}
+            </button>
+            <button
+              onClick={() => setConfirmBulkDelete(true)}
+              disabled={bulkBusy}
+              style={{ color: COLORS.rust }}
+              className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border disabled:opacity-50"
+            >
+              <Trash2 size={12} />
+              {t("Futa Kabisa", "Delete")}
+            </button>
+          </>
+        )}
+      </div>
+
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <p className="text-xs text-secondary">
           {items.length}{" "}
@@ -424,13 +566,21 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
         </button>
       </div>
 
-      {items.map((item) => (
+      {shown.length === 0 && (
+        <p className="text-xs text-muted text-center py-6">
+          {t("Hakuna matokeo ya utafutaji.", "No search results.")}
+        </p>
+      )}
+
+      {shown.map((item) => (
         <TrashItemCard
           key={item.id}
           item={item}
           lang={lang}
           busyState={busy[item.id]}
           isProtected={isProtected || item.protected}
+          selected={selectedIds.has(item.id)}
+          onToggleSelect={() => toggleSelect(item.id)}
           onRestore={() => handleRestore(item)}
           onDelete={() => setConfirmDelete(item)}
         />
@@ -460,6 +610,33 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
         }
         onConfirm={handleDeleteConfirm}
         onClose={() => !confirming && setConfirmDelete(null)}
+        lang={lang}
+      />
+
+      <ConfirmModal
+        open={confirmBulkDelete}
+        busy={bulkBusy}
+        danger
+        title={t("Futa Zilizochaguliwa Kabisa?", "Delete Selected Permanently?")}
+        description={t(
+          `Items ${validSelected.length} zitafutwa kabisa. Hatua hii haiwezi kurudishwa.`,
+          `${validSelected.length} items will be permanently deleted. This action cannot be undone.`
+        )}
+        extraWarning={
+          (isProtected || validSelected.some((it) => it.protected)) &&
+          t(
+            "⚠️ Zipo items zinazolindwa. Kufuta kunaweza kuathiri mfumo. Endelea tu ikiwa una uhakika.",
+            "⚠️ Some selected items are protected. Deleting may affect the system. Continue only if you are sure."
+          )
+        }
+        confirmLabel={
+          <>
+            <Trash2 size={14} />
+            {t("Futa Kabisa", "Delete Permanently")}
+          </>
+        }
+        onConfirm={handleBulkDeleteConfirm}
+        onClose={() => !bulkBusy && setConfirmBulkDelete(false)}
         lang={lang}
       />
     </div>

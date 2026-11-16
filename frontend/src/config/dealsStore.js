@@ -3,6 +3,7 @@
 // ============================================================
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { dealsApi } from "../api/deals.js";
+import { api } from "../api/client.js";
 import { transactionsApi } from "../api/transactions.js";
 import { getListings, useListings } from "./listingsStore.js";
 import { getUser as getUserById } from "./usersStore.js";
@@ -384,6 +385,13 @@ function normalizeDealFromApi(raw, currentUserId) {
     inspectionStartedAt: raw.inspection_started_at || null,
     inspectionExpiresAt: raw.inspection_expires_at || null,
     inspectionStatus: raw.inspection_status || null,
+    // ── Admin: transaction / reservation / refund ──────────
+    transactionStatus: raw.transaction_status || null,
+    reservationId: raw.reservation_id ?? null,
+    reservationStatus: raw.reservation_status || null,
+    reservationPaymentStatus: raw.reservation_payment_status || null,
+    refundableAmount: Number(raw.refundable_amount) || 0,
+    refunds: Array.isArray(raw.refunds) ? raw.refunds : [],
     // ── Hali ya malipo ya nje ya mfumo (zamu ya nani, muda, majaribio) ──
     paymentState: raw.payment_state
       ? {
@@ -981,6 +989,53 @@ export async function adminCancelDealAsync(dealId, reason) {
   } catch (err) {
     return { ok: false, error: err };
   }
+}
+
+// ============================================================
+// ADMIN INTERVENTION — POST /admin/deals/{id}/intervene/
+// Mlango mmoja wa vitendo vya admin. Baada ya kila action iliyofanikiwa
+// tunapakia upya deal ili hali, refund na buttons zisasishwe.
+// ============================================================
+export async function adminInterveneAsync(dealId, payload) {
+  if (!dealId) return { ok: false, error: new Error("dealId is required") };
+  try {
+    const data = await api.post(`/admin/deals/${dealId}/intervene/`, payload);
+    await fetchAdminDealDetailAsync(dealId);
+    return { ok: true, data };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
+const _needText = (v, msg) =>
+  !v || !String(v).trim() ? { ok: false, error: new Error(msg) } : null;
+
+// resolution: "COMPLETED" (mauzo yanaheshimiwa) | "CANCELLED" (muamala unaghairiwa)
+export async function adminResolveDisputeAsync(dealId, { resolution, note }) {
+  const bad = _needText(note, "Maelezo ya uamuzi ni lazima.");
+  if (bad) return bad;
+  return adminInterveneAsync(dealId, {
+    action: "resolve_dispute",
+    resolution,
+    note: String(note).trim(),
+  });
+}
+
+export async function adminRefundDealAsync(dealId, reason) {
+  const bad = _needText(reason, "Sababu ya refund ni lazima.");
+  if (bad) return bad;
+  return adminInterveneAsync(dealId, {
+    action: "refund",
+    reason: String(reason).trim(),
+  });
+}
+
+export function adminExpireReservationAsync(dealId) {
+  return adminInterveneAsync(dealId, { action: "expire_reservation" });
+}
+
+export function adminExpireInspectionAsync(dealId) {
+  return adminInterveneAsync(dealId, { action: "expire_inspection" });
 }
 
 // ============================================================

@@ -443,6 +443,21 @@ function VerificationCard({ request, lang, onOpenUser }) {
               {t("Iliwasilishwa", "Submitted")}{" "}
               {timeAgo(request.submittedAt, lang)}
             </p>
+            {request.reviewedAt && request.status !== "pending" && (
+              <p
+                className="text-[11px] mt-0.5 font-medium"
+                style={{
+                  color:
+                    request.status === "approved" ? COLORS.green : COLORS.rust,
+                }}
+              >
+                {request.status === "approved"
+                  ? t("Ilidhinishwa", "Approved")
+                  : t("Ilikataliwa", "Rejected")}{" "}
+                {timeAgo(request.reviewedAt, lang)}
+                {request.reviewedByName && ` · ${request.reviewedByName}`}
+              </p>
+            )}
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
@@ -700,10 +715,17 @@ function VerificationCard({ request, lang, onOpenUser }) {
 export default function VerificationSection() {
   const { lang } = useLanguage();
   const requests = useVerifications();
+  // view: "queue" = maombi yote (pending juu) | "history" = yaliyokaguliwa tayari
+  const [view, setView] = useState("queue");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
+
+  const switchView = (next) => {
+    setView(next);
+    setStatusFilter("all");
+  };
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -712,11 +734,20 @@ export default function VerificationSection() {
     const pending = requests.filter((r) => r.status === "pending").length;
     const approved = requests.filter((r) => r.status === "approved").length;
     const rejected = requests.filter((r) => r.status === "rejected").length;
-    return { total, pending, approved, rejected };
+    return {
+      total,
+      pending,
+      approved,
+      rejected,
+      history: approved + rejected,
+    };
   }, [requests]);
 
   const filtered = useMemo(() => {
-    let result = [...requests];
+    let result =
+      view === "history"
+        ? requests.filter((r) => r.status !== "pending")
+        : [...requests];
 
     if (statusFilter !== "all") {
       result = result.filter((r) => r.status === statusFilter);
@@ -732,8 +763,19 @@ export default function VerificationSection() {
         (r) =>
           r.subject?.toLowerCase().includes(q) ||
           r.userName?.toLowerCase().includes(q) ||
-          r.userEmail?.toLowerCase().includes(q)
+          r.userEmail?.toLowerCase().includes(q) ||
+          r.reviewedByName?.toLowerCase().includes(q)
       );
+    }
+
+    if (view === "history") {
+      // Zilizokaguliwa hivi karibuni juu
+      result.sort(
+        (a, b) =>
+          new Date(b.reviewedAt || b.submittedAt) -
+          new Date(a.reviewedAt || a.submittedAt)
+      );
+      return result;
     }
 
     result.sort((a, b) => {
@@ -743,7 +785,7 @@ export default function VerificationSection() {
     });
 
     return result;
-  }, [requests, statusFilter, typeFilter, query]);
+  }, [requests, statusFilter, typeFilter, query, view]);
 
   return (
     <div className="w-full max-w-7xl mx-auto min-w-0 overflow-hidden">
@@ -796,6 +838,44 @@ export default function VerificationSection() {
         ))}
       </div>
 
+      <div className="flex justify-center mb-3">
+        <div
+          style={{ background: "white", borderColor: COLORS.sandLine }}
+          className="flex rounded-full border p-1"
+        >
+          {[
+            { key: "queue", label: t("Maombi", "Requests"), count: counts.total },
+            {
+              key: "history",
+              label: t("Historia", "History"),
+              count: counts.history,
+            },
+          ].map((v) => (
+            <button
+              key={v.key}
+              onClick={() => switchView(v.key)}
+              style={{
+                background: view === v.key ? COLORS.night : "transparent",
+                color: view === v.key ? COLORS.sand : "var(--text-primary)",
+              }}
+              className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-full transition-colors"
+            >
+              {v.label}
+              <span
+                style={{
+                  background:
+                    view === v.key ? "rgba(245,243,236,0.18)" : COLORS.sandLine,
+                  color: view === v.key ? COLORS.sand : "var(--text-primary)",
+                }}
+                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+              >
+                {v.count}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="flex gap-2 mb-3 overflow-x-auto pb-2 sm:justify-center">
         <button
           onClick={() => setStatusFilter("all")}
@@ -806,9 +886,11 @@ export default function VerificationSection() {
           }}
           className="text-xs font-semibold px-3 py-1.5 rounded-full border whitespace-nowrap shrink-0"
         >
-          {t("Zote", "All")} ({counts.total})
+          {t("Zote", "All")} ({view === "history" ? counts.history : counts.total})
         </button>
-        {VERIFICATION_STATUSES.map((status) => (
+        {VERIFICATION_STATUSES.filter(
+          (status) => view !== "history" || status.key !== "pending"
+        ).map((status) => (
           <button
             key={status.key}
             onClick={() => setStatusFilter(status.key)}
@@ -829,7 +911,11 @@ export default function VerificationSection() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("Tafuta...", "Search...")}
+            placeholder={
+              view === "history"
+                ? t("Tafuta kwa jina, barua pepe, au aliyekagua...", "Search by name, email, or reviewer...")
+                : t("Tafuta...", "Search...")
+            }
             className="smk-inline-search w-full rounded-lg border border-gray-200 bg-white pl-3 pr-10 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
             style={{ WebkitAppearance: "none" }}
           />
@@ -865,7 +951,12 @@ export default function VerificationSection() {
                   "Jaribu kubadilisha vichujio au utafutaji.",
                   "Try changing filters or search."
                 )
-              : t("Maombi yataonekana hapa.", "Requests will appear here.")}
+              : view === "history"
+                ? t(
+                    "Maombi yaliyoidhinishwa au kukataliwa yataonekana hapa.",
+                    "Approved or rejected requests will appear here."
+                  )
+                : t("Maombi yataonekana hapa.", "Requests will appear here.")}
           </p>
         </div>
       ) : (

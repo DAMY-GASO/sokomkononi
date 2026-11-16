@@ -1,5 +1,11 @@
 // ============================================================
 // announcementsStore.js — API-only via /api/announcements/
+//
+// Marekebisho:
+//  - `sent` sasa = `is_published` ya server (ratiba imefika) — si flag ghafi
+//  - scheduled_for inatumwa kama ISO (UTC) — si string ya datetime-local
+//  - sendAnnouncementNowAsync / rescheduleAnnouncementAsync
+//  - useSentAnnouncements() inaficha zenye ratiba ya wakati ujao
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -33,6 +39,21 @@ function write(list) {
 const API_TO_KEY = { FEE_CHANGE: "fee_change", NEW_CATEGORY: "new_category", MAINTENANCE: "maintenance", PROMOTION: "promotion" };
 const KEY_TO_API = { fee_change: "FEE_CHANGE", new_category: "NEW_CATEGORY", maintenance: "MAINTENANCE", promotion: "PROMOTION" };
 
+// "YYYY-MM-DDTHH:mm" (datetime-local, saa za kivinjari) → ISO UTC
+export function localInputToIso(value) {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+// ISO → "YYYY-MM-DDTHH:mm" kwa <input type="datetime-local">
+export function isoToLocalInput(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 function norm(raw) {
   if (!raw) return null;
   return {
@@ -43,7 +64,9 @@ function norm(raw) {
     message: raw.message,
     messageEn: raw.message_en,
     scheduledFor: raw.scheduled_for,
-    sent: raw.sent,
+    // Server inahesabu: ratiba ikifika = imetumwa (hata flag ikiwa bado false)
+    sent: raw.is_published ?? raw.sent,
+    status: raw.status || (raw.sent ? "SENT" : raw.scheduled_for ? "SCHEDULED" : "DRAFT"),
     createdAt: raw.created_at,
   };
 }
@@ -63,15 +86,20 @@ export async function addAnnouncementAsync(form) {
   if (!form?.title?.trim() || !form?.message?.trim()) {
     return { ok: false, error: new Error("title + message required") };
   }
+  let scheduledIso = null;
+  if (form.scheduledFor) {
+    scheduledIso = localInputToIso(form.scheduledFor);
+    if (!scheduledIso) return { ok: false, error: new Error("Ratiba si sahihi") };
+  }
   try {
+    // `sent` haitumwi — server inaamua kutokana na scheduled_for
     const raw = await api.post("/announcements/", {
       type: KEY_TO_API[form.typeId] || "MAINTENANCE",
       title: form.title,
       title_en: form.titleEn || "",
       message: form.message,
       message_en: form.messageEn || "",
-      scheduled_for: form.scheduledFor || null,
-      sent: form.sent !== false,
+      scheduled_for: scheduledIso,
     });
     const created = norm(raw);
     write([created, ...read()]);
@@ -84,6 +112,33 @@ export async function removeAnnouncementAsync(id) {
     await api.delete(`/announcements/${id}/`);
     write(read().filter((a) => a.id !== id));
     return { ok: true };
+  } catch (err) { return { ok: false, error: err }; }
+}
+
+function replaceInCache(updated) {
+  if (!updated) return;
+  write(read().map((a) => (a.id === updated.id ? updated : a)));
+}
+
+/** Tuma tangazo lililopangwa sasa hivi. */
+export async function sendAnnouncementNowAsync(id) {
+  try {
+    const raw = await api.post(`/announcements/${id}/send-now/`);
+    const updated = norm(raw);
+    replaceInCache(updated);
+    return { ok: true, announcement: updated };
+  } catch (err) { return { ok: false, error: err }; }
+}
+
+/** Badilisha ratiba ya tangazo ambalo halijatumwa. `localValue` = datetime-local. */
+export async function rescheduleAnnouncementAsync(id, localValue) {
+  const iso = localInputToIso(localValue);
+  if (!iso) return { ok: false, error: new Error("Ratiba si sahihi") };
+  try {
+    const raw = await api.patch(`/announcements/${id}/`, { scheduled_for: iso });
+    const updated = norm(raw);
+    replaceInCache(updated);
+    return { ok: true, announcement: updated };
   } catch (err) { return { ok: false, error: err }; }
 }
 
@@ -101,6 +156,11 @@ export function useAnnouncements() {
   }, []);
   return list;
 }
-export function useSentAnnouncements() { return useAnnouncements().filter((a) => a.sent); }
+export function useSentAnnouncements() {
+  const now = Date.now();
+  return useAnnouncements().filter(
+    (a) => a.sent && (!a.scheduledFor || new Date(a.scheduledFor).getTime() <= now)
+  );
+}
 
 export const hydrateAnnouncementsFromApi = guarded(_hydrateAnnouncementsFromApi_impl, { key: "hydrateAnnouncementsFromApi" });

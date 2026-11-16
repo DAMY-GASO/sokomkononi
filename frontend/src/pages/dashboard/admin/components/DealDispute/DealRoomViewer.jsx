@@ -25,6 +25,7 @@ import {
   X,
   Gavel,
   Timer,
+  Banknote,
 } from "lucide-react";
 import { COLORS, formatTZS, timeAgo } from "../../shared/constants.js";
 import MessageBubble from "../../shared/MessageBubble.jsx";
@@ -35,6 +36,10 @@ import {
   adminLockDealAsync,
   adminUnlockDealAsync,
   adminCancelDealAsync,
+  adminResolveDisputeAsync,
+  adminRefundDealAsync,
+  adminExpireReservationAsync,
+  adminExpireInspectionAsync,
 } from "../../../../../config/dealsStore.js";
 import { exportTranscript } from "../../../../../utils/exportDealTranscript.js";
 
@@ -50,6 +55,9 @@ function apiErrorText(err, fallback) {
     first(d?.non_field_errors) ||
     first(d?.text) ||
     first(d?.reason) ||
+    first(d?.note) ||
+    first(d?.resolution) ||
+    first(d?.action) ||
     err?.message;
   return typeof candidate === "string" && candidate ? candidate : fallback;
 }
@@ -354,6 +362,148 @@ function ReasonModal({
 }
 
 // ============================================================
+// MODAL — tatua mgogoro (chagua uamuzi + maelezo)
+// ============================================================
+function ResolveDisputeModal({
+  open,
+  busy = false,
+  error = "",
+  lang = "sw",
+  onClose,
+  onConfirm,
+}) {
+  const [resolution, setResolution] = useState("");
+  const [note, setNote] = useState("");
+
+  useEffect(() => {
+    if (!open) {
+      setResolution("");
+      setNote("");
+    }
+  }, [open]);
+
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  if (!open) return null;
+
+  const canSubmit = !busy && !!resolution && note.trim().length > 0;
+  const options = [
+    {
+      value: "COMPLETED",
+      title: t("Heshimu mauzo (Completed)", "Honour the sale (Completed)"),
+      desc: t(
+        "Muamala unakamilika na tangazo linawekwa SOLD.",
+        "The transaction completes and the listing is marked SOLD."
+      ),
+    },
+    {
+      value: "CANCELLED",
+      title: t("Ghairi muamala (Cancelled)", "Cancel the transaction (Cancelled)"),
+      desc: t(
+        "Muamala unaghairiwa na tangazo linarudi hewani (LIVE).",
+        "The transaction is cancelled and the listing goes back LIVE."
+      ),
+    },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60">
+      <div
+        style={{ background: "white", borderColor: COLORS.sandLine }}
+        className="rounded-2xl border w-full max-w-md p-5 shadow-2xl"
+      >
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <h3 className="text-primary text-base font-bold">
+            {t("Tatua Mgogoro", "Resolve Dispute")}
+          </h3>
+          <button
+            onClick={onClose}
+            disabled={busy}
+            className="text-muted hover:text-secondary p-1 disabled:opacity-50"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <p className="text-xs text-secondary mb-3">
+          {t(
+            "Uamuzi huu ni wa mwisho. Mnunuzi na muuzaji wataarifiwa, na maelezo yako yatarekodiwa kwenye audit log.",
+            "This decision is final. Buyer and seller will be notified and your note is recorded in the audit log."
+          )}
+        </p>
+        <div className="flex flex-col gap-2 mb-3">
+          {options.map((o) => {
+            const active = resolution === o.value;
+            return (
+              <button
+                key={o.value}
+                type="button"
+                disabled={busy}
+                onClick={() => setResolution(o.value)}
+                style={{
+                  borderColor: active ? COLORS.green : COLORS.sandLine,
+                  background: active ? "rgba(47,109,79,0.08)" : "transparent",
+                }}
+                className="text-left rounded-lg border px-3 py-2 disabled:opacity-50"
+              >
+                <p className="text-xs font-semibold text-primary">{o.title}</p>
+                <p className="text-[11px] text-secondary mt-0.5">{o.desc}</p>
+              </button>
+            );
+          })}
+        </div>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          rows={3}
+          placeholder={t(
+            "Maelezo ya uamuzi (yanaonekana kwa pande zote)...",
+            "Decision note (visible to both parties)..."
+          )}
+          style={{
+            background: COLORS.sand,
+            borderColor: COLORS.sandLine,
+            color: COLORS.night,
+          }}
+          className="w-full rounded-lg border px-3 py-2 text-sm outline-none resize-none mb-3"
+        />
+        {error && (
+          <p className="text-xs mb-2" style={{ color: COLORS.rust }}>
+            {error}
+          </p>
+        )}
+        <div className="flex gap-2">
+          <button
+            onClick={onClose}
+            disabled={busy}
+            style={{ borderColor: COLORS.sandLine }}
+            className="flex-1 border text-sm font-semibold px-3 py-2 rounded-lg disabled:opacity-50"
+          >
+            {t("Ghairi", "Cancel")}
+          </button>
+          <button
+            onClick={() => onConfirm({ resolution, note: note.trim() })}
+            disabled={!canSubmit}
+            style={{
+              background: canSubmit ? COLORS.rust : COLORS.sandLine,
+              color: "white",
+            }}
+            className="flex-1 text-sm font-semibold px-3 py-2 rounded-lg disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {busy ? (
+              <span className="inline-flex items-center justify-center gap-2">
+                <Loader2 size={13} className="animate-spin" />
+                {t("Inatuma...", "Sending...")}
+              </span>
+            ) : (
+              t("Thibitisha Uamuzi", "Confirm Decision")
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // ADMIN ACTIONS PANEL
 // ============================================================
 function AdminActionsPanel({ deal, lang }) {
@@ -381,6 +531,10 @@ function AdminActionsPanel({ deal, lang }) {
   const [lockOpen, setLockOpen] = useState(false);
   const [unlockOpen, setUnlockOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [resolveOpen, setResolveOpen] = useState(false);
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [expireResOpen, setExpireResOpen] = useState(false);
+  const [expireInspOpen, setExpireInspOpen] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
   const [actionError, setActionError] = useState("");
 
@@ -473,18 +627,73 @@ function AdminActionsPanel({ deal, lang }) {
     }
   };
 
-  // Viungo vya backend zilizopo (resolve-dispute, expire-*, n.k.)
-  const showResolveDispute =
-    txnId &&
-    (deal.status === "disputed" ||
-      deal.buyerDecision === "REQUEST_NEGOTIATION" ||
-      deal.paymentState?.awaiting === "admin");
-  const showExpireReservation =
-    txnId && deal.status === "reserved" && deal.reservationExpiresAt;
-  const showExpireInspection =
-    txnId && deal.inspectionStatus === "IN_PROGRESS";
+  // ── Vitendo vya transaction (vinaendeshwa hapa hapa, bila kuhama ukurasa) ──
+  const txnStatus = String(deal?.transactionStatus || "").toUpperCase();
+  const resStatus = String(deal?.reservationStatus || "").toUpperCase();
+  const inspStatus = String(deal?.inspectionStatus || "").toUpperCase();
+  const refundable = Number(deal?.refundableAmount) || 0;
 
-  const baseAdminUrl = "/smk-control-9x7k";
+  const showResolveDispute = !!txnId && txnStatus === "DISPUTED";
+  const showExpireReservation = !!txnId && resStatus === "ACTIVE";
+  const showExpireInspection = !!txnId && inspStatus === "ACTIVE";
+  // Refund inaruhusiwa tu deal ikiisha (backend pia inalinda sheria hii)
+  const showRefund =
+    !!txnId &&
+    refundable > 0 &&
+    (txnStatus === "CANCELLED" ||
+      resStatus === "CANCELLED" ||
+      resStatus === "EXPIRED");
+
+  const runAction = async (fn, close, fallback) => {
+    if (actionBusy) return;
+    setActionBusy(true);
+    setActionError("");
+    try {
+      const res = await fn();
+      if (res.ok) {
+        close();
+      } else {
+        setActionError(apiErrorText(res.error, fallback));
+      }
+    } catch (err) {
+      setActionError(apiErrorText(err, fallback));
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const handleResolveDispute = ({ resolution, note }) =>
+    runAction(
+      () => adminResolveDisputeAsync(dealId, { resolution, note }),
+      () => setResolveOpen(false),
+      t("Imeshindwa kutatua mgogoro.", "Failed to resolve dispute.")
+    );
+
+  const handleRefund = (reason) =>
+    runAction(
+      () => adminRefundDealAsync(dealId, reason),
+      () => setRefundOpen(false),
+      t("Imeshindwa kuomba refund.", "Failed to request refund.")
+    );
+
+  const handleExpireReservation = () =>
+    runAction(
+      () => adminExpireReservationAsync(dealId),
+      () => setExpireResOpen(false),
+      t("Imeshindwa kumaliza reservation.", "Failed to expire reservation.")
+    );
+
+  const handleExpireInspection = () =>
+    runAction(
+      () => adminExpireInspectionAsync(dealId),
+      () => setExpireInspOpen(false),
+      t("Imeshindwa kumaliza ukaguzi.", "Failed to expire inspection.")
+    );
+
+  const openModal = (setter) => () => {
+    setActionError("");
+    setter(true);
+  };
 
   return (
     <div
@@ -665,18 +874,20 @@ function AdminActionsPanel({ deal, lang }) {
         </div>
       )}
 
-      {/* ── Viungo vya backend zilizopo ── */}
-      {(showResolveDispute || showExpireReservation || showExpireInspection) && (
+      {/* ── Vitendo vya transaction / malipo ── */}
+      {(showResolveDispute ||
+        showRefund ||
+        showExpireReservation ||
+        showExpireInspection) && (
         <div>
           <p className="text-[10px] font-semibold text-secondary uppercase mb-1.5">
             {t("Vitendo vingine", "Other actions")}
           </p>
           <div className="flex flex-col gap-1.5">
             {showResolveDispute && (
-              <a
-                href={`${baseAdminUrl}/disputes?txn=${txnId}`}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                type="button"
+                onClick={openModal(setResolveOpen)}
                 style={{
                   borderColor: "rgba(193,80,46,0.4)",
                   color: COLORS.rust,
@@ -686,13 +897,27 @@ function AdminActionsPanel({ deal, lang }) {
               >
                 <Gavel size={11} />
                 {t("Tatua Mgogoro (Resolve Dispute)", "Resolve Dispute")}
-              </a>
+              </button>
+            )}
+            {showRefund && (
+              <button
+                type="button"
+                onClick={openModal(setRefundOpen)}
+                style={{
+                  borderColor: "rgba(47,109,79,0.4)",
+                  color: COLORS.green,
+                  background: "white",
+                }}
+                className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg border hover:bg-green-50 transition-colors"
+              >
+                <Banknote size={11} />
+                {t("Rudisha Malipo (Refund)", "Refund Payments")} · {formatTZS(refundable)}
+              </button>
             )}
             {showExpireReservation && (
-              <a
-                href={`${baseAdminUrl}/transactions?txn=${txnId}&action=expire-reservation`}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                type="button"
+                onClick={openModal(setExpireResOpen)}
                 style={{
                   borderColor: COLORS.sandLine,
                   color: COLORS.night,
@@ -702,13 +927,12 @@ function AdminActionsPanel({ deal, lang }) {
               >
                 <Timer size={11} />
                 {t("Maliza Reservation", "Expire Reservation")}
-              </a>
+              </button>
             )}
             {showExpireInspection && (
-              <a
-                href={`${baseAdminUrl}/transactions?txn=${txnId}&action=expire-inspection`}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                type="button"
+                onClick={openModal(setExpireInspOpen)}
                 style={{
                   borderColor: COLORS.sandLine,
                   color: COLORS.night,
@@ -718,7 +942,7 @@ function AdminActionsPanel({ deal, lang }) {
               >
                 <Clock size={11} />
                 {t("Maliza Ukaguzi", "Expire Inspection")}
-              </a>
+              </button>
             )}
           </div>
         </div>
@@ -768,10 +992,26 @@ function AdminActionsPanel({ deal, lang }) {
       <ReasonModal
         open={cancelOpen}
         title={t("Ghairi Deal", "Cancel Deal")}
-        description={t(
-          "Deal itaghairiwa kabisa na haiwezi kufufuliwa na watumiaji. Pande zote zitaarifiwa.",
-          "The deal will be cancelled permanently and cannot be reopened by users. Both parties will be notified."
-        )}
+        description={
+          t(
+            "Deal itaghairiwa kabisa na haiwezi kufufuliwa na watumiaji. Pande zote zitaarifiwa.",
+            "The deal will be cancelled permanently and cannot be reopened by users. Both parties will be notified."
+          ) +
+          (txnId
+            ? " " +
+              t(
+                "Muamala unaoendelea (reservation/ukaguzi) pia utaghairiwa na tangazo litarudi hewani.",
+                "The ongoing transaction (reservation/inspection) is cancelled too and the listing goes back live."
+              )
+            : "") +
+          (refundable > 0
+            ? " " +
+              t(
+                `Ada ya reservation (${formatTZS(refundable)}) HAITARUDISHWA kiotomatiki — tumia "Rudisha Malipo" baada ya kughairi ukipenda.`,
+                `The reservation fee (${formatTZS(refundable)}) is NOT refunded automatically — use "Refund Payments" after cancelling if needed.`
+              )
+            : "")
+        }
         confirmLabel={t("Ghairi Deal", "Cancel Deal")}
         confirmColor={COLORS.rust}
         requireReason
@@ -784,6 +1024,66 @@ function AdminActionsPanel({ deal, lang }) {
         )}
         onClose={() => setCancelOpen(false)}
         onConfirm={handleCancel}
+      />
+      <ResolveDisputeModal
+        open={resolveOpen}
+        lang={lang}
+        busy={actionBusy}
+        error={actionError}
+        onClose={() => setResolveOpen(false)}
+        onConfirm={handleResolveDispute}
+      />
+      <ReasonModal
+        open={refundOpen}
+        title={t("Rudisha Malipo", "Refund Payments")}
+        description={t(
+          `Itaundwa refund ya ${formatTZS(refundable)} (ada ya reservation na extensions zilizolipwa) kwenye ukurasa wa Refunds, ikisubiri ukamilishe malipo kwa mkono. Mnunuzi atapewa taarifa.`,
+          `A ${formatTZS(refundable)} refund (paid reservation fee and extensions) will be created on the Refunds page, waiting for you to complete the payout manually. The buyer will be notified.`
+        )}
+        confirmLabel={t("Omba Refund", "Request Refund")}
+        confirmColor={COLORS.green}
+        requireReason
+        lang={lang}
+        busy={actionBusy}
+        error={actionError}
+        placeholder={t(
+          "Sababu ya refund (inaingia kwenye audit)...",
+          "Reason for the refund (recorded in audit)..."
+        )}
+        onClose={() => setRefundOpen(false)}
+        onConfirm={handleRefund}
+      />
+      <ReasonModal
+        open={expireResOpen}
+        title={t("Maliza Reservation", "Expire Reservation")}
+        description={t(
+          "Reservation itaisha sasa hivi na tangazo litarudi hewani. Ada haitarudishwa kiotomatiki.",
+          "The reservation ends now and the listing goes back live. The fee is not refunded automatically."
+        )}
+        confirmLabel={t("Maliza", "Expire")}
+        confirmColor={COLORS.rust}
+        requireReason={false}
+        lang={lang}
+        busy={actionBusy}
+        error={actionError}
+        onClose={() => setExpireResOpen(false)}
+        onConfirm={handleExpireReservation}
+      />
+      <ReasonModal
+        open={expireInspOpen}
+        title={t("Maliza Ukaguzi", "Expire Inspection")}
+        description={t(
+          "Muda wa ukaguzi utaisha sasa hivi. Kama mnunuzi hajatoa uamuzi, mgogoro utafunguliwa.",
+          "The inspection period ends now. If the buyer has not decided, a dispute is opened."
+        )}
+        confirmLabel={t("Maliza", "Expire")}
+        confirmColor={COLORS.rust}
+        requireReason={false}
+        lang={lang}
+        busy={actionBusy}
+        error={actionError}
+        onClose={() => setExpireInspOpen(false)}
+        onConfirm={handleExpireInspection}
       />
     </div>
   );

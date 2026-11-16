@@ -22,8 +22,9 @@ import {
   CheckCircle2,
   AlertCircle,
   X,
+  History,
 } from "lucide-react";
-import { COLORS } from "../shared/constants.js";
+import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import StatusBadge from "../shared/StatusBadge.jsx";
 import UserDrawer from "../shared/UserDrawer.jsx";
@@ -37,6 +38,10 @@ import {
   suspendUserAsync,
   permanentDeleteUserAsync,
 } from "../../../../config/usersStore.js";
+import {
+  useAuditLogs,
+  AUDIT_ACTIONS,
+} from "../../../../config/auditLogsStore.js";
 
 // ============================================================
 // ROLE BADGE
@@ -98,6 +103,9 @@ function TableSkeleton({ rows = 6 }) {
     <>
       {Array.from({ length: rows }).map((_, i) => (
         <tr key={i} className="animate-pulse">
+          <td className="px-3 py-3">
+            <div className="h-4 w-4 rounded bg-[rgb(var(--c-ink)/0.08)]" />
+          </td>
           <td className="px-5 py-3">
             <div className="h-4 w-32 rounded bg-[rgb(var(--c-ink)/0.08)]" />
           </td>
@@ -180,6 +188,105 @@ function Toast({ toast, onClose, lang }) {
   );
 }
 
+// ============================================================
+// USER ACTIVITY MODAL — vitendo vya admin kwa mtumiaji huyu
+// Chanzo: audit logs (action zinazoanza na "user." na targetId = user.id).
+// ============================================================
+function UserActivityModal({ user, lang, onClose }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const logs = useAuditLogs();
+
+  const items = logs
+    .filter(
+      (l) =>
+        typeof l.action === "string" &&
+        l.action.startsWith("user.") &&
+        l.targetId != null &&
+        String(l.targetId) === String(user.id)
+    )
+    .sort((a, b) => new Date(b.at) - new Date(a.at))
+    .slice(0, 20);
+
+  const detailsOf = (l) => {
+    const raw = typeof l.details === "string" ? l.details : "";
+    return lang === "en"
+      ? l.detailsEn || raw || l.detailsSw || ""
+      : l.detailsSw || raw || l.detailsEn || "";
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50">
+      <div className="bg-card rounded-t-2xl sm:rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-card border-b border-hairline p-4 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-primary truncate">
+              {t("Historia ya Vitendo", "Activity History")}
+            </p>
+            <p className="text-[11px] text-muted truncate">
+              {user.name || user.email}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 text-muted hover:text-secondary shrink-0"
+            aria-label={t("Funga", "Close")}
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <div className="p-4">
+          {items.length === 0 ? (
+            <p className="text-xs text-muted text-center py-6">
+              {t(
+                "Hakuna vitendo vya admin vilivyorekodiwa kwa mtumiaji huyu.",
+                "No admin actions recorded for this user."
+              )}
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {items.map((l) => {
+                const a = AUDIT_ACTIONS.find((x) => x.key === l.action);
+                const d = detailsOf(l);
+                return (
+                  <li key={l.id} className="text-xs min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span
+                        style={{ background: "rgb(var(--c-ink) / 0.08)", color: COLORS.ink }}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+                      >
+                        {a?.label?.[lang] || a?.label?.sw || l.action}
+                      </span>
+                      <span className="text-[10px] text-muted whitespace-nowrap">
+                        {timeAgo(l.at, lang)}
+                      </span>
+                      {l.adminName && (
+                        <span className="text-[10px] text-muted truncate">
+                          · {l.adminName}
+                        </span>
+                      )}
+                    </div>
+                    {d && (
+                      <p className="text-[11px] text-secondary mt-1 break-words">
+                        {d}
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <p className="text-[10px] text-muted mt-4">
+            {t(
+              "Zinaonyesha vitendo vya admin (simamisha, washa, n.k.) kutoka audit logs za hivi karibuni.",
+              "Shows admin actions (suspend, activate, etc.) from the most recent audit logs."
+            )}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function UserManagementSection() {
   const { lang } = useLanguage();
 
@@ -199,6 +306,14 @@ export default function UserManagementSection() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [suspendTarget, setSuspendTarget] = useState(null);
   const [busy, setBusy] = useState({});
+  const [activityUser, setActivityUser] = useState(null);
+
+  // ── Bulk actions ──
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkAction, setBulkAction] = useState(null); // "suspend" | "delete" | null
+  const [bulkReason, setBulkReason] = useState("");
+  const [bulkConfirmText, setBulkConfirmText] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   // Toast ya bilingual
   const [toast, setToast] = useState(null);
@@ -262,6 +377,7 @@ export default function UserManagementSection() {
 
       if (res?.ok) {
         setUsers(getUsers());
+        setSelectedIds(new Set()); // uchaguzi ni wa ukurasa wa sasa tu
         setPage(res.page || p);
         setTotalPages(res.totalPages || 1);
         setCount(res.count || 0);
@@ -423,6 +539,95 @@ export default function UserManagementSection() {
     }
   };
 
+  // ── Bulk helpers ───────────────────────────────────────────
+  const MIN_REASON = 5;
+  // Staff hawawezi kusimamishwa/kufutwa kwa wingi
+  const selectableUsers = users.filter((u) => !u.isStaff);
+  const allShownSelected =
+    selectableUsers.length > 0 &&
+    selectableUsers.every((u) => selectedIds.has(u.id));
+
+  const toggleSelect = (id) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const toggleSelectAll = () =>
+    setSelectedIds(
+      allShownSelected ? new Set() : new Set(selectableUsers.map((u) => u.id))
+    );
+
+  const closeBulkForm = () => {
+    setBulkAction(null);
+    setBulkReason("");
+    setBulkConfirmText("");
+  };
+
+  const runBulk = async (action) => {
+    // Chukua tu waliochaguliwa ambao si staff (ulinzi mara ya pili)
+    const targets = users.filter((u) => selectedIds.has(u.id) && !u.isStaff);
+    if (targets.length === 0 || bulkBusy) return;
+
+    if (action !== "activate") {
+      if (bulkReason.trim().length < MIN_REASON) {
+        showToast(
+          {
+            sw: `Sababu lazima iwe na angalau herufi ${MIN_REASON}.`,
+            en: `Reason must be at least ${MIN_REASON} characters.`,
+          },
+          "error"
+        );
+        return;
+      }
+      if (action === "delete" && bulkConfirmText !== "DELETE") {
+        showToast(
+          { sw: 'Andika "DELETE" kuthibitisha.', en: 'Type "DELETE" to confirm.' },
+          "error"
+        );
+        return;
+      }
+    }
+
+    setBulkBusy(true);
+    let ok = 0;
+    let failed = 0;
+    // Mfuatano — huzuia rate-limit na kuhifadhi mpangilio wa audit logs
+    for (const u of targets) {
+      let res;
+      try {
+        if (action === "suspend") {
+          if (u.status === "suspended") { ok += 1; continue; }
+          res = await suspendUserAsync(u.id, { reason: bulkReason.trim() });
+        } else if (action === "activate") {
+          if (u.status !== "suspended") { ok += 1; continue; }
+          res = await activateUserAsync(u.id);
+        } else {
+          res = await permanentDeleteUserAsync(u.id, {
+            reason: bulkReason.trim(),
+            confirmText: "DELETE",
+          });
+        }
+      } catch (e) {
+        res = { ok: false };
+      }
+      if (res?.ok) ok += 1;
+      else failed += 1;
+    }
+    setBulkBusy(false);
+    closeBulkForm();
+    showToast(
+      {
+        sw: `Imefanikiwa: ${ok}. Imeshindwa: ${failed}.`,
+        en: `Succeeded: ${ok}. Failed: ${failed}.`,
+      },
+      failed > 0 ? "error" : "success"
+    );
+    fetchPage(page);
+  };
+
   // ── ActionButtons ──────────────────────────────────────────
   const ActionButtons = ({ user, fullWidth = false }) => {
     const isSuspended = user.status === "suspended";
@@ -435,6 +640,22 @@ export default function UserManagementSection() {
           fullWidth ? "w-full" : "justify-end"
         }`}
       >
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setActivityUser(user);
+          }}
+          title={t("Historia ya Vitendo", "Activity History")}
+          aria-label={t("Historia ya Vitendo", "Activity History")}
+          style={{ color: COLORS.ink, borderColor: "rgb(var(--c-ink) / 0.2)" }}
+          className={`inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
+            fullWidth ? "flex-1" : ""
+          }`}
+        >
+          <History size={13} />
+          {fullWidth && t("Historia", "History")}
+        </button>
+
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -657,12 +878,133 @@ export default function UserManagementSection() {
           : t(`Watumiaji ${count}`, `${count} users`)}
       </p>
 
+      {/* BULK BAR */}
+      {selectedIds.size > 0 && (
+        <div
+          style={{ borderColor: COLORS.gold, background: "rgb(var(--c-card))" }}
+          className="rounded-xl border-2 p-3 sm:p-4 mb-3 flex flex-col gap-2.5"
+        >
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-sm font-semibold text-primary">
+              {selectedIds.size} {t("wamechaguliwa", "selected")}
+            </p>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                onClick={() => runBulk("activate")}
+                disabled={bulkBusy}
+                style={{ color: COLORS.successText, borderColor: `${COLORS.green}33` }}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border disabled:opacity-50"
+              >
+                {bulkBusy && !bulkAction ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
+                {t("Washa", "Activate")}
+              </button>
+              <button
+                onClick={() => { setBulkAction("suspend"); setBulkConfirmText(""); }}
+                disabled={bulkBusy}
+                style={{ color: COLORS.dangerText, borderColor: `${COLORS.rust}33` }}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border disabled:opacity-50"
+              >
+                <Ban size={13} />
+                {t("Simamisha", "Suspend")}
+              </button>
+              <button
+                onClick={() => { setBulkAction("delete"); setBulkConfirmText(""); }}
+                disabled={bulkBusy}
+                style={{ color: COLORS.dangerText, borderColor: `${COLORS.rust}33` }}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border disabled:opacity-50"
+              >
+                <Trash2 size={13} />
+                {t("Futa Kabisa", "Delete")}
+              </button>
+              <button
+                onClick={() => { setSelectedIds(new Set()); closeBulkForm(); }}
+                disabled={bulkBusy}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg text-secondary hover:bg-ink/5 disabled:opacity-50"
+              >
+                {t("Ondoa uchaguzi", "Clear")}
+              </button>
+            </div>
+          </div>
+
+          {bulkAction && (
+            <div className="flex flex-col gap-2">
+              <p
+                style={{ background: "rgba(193,80,46,0.08)", color: COLORS.dangerText }}
+                className="text-xs font-semibold px-3 py-2 rounded-lg"
+              >
+                {bulkAction === "delete"
+                  ? t(
+                      `Utafuta KABISA watumiaji ${selectedIds.size}. Hatua hii haiwezi kurudishwa.`,
+                      `You are about to PERMANENTLY delete ${selectedIds.size} users. This cannot be undone.`
+                    )
+                  : t(
+                      `Utasimamisha watumiaji ${selectedIds.size}.`,
+                      `You are about to suspend ${selectedIds.size} users.`
+                    )}
+              </p>
+              <textarea
+                value={bulkReason}
+                onChange={(e) => setBulkReason(e.target.value)}
+                rows={2}
+                disabled={bulkBusy}
+                placeholder={t(
+                  `Sababu (angalau herufi ${MIN_REASON})...`,
+                  `Reason (at least ${MIN_REASON} characters)...`
+                )}
+                className="w-full rounded-lg border border-hairline bg-card px-3 py-2 text-xs outline-none resize-none disabled:opacity-50"
+              />
+              {bulkAction === "delete" && (
+                <input
+                  value={bulkConfirmText}
+                  onChange={(e) => setBulkConfirmText(e.target.value)}
+                  disabled={bulkBusy}
+                  placeholder={t('Andika "DELETE" kuthibitisha', 'Type "DELETE" to confirm')}
+                  className="w-full rounded-lg border border-hairline bg-card px-3 py-2 text-xs font-mono outline-none disabled:opacity-50"
+                />
+              )}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={closeBulkForm}
+                  disabled={bulkBusy}
+                  className="text-xs font-semibold px-3 py-2 rounded-lg border border-hairline text-secondary disabled:opacity-50"
+                >
+                  {t("Ghairi", "Cancel")}
+                </button>
+                <button
+                  onClick={() => runBulk(bulkAction)}
+                  disabled={
+                    bulkBusy ||
+                    bulkReason.trim().length < MIN_REASON ||
+                    (bulkAction === "delete" && bulkConfirmText !== "DELETE")
+                  }
+                  style={{ background: COLORS.rust, color: "white" }}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {bulkBusy && <Loader2 size={13} className="animate-spin" />}
+                  {bulkAction === "delete" ? t("Futa Kabisa", "Delete Permanently") : t("Simamisha", "Suspend")}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* DESKTOP — TABLE */}
       <div className="hidden sm:block bg-card rounded-xl border border-hairline overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-page">
               <tr>
+                <th className="px-3 py-2.5 w-8">
+                  <input
+                    type="checkbox"
+                    checked={allShownSelected}
+                    onChange={toggleSelectAll}
+                    disabled={selectableUsers.length === 0 || bulkBusy}
+                    aria-label={t("Chagua wote", "Select all")}
+                    className="w-4 h-4 rounded"
+                  />
+                </th>
                 <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
                   {t("Jina", "Name")}
                 </th>
@@ -689,7 +1031,7 @@ export default function UserManagementSection() {
               ) : users.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-5 py-8 text-center text-sm text-muted"
                   >
                     {t("Hakuna matokeo", "No results")}
@@ -704,6 +1046,16 @@ export default function UserManagementSection() {
                       className="hover:bg-ink/5 transition-colors cursor-pointer"
                       onClick={() => setSelectedUser(u)}
                     >
+                      <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(u.id)}
+                          onChange={() => toggleSelect(u.id)}
+                          disabled={u.isStaff || bulkBusy}
+                          title={u.isStaff ? t("Admin hawezi kuchaguliwa", "Admin cannot be selected") : undefined}
+                          className="w-4 h-4 rounded disabled:opacity-30"
+                        />
+                      </td>
                       <td className="px-5 py-3 text-sm font-medium text-primary">
                         <div className="flex items-center gap-1.5">
                           <span>{u.name}</span>
@@ -759,6 +1111,15 @@ export default function UserManagementSection() {
                 className="bg-card rounded-xl border border-hairline p-4 cursor-pointer hover:shadow-sm transition-shadow"
               >
                 <div className="flex items-start justify-between gap-3 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(u.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={() => toggleSelect(u.id)}
+                    disabled={u.isStaff || bulkBusy}
+                    aria-label={t("Chagua mtumiaji", "Select user")}
+                    className="w-4 h-4 mt-1 rounded shrink-0 disabled:opacity-30"
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       <p className="text-sm font-semibold text-primary truncate">
@@ -814,6 +1175,15 @@ export default function UserManagementSection() {
           user={selectedUser}
           onClose={() => setSelectedUser(null)}
           lang={lang}
+        />
+      )}
+
+      {/* ACTIVITY MODAL */}
+      {activityUser && (
+        <UserActivityModal
+          user={activityUser}
+          lang={lang}
+          onClose={() => setActivityUser(null)}
         />
       )}
 

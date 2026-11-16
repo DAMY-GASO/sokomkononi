@@ -24,6 +24,7 @@ import { Menu, X, Bell, LogOut, User as UserIcon, Settings, Lock, Home as HomeIc
 // ⬇️ Secret admin path
 import { ADMIN_PATH, ADMIN_LOGIN_PATH } from "../../config/adminPath.js";
 import ThemeToggle from "../../components/ThemeToggle.jsx";
+import { useAdminTwoFactor } from "../../config/adminTwoFactor.js";
 
 import {
   COLORS,
@@ -73,6 +74,12 @@ import { useOpenTicketsCount } from "../../config/ticketsStore.js";
 
 // Permissions
 import { useRoles } from "../../config/rolesStore.js";
+
+// ============================================================
+// 2FA GATE — admin asiye na 2FA anaelekezwa kwenye Profile hadi aiwashe.
+// Hii ni gate ya UI tu; ulinzi wa kweli lazima uwe backend pia.
+// ============================================================
+const REQUIRE_ADMIN_2FA = true;
 
 // ============================================================
 // URL ↔ STATE MAPPING (dynamic na ADMIN_PATH)
@@ -321,6 +328,18 @@ export default function AdminDashboard() {
     user?.is_staff,
   ]);
 
+  // ── 2FA gate ──
+  const twofa = useAdminTwoFactor(isAdmin ? (user?.id ?? user?.email ?? "admin") : null);
+  const gateActive = REQUIRE_ADMIN_2FA && isAdmin && twofa.status === "required";
+  const gateChecking = REQUIRE_ADMIN_2FA && isAdmin && twofa.status === "checking";
+
+  // Sehemu yoyote isiyo Profile → rudisha Profile hadi 2FA iwashwe
+  useEffect(() => {
+    if (gateActive && activeSection !== "profile") {
+      navigate(STATE_TO_URL.profile, { replace: true });
+    }
+  }, [gateActive, activeSection, navigate]);
+
   const canAccess = (sectionKey) => {
     if (sectionKey === "profile" || sectionKey === "overview") return true;
     if (!rolesReady) return true;
@@ -378,11 +397,45 @@ export default function AdminDashboard() {
     setSidebarOpen(false);
   };
 
-  if (loading) {
+  if (loading || gateChecking) {
     return <PageLoader lang={lang} />;
   }
 
   const renderSection = () => {
+    // Gate ya 2FA: sehemu zote zimefungwa isipokuwa Profile (redirect inaendelea)
+    if (gateActive && activeSection !== "profile") {
+      return (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center max-w-md px-4">
+            <div
+              style={{ background: `${COLORS.rust}15` }}
+              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+            >
+              <Lock size={28} color={COLORS.rust} />
+            </div>
+            <h2
+              style={{ color: "var(--text-primary)" }}
+              className="text-xl font-semibold mb-2"
+            >
+              {lang === "sw" ? "Washa 2FA Kwanza" : "Turn On 2FA First"}
+            </h2>
+            <p className="text-sm text-secondary mb-4">
+              {lang === "sw"
+                ? "Akaunti za admin zinahitaji uthibitishaji wa hatua mbili. Washa 2FA kwenye Wasifu wako ili kuendelea."
+                : "Admin accounts require two-factor authentication. Turn on 2FA in your Profile to continue."}
+            </p>
+            <button
+              onClick={() => navigate(STATE_TO_URL.profile)}
+              style={{ background: COLORS.gold, color: COLORS.night }}
+              className="text-xs font-semibold px-4 py-2.5 rounded-lg"
+            >
+              {lang === "sw" ? "Nenda kwenye Wasifu" : "Go to Profile"}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     if (!canAccess(activeSection)) {
       return (
         <div className="flex items-center justify-center min-h-[400px]">
