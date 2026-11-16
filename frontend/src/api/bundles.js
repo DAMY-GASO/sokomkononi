@@ -33,6 +33,12 @@ export const bundlesApi = {
 
   payPurchase: (purchaseId, body = {}) =>
     api.post(`/bundles/purchases/${purchaseId}/pay/`, body),
+
+  // Admin: historia ya manunuzi (filters: bundle, user, status, search, date_from, date_to)
+  admin: {
+    purchases: (params = {}) =>
+      api.get(`/admin/bundles/purchases/${toQuery(params)}`),
+  },
 };
 
 export default bundlesApi;

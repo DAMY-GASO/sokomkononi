@@ -67,6 +67,11 @@ function norm(raw) {
     color: raw.color || "night",
     active: raw.active !== false && raw.is_active !== false,
     featured: !!raw.featured,
+    // Takwimu za manunuzi (admin tu; zinakuja zikiwa na 2FA)
+    purchasesCount: Number(raw.purchasesCount ?? raw.purchases_count) || 0,
+    creditsIssued: Number(raw.creditsIssued ?? raw.credits_issued) || 0,
+    creditsIssuedByService:
+      raw.creditsIssuedByService || raw.credits_issued_by_service || {},
   };
 }
 
@@ -202,6 +207,60 @@ export async function purchaseBundleAsync(id, ref = "") {
   try {
     const raw = await bundlesApi.purchase(id, ref);
     return { ok: true, purchase: raw };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
+// ============================================================
+// PURCHASE HISTORY (admin) — GET /api/admin/bundles/purchases/
+// Haihifadhiwi kwenye localStorage: ni data ya kusoma tu, inapakiwa kwa ukurasa.
+// ============================================================
+function normPurchase(raw) {
+  if (!raw) return null;
+  const bundle = raw.bundle || {};
+  const user = raw.user || {};
+  return {
+    id: raw.id,
+    bundle: {
+      id: bundle.id,
+      code: bundle.code || "",
+      type: bundle.type || "",
+      name: bundle.name || { sw: "", en: "" },
+    },
+    user: {
+      id: user.id,
+      name: user.name || "",
+      email: user.email || "",
+      phone: user.phone || "",
+    },
+    amount: Number(raw.amount) || 0,
+    status: raw.status || "PENDING",
+    paymentReference: raw.paymentReference ?? raw.payment_reference ?? "",
+    paidAt: raw.paidAt ?? raw.paid_at ?? null,
+    expiresAt: raw.expiresAt ?? raw.expires_at ?? null,
+    createdAt: raw.createdAt ?? raw.created_at ?? null,
+    credits: raw.credits || {},
+    creditsTotal: Number(raw.creditsTotal ?? raw.credits_total) || 0,
+  };
+}
+
+export async function fetchBundlePurchasesAsync(params = {}) {
+  try {
+    const d = await bundlesApi.admin.purchases(params);
+    const list = Array.isArray(d) ? d : d?.results || [];
+    const s = d?.summary || {};
+    return {
+      ok: true,
+      items: list.map(normPurchase).filter(Boolean),
+      count: Number(d?.count ?? list.length) || 0,
+      summary: {
+        count: Number(s.count) || 0,
+        paidCount: Number(s.paidCount) || 0,
+        paidAmount: Number(s.paidAmount) || 0,
+        creditsIssued: Number(s.creditsIssued) || 0,
+      },
+    };
   } catch (err) {
     return { ok: false, error: err };
   }

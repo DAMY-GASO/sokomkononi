@@ -1,7 +1,7 @@
 // ============================================================
 // AdminBundles.jsx
 // ============================================================
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Plus,
   Pencil,
@@ -12,6 +12,10 @@ import {
   EyeOff,
   Search,
   Loader2,
+  History,
+  Coins,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import { COLORS, formatTZS } from "./dashboard/components/shared";
@@ -21,6 +25,7 @@ import {
   updateBundleAsync,
   removeBundleAsync,
   toggleBundleActiveAsync,
+  fetchBundlePurchasesAsync,
 } from "../config/bundlesStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 
@@ -416,6 +421,324 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
 // ============================================================
 // MAIN COMPONENT
 // ============================================================
+// ============================================================
+// HISTORY MODAL — manunuzi ya bundle (au ya vifurushi vyote)
+// ============================================================
+const PURCHASE_STATUS = {
+  PAID: {
+    sw: "Imelipwa",
+    en: "Paid",
+    cls: "bg-[#2F6D4F]/10 text-[#2F6D4F]",
+  },
+  PENDING: {
+    sw: "Inasubiri",
+    en: "Pending",
+    cls: "bg-[#FEA406]/15 text-[#9A6200]",
+  },
+  FAILED: {
+    sw: "Imeshindwa",
+    en: "Failed",
+    cls: "bg-[#C1502E]/10 text-[#C1502E]",
+  },
+  REFUNDED: {
+    sw: "Imerudishwa",
+    en: "Refunded",
+    cls: "bg-gray-100 text-secondary",
+  },
+};
+
+const HISTORY_PAGE_SIZE = 15;
+
+function fmtDate(iso, lang) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  try {
+    return d.toLocaleString(lang === "sw" ? "sw-TZ" : "en-GB", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  } catch {
+    return d.toISOString().slice(0, 16).replace("T", " ");
+  }
+}
+
+function creditsText(credits, lang) {
+  const entries = Object.entries(credits || {});
+  if (!entries.length) return "—";
+  return entries
+    .map(([k, v]) => `${pickLang(CREDIT_LABELS[k], lang) || k}: ${v}`)
+    .join(", ");
+}
+
+function BundleHistoryModal({ bundle, lang, onClose }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const [items, setItems] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [count, setCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // Search inasubiri kidogo ili isiite API kwa kila herufi
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setQuery(search.trim());
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(id);
+  }, [search]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError("");
+      const res = await fetchBundlePurchasesAsync({
+        page,
+        page_size: HISTORY_PAGE_SIZE,
+        ...(bundle?.id ? { bundle: bundle.id } : {}),
+        ...(status ? { status } : {}),
+        ...(query ? { search: query } : {}),
+      });
+      if (cancelled) return;
+      if (res.ok) {
+        setItems(res.items);
+        setCount(res.count);
+        setSummary(res.summary);
+      } else {
+        setError(
+          res.error?.data?.detail ||
+            res.error?.data?.error?.message ||
+            res.error?.message ||
+            t("Imeshindwa kupakia historia.", "Failed to load history.")
+        );
+      }
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bundle?.id, page, status, query]);
+
+  const totalPages = Math.max(1, Math.ceil(count / HISTORY_PAGE_SIZE));
+  const title = bundle
+    ? pickLang(bundle.name, lang) || displayBundleCode(bundle.code, lang)
+    : t("Vifurushi vyote", "All bundles");
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl max-w-3xl w-full p-4 sm:p-6 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4 sticky top-0 bg-white pb-2 border-b border-gray-100">
+          <div className="min-w-0">
+            <h3 className="font-bold text-primary text-sm sm:text-base">
+              {t("Historia ya Manunuzi", "Purchase History")}
+            </h3>
+            <p className="text-[11px] sm:text-xs text-secondary truncate">
+              {title}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 text-muted hover:text-secondary"
+            aria-label={t("Funga", "Close")}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+          <div className="rounded-lg border border-gray-100 p-2.5 text-center">
+            <p className="text-lg font-bold text-primary">
+              {summary ? summary.count : "—"}
+            </p>
+            <p className="text-[10px] text-secondary">
+              {t("Manunuzi yote", "All purchases")}
+            </p>
+          </div>
+          <div className="rounded-lg border border-gray-100 p-2.5 text-center">
+            <p className="text-lg font-bold text-[#2F6D4F]">
+              {summary ? summary.paidCount : "—"}
+            </p>
+            <p className="text-[10px] text-secondary">
+              {t("Yaliyolipwa", "Paid")}
+            </p>
+          </div>
+          <div className="rounded-lg border border-gray-100 p-2.5 text-center">
+            <p className="text-sm sm:text-base font-bold text-[#C1502E] leading-7">
+              {summary ? formatTZS(summary.paidAmount) : "—"}
+            </p>
+            <p className="text-[10px] text-secondary">
+              {t("Mapato", "Revenue")}
+            </p>
+          </div>
+          <div className="rounded-lg border border-gray-100 p-2.5 text-center">
+            <p className="text-lg font-bold text-[#FEA406]">
+              {summary ? summary.creditsIssued : "—"}
+            </p>
+            <p className="text-[10px] text-secondary">
+              {t("Credits zilizotolewa", "Credits issued")}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2 mb-3">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t(
+                "Tafuta mnunuzi, simu, barua pepe, kumbukumbu...",
+                "Search buyer, phone, email, reference..."
+              )}
+              className="w-full rounded-lg border border-gray-200 bg-white pl-3 pr-9 py-2 text-sm outline-none"
+            />
+            <Search
+              size={14}
+              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted"
+            />
+          </div>
+          <select
+            value={status}
+            onChange={(e) => {
+              setStatus(e.target.value);
+              setPage(1);
+            }}
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+          >
+            <option value="">{t("Hali zote", "All statuses")}</option>
+            {Object.entries(PURCHASE_STATUS).map(([key, v]) => (
+              <option key={key} value={key}>
+                {pickLang(v, lang)}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {error && (
+          <div className="text-xs font-semibold px-3 py-2 rounded-lg bg-[#C1502E]/10 text-[#C1502E] mb-3">
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="py-10 flex justify-center">
+            <Loader2 size={22} className="animate-spin text-muted" />
+          </div>
+        ) : items.length === 0 ? (
+          <div className="rounded-xl border-2 border-dashed border-gray-200 p-8 text-center">
+            <Package size={32} className="mx-auto text-muted mb-2" />
+            <p className="text-xs sm:text-sm text-secondary">
+              {t("Hakuna manunuzi yaliyopatikana.", "No purchases found.")}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {items.map((p) => {
+              const st = PURCHASE_STATUS[p.status] || PURCHASE_STATUS.PENDING;
+              return (
+                <div
+                  key={p.id}
+                  className="rounded-xl border border-gray-100 p-3 flex flex-col gap-1.5"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm font-semibold text-primary truncate">
+                        {p.user.name || p.user.email || p.user.phone || "—"}
+                      </p>
+                      <p className="text-[10px] sm:text-xs text-secondary truncate">
+                        {[p.user.phone, p.user.email]
+                          .filter(Boolean)
+                          .join(" · ") || "—"}
+                      </p>
+                    </div>
+                    <span
+                      className={`text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${st.cls}`}
+                    >
+                      {pickLang(st, lang)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    {!bundle && (
+                      <span className="text-[11px] sm:text-xs text-secondary truncate">
+                        {pickLang(p.bundle.name, lang) ||
+                          displayBundleCode(p.bundle.code, lang)}
+                      </span>
+                    )}
+                    <span className="text-sm font-bold text-[#C1502E]">
+                      {formatTZS(p.amount)}
+                    </span>
+                  </div>
+
+                  <p className="text-[10px] sm:text-xs text-secondary flex items-start gap-1">
+                    <Coins size={11} className="mt-0.5 shrink-0" />
+                    <span>
+                      {creditsText(p.credits, lang)}
+                      {p.creditsTotal > 0 && ` (${p.creditsTotal})`}
+                    </span>
+                  </p>
+
+                  <div className="flex items-center justify-between gap-2 text-[10px] text-muted flex-wrap">
+                    <span>
+                      {p.paidAt
+                        ? `${t("Imelipwa", "Paid")}: ${fmtDate(p.paidAt, lang)}`
+                        : `${t("Imeundwa", "Created")}: ${fmtDate(
+                            p.createdAt,
+                            lang
+                          )}`}
+                    </span>
+                    {p.paymentReference && (
+                      <span
+                        className="font-mono truncate max-w-[180px]"
+                        title={p.paymentReference}
+                      >
+                        {p.paymentReference}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {!loading && count > HISTORY_PAGE_SIZE && (
+          <div className="flex items-center justify-between mt-4">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="flex items-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-secondary disabled:opacity-40"
+            >
+              <ChevronLeft size={14} />
+              {t("Nyuma", "Prev")}
+            </button>
+            <span className="text-[11px] text-secondary">
+              {t("Ukurasa", "Page")} {page} / {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="flex items-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-secondary disabled:opacity-40"
+            >
+              {t("Mbele", "Next")}
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminBundles() {
   const { lang } = useLanguage();
   const bundles = useBundles();
@@ -427,6 +750,8 @@ export default function AdminBundles() {
   const inflightRef = React.useRef(new Set());
   const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
+  // history.open = dirisha liko wazi; history.bundle = null → vifurushi vyote
+  const [history, setHistory] = useState({ open: false, bundle: null });
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -560,18 +885,27 @@ export default function AdminBundles() {
             </div>
           </div>
 
-          <button
-            onClick={() => {
-              setEditing(null);
-              setShowForm(true);
-              setError("");
-            }}
-            disabled={saving}
-            className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-lg bg-[#FEA406] text-[#101A2E] mt-2 disabled:opacity-50"
-          >
-            <Plus size={14} />
-            {t("Ongeza Kifurushi", "Add Bundle")}
-          </button>
+          <div className="flex items-center gap-2 flex-wrap justify-center mt-2">
+            <button
+              onClick={() => {
+                setEditing(null);
+                setShowForm(true);
+                setError("");
+              }}
+              disabled={saving}
+              className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-lg bg-[#FEA406] text-[#101A2E] disabled:opacity-50"
+            >
+              <Plus size={14} />
+              {t("Ongeza Kifurushi", "Add Bundle")}
+            </button>
+            <button
+              onClick={() => setHistory({ open: true, bundle: null })}
+              className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-lg border border-gray-200 bg-white text-secondary hover:bg-gray-50"
+            >
+              <History size={14} />
+              {t("Historia ya Manunuzi", "Purchase History")}
+            </button>
+          </div>
 
           {error && !showForm && (
             <div className="text-xs font-semibold px-3 py-2 rounded-lg bg-[#C1502E]/10 text-[#C1502E] max-w-xl">
@@ -711,6 +1045,23 @@ export default function AdminBundles() {
                     )}
                   </div>
 
+                  <div className="flex items-center gap-3 text-[10px] sm:text-xs text-secondary flex-wrap">
+                    <span title={t("Manunuzi yaliyolipwa", "Paid purchases")}>
+                      {t("Zilizonunuliwa", "Purchased")}:{" "}
+                      <b className="text-primary">{b.purchasesCount}</b>
+                    </span>
+                    <span
+                      title={
+                        Object.keys(b.creditsIssuedByService || {}).length
+                          ? creditsText(b.creditsIssuedByService, lang)
+                          : ""
+                      }
+                    >
+                      {t("Credits zilizotolewa", "Credits issued")}:{" "}
+                      <b className="text-primary">{b.creditsIssued}</b>
+                    </span>
+                  </div>
+
                   <div className="flex items-center gap-1.5 mt-2">
                     <button
                       onClick={() => {
@@ -723,6 +1074,14 @@ export default function AdminBundles() {
                     >
                       <Pencil size={12} />
                       {t("Hariri", "Edit")}
+                    </button>
+                    <button
+                      onClick={() => setHistory({ open: true, bundle: b })}
+                      className="p-2 text-muted hover:text-[#C1502E] rounded-lg hover:bg-gray-50 transition-colors"
+                      title={t("Historia ya manunuzi", "Purchase history")}
+                      aria-label={t("Historia ya manunuzi", "Purchase history")}
+                    >
+                      <History size={14} />
                     </button>
                     <button
                       onClick={() => handleToggle(b.id)}
@@ -766,6 +1125,14 @@ export default function AdminBundles() {
           </div>
         )}
       </div>
+
+      {history.open && (
+        <BundleHistoryModal
+          bundle={history.bundle}
+          lang={lang}
+          onClose={() => setHistory({ open: false, bundle: null })}
+        />
+      )}
 
       {showForm && (
         <BundleFormModal
