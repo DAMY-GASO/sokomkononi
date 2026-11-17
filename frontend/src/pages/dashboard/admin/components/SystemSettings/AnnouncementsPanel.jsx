@@ -199,8 +199,8 @@ export default function AnnouncementsPanel() {
     if (
       !window.confirm(
         t(
-          "Tuma tangazo hili sasa hivi kwa wote? Watapata arifa kwenye app.",
-          "Send this announcement to everyone right now? They will get an in-app notification."
+          "Tuma tangazo hili sasa hivi kwa wote? Watapata arifa kwenye app, push na email (kulingana na mipangilio yao).",
+          "Send this announcement to everyone right now? They will get an in-app notification, push and email (per their settings)."
         )
       )
     )
