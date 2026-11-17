@@ -1,12 +1,12 @@
 import React from "react";
-import { Star, ShieldCheck, Award, Lock } from "lucide-react";
+import { Star, ShieldCheck, MessageSquare, Lock } from "lucide-react";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import { Section, SectionHeader, Card } from "../ui";
 
 const FALLBACK = [
-  { name: "Mary M.",  region: "Dar es Salaam", quote: { sw: "Nilinunua nyumba yangu kwa urahisi kupitia SokoMkononi. Mchakato wote ulikuwa rahisi na salama.", en: "I bought my house easily through SokoMkononi. The whole process was simple and secure." } },
-  { name: "Juma K.",  region: "Arusha",         quote: { sw: "Nimeuza magari matatu kwa mwezi mmoja! Jukwaa hili limebadilisha biashara yangu.",       en: "I've sold three cars in just one month! This platform transformed my business." } },
-  { name: "Fatima A.", region: "Mwanza",        quote: { sw: "Nilipata kiwanja bora kwa bei nzuri. Nashukuru SokoMkononi kwa uwazi wao.",             en: "I found a great plot at a good price. Thank you SokoMkononi for your transparency." } },
+  { name: "Mary M.",   region: "Dar es Salaam", quote: { sw: "Nilinunua laptop iliyotumika kwa bei nzuri. Tulikutana na muuzaji, nikaikagua kabla ya kulipa. Nimeridhika.", en: "I bought a used laptop at a fair price. I met the seller and checked it before paying. Very happy." } },
+  { name: "Juma K.",   region: "Arusha",        quote: { sw: "Niliuza simu yangu ya zamani ndani ya siku mbili tu. Wanunuzi walinitafuta wenyewe kupitia Deal Room.",      en: "I sold my old phone in just two days. Buyers contacted me directly through the Deal Room." } },
+  { name: "Fatima A.", region: "Mwanza",        quote: { sw: "Nimepata vitabu vya chuo kwa nusu ya bei ya dukani. Jukwaa ni rahisi kutumia, hata kwa simu.",              en: "I found my college books for half the shop price. The platform is easy to use, even on a phone." } },
 ];
 
 export default function TestimonialsSection({ testimonials }) {
@@ -36,16 +36,15 @@ export default function TestimonialsSection({ testimonials }) {
                   <p className="text-sm font-semibold text-primary truncate">{name}</p>
                   {region && <p className="text-[11px] text-muted truncate">{region}</p>}
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-wide text-[#2F6D4F] flex items-center gap-1 shrink-0"><ShieldCheck size={10} /> {t("Amethibitishwa", "Verified")}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wide text-[#2F6D4F] flex items-center gap-1 shrink-0"><ShieldCheck size={10} /> {t("Mteja", "Customer")}</span>
               </div>
             </Card>
           );
         })}
       </div>
       <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 mt-10 text-[11px] text-muted">
-        <span className="inline-flex items-center gap-1.5"><Award size={13} /> {t("Wauzaji Bora", "Top Rated Sellers")}</span>
+        <span className="inline-flex items-center gap-1.5"><MessageSquare size={13} /> {t("Deal Room Salama", "Secure Deal Room")}</span>
         <span className="inline-flex items-center gap-1.5"><Lock size={13} /> {t("SSL Imelindwa", "SSL Secured")}</span>
-        <span className="inline-flex items-center gap-1.5"><ShieldCheck size={13} /> {t("Uthibitishwa wa Mali", "Verified Listings")}</span>
       </div>
     </Section>
   );
