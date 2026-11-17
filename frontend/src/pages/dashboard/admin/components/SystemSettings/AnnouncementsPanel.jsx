@@ -166,8 +166,8 @@ export default function AnnouncementsPanel() {
     const target = announcements.find((a) => a.id === id);
     const msg = target?.sent
       ? t(
-          "Futa tangazo hili? Litatoweka kwa watumiaji wote na hatua hii haiwezi kurudishwa.",
-          "Delete this announcement? It will disappear for all users and this cannot be undone."
+          "Futa tangazo hili? Litatoweka kwa watumiaji wote, pamoja na arifa zake, na hatua hii haiwezi kurudishwa.",
+          "Delete this announcement? It will disappear for all users, including its notifications, and this cannot be undone."
         )
       : t(
           "Ghairi na ufute tangazo hili lililopangwa?",
@@ -199,8 +199,8 @@ export default function AnnouncementsPanel() {
     if (
       !window.confirm(
         t(
-          "Tuma tangazo hili sasa hivi kwa wote?",
-          "Send this announcement to everyone right now?"
+          "Tuma tangazo hili sasa hivi kwa wote? Watapata arifa kwenye app.",
+          "Send this announcement to everyone right now? They will get an in-app notification."
         )
       )
     )
@@ -511,6 +511,23 @@ export default function AnnouncementsPanel() {
                         {formatScheduled(a.scheduledFor || a.createdAt)}
                       </span>
                     )}
+                    {a.sent && (() => {
+                      // Arifa za bell: "zinatumwa" ni kwa matangazo ya saa 24 zilizopita tu
+                      const ref = new Date(a.scheduledFor || a.createdAt).getTime();
+                      const recent = Date.now() - ref < 24 * 3600 * 1000;
+                      if (a.dispatchedAt) {
+                        return (
+                          <span className="text-[10px] text-muted">
+                            {t("Arifa zimetumwa kwa watumiaji", "Users notified")}
+                          </span>
+                        );
+                      }
+                      return recent ? (
+                        <span className="text-[10px] text-muted">
+                          {t("Arifa zinatumwa...", "Notifying users...")}
+                        </span>
+                      ) : null;
+                    })()}
                   </div>
                   <p className="text-sm font-semibold text-primary break-words">
                     {getTitle(a)}

@@ -67,6 +67,8 @@ function norm(raw) {
     // Server inahesabu: ratiba ikifika = imetumwa (hata flag ikiwa bado false)
     sent: raw.is_published ?? raw.sent,
     status: raw.status || (raw.sent ? "SENT" : raw.scheduled_for ? "SCHEDULED" : "DRAFT"),
+    // Wakati arifa (bell) zilipotumwa kwa watumiaji; null = bado
+    dispatchedAt: raw.dispatched_at || null,
     createdAt: raw.created_at,
   };
 }
