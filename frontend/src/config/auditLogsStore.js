@@ -56,12 +56,9 @@ export const AUDIT_ACTIONS = [
   // Announcements
   { key: "announcement.created", label: { sw: "Unda Tangazo", en: "Create Announcement" }, color: "gold" },
   { key: "announcement.sent", label: { sw: "Tuma Tangazo", en: "Send Announcement" }, color: "gold" },
+  { key: "announcement.sent_now", label: { sw: "Tuma Tangazo Sasa", en: "Send Announcement Now" }, color: "gold" },
+  { key: "announcement.updated", label: { sw: "Hariri Tangazo", en: "Update Announcement" }, color: "gold" },
   { key: "announcement.deleted", label: { sw: "Futa Tangazo", en: "Delete Announcement" }, color: "rust" },
-
-  // Content
-  { key: "content.banner.created", label: { sw: "Ongeza Banner", en: "Create Banner" }, color: "green" },
-  { key: "content.banner.updated", label: { sw: "Badilisha Banner", en: "Update Banner" }, color: "gold" },
-  { key: "content.banner.deleted", label: { sw: "Futa Banner", en: "Delete Banner" }, color: "rust" },
 
   // Bundles
   { key: "bundle.created", label: { sw: "Ongeza Kifurushi", en: "Create Bundle" }, color: "green" },

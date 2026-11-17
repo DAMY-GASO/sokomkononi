@@ -21,7 +21,6 @@ import {
   UserCog,
   Loader2,
   RotateCcw,
-  Image as ImageIcon,
   Package,
   Webhook,
   Eye,
@@ -131,11 +130,9 @@ const ACTION_ICONS = {
 
   "announcement.created": Megaphone,
   "announcement.sent": Megaphone,
+  "announcement.sent_now": Megaphone,
+  "announcement.updated": Megaphone,
   "announcement.deleted": Trash2,
-
-  "content.banner.created": ImageIcon,
-  "content.banner.updated": ImageIcon,
-  "content.banner.deleted": Trash2,
 
   "bundle.created": Package,
   "bundle.updated": Package,
