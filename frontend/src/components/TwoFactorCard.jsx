@@ -6,6 +6,7 @@ import { Shield, Loader2, CheckCircle2, Copy, AlertTriangle } from "lucide-react
 import { COLORS } from "../pages/dashboard/components/shared";
 import { securityApi } from "../api/security.js";
 import RecoveryCodesCard from "./RecoveryCodesCard.jsx";
+import RevealPasswordInput from "./RevealPasswordInput.jsx";
 
 const errMsg = (err, fallback) =>
   err?.data?.detail || err?.message || fallback;
@@ -241,7 +242,7 @@ export default function TwoFactorCard({ lang, onStatusChange }) {
             {t("Zima 2FA — weka nenosiri + msimbo wa sasa:",
                "Disable 2FA — enter password + current code:")}
           </p>
-          <input type="password" value={password}
+          <RevealPasswordInput lang={lang} value={password}
                  onChange={(e) => setPassword(e.target.value)}
                  placeholder={t("Nenosiri", "Password")}
                  className="w-full border rounded-lg px-3 py-2 text-sm"

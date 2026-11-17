@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import TwoFactorCard from "../../../../components/TwoFactorCard.jsx";
+import AdminSessionsCard from "../../../../components/AdminSessionsCard.jsx";
+import RevealPasswordInput from "../../../../components/RevealPasswordInput.jsx";
 import {
   useAdminTwoFactor,
   setAdminTwoFactorEnabled,
@@ -224,8 +226,8 @@ export default function AdminProfile() {
       <SectionHeader
         title={t("Wasifu wa Msimamizi", "Admin Profile")}
         subtitle={t(
-          "Badilisha taarifa zako, picha, nenosiri, na usalama wa akaunti (2FA).",
-          "Update your info, photo, password, and account security (2FA)."
+          "Badilisha taarifa zako, picha, nenosiri, usalama wa akaunti (2FA) na vifaa vilivyoingia.",
+          "Update your info, photo, password, account security (2FA) and signed-in devices."
         )}
       />
 
@@ -392,8 +394,8 @@ export default function AdminProfile() {
             <span className="text-[11px] font-semibold text-secondary">
               {t("Nenosiri la Sasa", "Current Password")}
             </span>
-            <input
-              type="password"
+            <RevealPasswordInput
+              lang={lang}
               value={passwordForm.currentPassword}
               onChange={(e) =>
                 setPasswordForm({
@@ -410,8 +412,8 @@ export default function AdminProfile() {
             <span className="text-[11px] font-semibold text-secondary">
               {t("Nenosiri Jipya", "New Password")}
             </span>
-            <input
-              type="password"
+            <RevealPasswordInput
+              lang={lang}
               value={passwordForm.newPassword}
               onChange={(e) =>
                 setPasswordForm({
@@ -431,8 +433,8 @@ export default function AdminProfile() {
             <span className="text-[11px] font-semibold text-secondary">
               {t("Thibitisha Nenosiri Jipya", "Confirm New Password")}
             </span>
-            <input
-              type="password"
+            <RevealPasswordInput
+              lang={lang}
               value={passwordForm.confirmPassword}
               onChange={(e) =>
                 setPasswordForm({
@@ -489,6 +491,11 @@ export default function AdminProfile() {
           </span>
         </p>
         <TwoFactorCard lang={lang} onStatusChange={setAdminTwoFactorEnabled} />
+      </div>
+
+      {/* ACTIVE SESSIONS */}
+      <div className="mt-4">
+        <AdminSessionsCard lang={lang} />
       </div>
     </div>
   );
