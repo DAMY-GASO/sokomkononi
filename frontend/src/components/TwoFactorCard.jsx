@@ -183,8 +183,8 @@ export default function TwoFactorCard({ lang, onStatusChange }) {
       {setup && (
         <div className="space-y-3">
           <p className="text-xs text-secondary">
-            {t("1. Changanua QR hii kwa app yako (Google Authenticator, Authy, 1Password):",
-               "1. Scan this QR with your app (Google Authenticator, Authy, 1Password):")}
+            {t("1.Nakili na bandika funguo hii ya siri kwa app yako (Google Authenticator, Authy, 1Password):",
+               "1. Copy and paste this secret key to your app (Google Authenticator, Authy, 1Password):")}
           </p>
           {setup.qr_url && (
             <img src={setup.qr_url} alt="QR"
