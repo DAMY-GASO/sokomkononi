@@ -521,11 +521,28 @@ export async function updateProfileAsync(patch) {
   saveUser(optimistic);
   try {
     const raw = await authApi.updateProfile(patch);
+    // Jibu la PATCH linaweza kukosa fields (mfano phone) au kuwa na majina
+    // tofauti, na kufuta data kwenye UI. Chanzo cha ukweli ni /auth/me/ —
+    // kisha, kama /me/ pia haina, tunarudi kwenye jibu la PATCH / optimistic.
+    resetHydrateCache();
+    try {
+      const me = await authApi.me();
+      const fresh = normalizeUserFromApi(me);
+      if (fresh?.id) {
+        const merged = attachStoredAvatar(fresh);
+        saveUser(merged);
+        lastHydrateAt = Date.now();
+        return { ok: true, user: merged };
+      }
+    } catch (meErr) {
+      console.warn("[authStore] me() after updateProfile failed:", meErr);
+    }
     const data = raw?.profile || raw;
     const updated = normalizeUserFromApi(data);
     if (updated?.id) {
-      saveUser(updated);
-      return { ok: true, user: updated };
+      const next = { ...optimistic, ...updated };
+      saveUser(next);
+      return { ok: true, user: next };
     }
     return { ok: true, user: optimistic };
   } catch (err) {

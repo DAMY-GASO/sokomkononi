@@ -32,6 +32,32 @@ import {
 } from "../../../../config/adminTwoFactor.js";
 
 // ============================================================
+// Toa sababu halisi ya kosa kutoka backend (field errors za DRF),
+// badala ya "Failed" tupu.
+// ============================================================
+function errorText(err, fallback) {
+  // ApiError (api/client.js) tayari inatengeneza ujumbe sahihi kutoka
+  // jibu la backend (field errors, detail, message) — tumia huo kwanza.
+  if (err instanceof Error && err.message && !/^API error \d+$/.test(err.message)) {
+    return err.status ? `${err.message} (${err.status})` : err.message;
+  }
+  const d = err?.data ?? err?.details ?? err?.response?.data;
+  if (d && typeof d === "object") {
+    const parts = [];
+    for (const [k, v] of Object.entries(d)) {
+      const msg = Array.isArray(v)
+        ? v.map((x) => (typeof x === "object" ? JSON.stringify(x) : x)).join(", ")
+        : typeof v === "object"
+        ? JSON.stringify(v)
+        : String(v);
+      parts.push(["detail", "message", "error", "non_field_errors"].includes(k) ? msg : `${k}: ${msg}`);
+    }
+    if (parts.length) return parts.join(" • ");
+  }
+  return err?.message || fallback;
+}
+
+// ============================================================
 // AVATAR
 // ============================================================
 function Avatar({ user, size = "lg" }) {
@@ -99,7 +125,7 @@ export default function AdminProfile() {
 
   const showToast = (type, msg) => {
     setToast({ type, msg });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), type === "error" ? 7000 : 3000);
   };
 
   const handleAvatarChange = async (e) => {
@@ -147,20 +173,29 @@ export default function AdminProfile() {
       );
       return;
     }
+    // Tuma sehemu zilizobadilika tu (email haitumwi — ni readOnly)
+    const payload = {};
+    if (profileForm.name.trim() !== (user?.name || "")) {
+      payload.name = profileForm.name.trim();
+    }
+    if (profileForm.phone.trim() !== (user?.phone || "")) {
+      payload.phone = profileForm.phone.trim();
+    }
+    if (Object.keys(payload).length === 0) {
+      showToast("success", lang === "sw" ? "Hakuna mabadiliko" : "No changes");
+      return;
+    }
     setSavingProfile(true);
-    // Email haitumwi — ni readOnly
-    const res = await updateProfileAsync({
-      name: profileForm.name.trim(),
-      phone: profileForm.phone.trim(),
-    });
+    const res = await updateProfileAsync(payload);
     setSavingProfile(false);
+    if (!res.ok) console.error("updateProfileAsync failed", payload, res.error);
     if (res.ok) {
       showToast(
         "success",
         lang === "sw" ? "Taarifa zimehifadhiwa!" : "Profile saved!"
       );
     } else {
-      showToast("error", res.error?.message || "Failed");
+      showToast("error", errorText(res.error, lang === "sw" ? "Imeshindikana kuhifadhi" : "Failed to save"));
     }
   };
 
