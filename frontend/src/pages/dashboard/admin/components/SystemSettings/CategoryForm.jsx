@@ -6,13 +6,177 @@
 // ============================================================
 
 import React, { useState, useRef } from "react";
-import { X, ImagePlus, Loader2 } from "lucide-react";
+import { X, ImagePlus, Loader2, ChevronDown, Search } from "lucide-react";
 import { COLORS } from "../../shared/constants.js";
 import { useLanguage } from "../../../../../context/LanguageContext.jsx";
 import { AVAILABLE_ICONS } from "../../../../../config/categoriesStore.js";
+import {
+  FIELD_LIBRARY,
+  getFieldsByGroup,
+  fieldsConfigFromExtra,
+  resolveConfiguredFields,
+} from "../../../../../config/fieldLibrary.js";
 import { categoriesApi } from "../../../../../api/categories.js";
 import { useToast } from "../../../../../components/Toast.jsx";
 import ImageCropper from "../../../../../components/ImageCropper.jsx";
+
+// ============================================================
+// FieldsPicker — admin anatick fields zitakazoonekana kwenye fomu ya posting
+// ============================================================
+function FieldsPicker({ value, onChange, seedFields, lang, disabled }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const [open, setOpen] = useState({});
+  const [q, setQ] = useState("");
+
+  const selected = new Map(value.map((c) => [c.key, c]));
+
+  // Fields za awali za category ambazo hazipo kwenye maktaba (key za zamani)
+  const legacy = (seedFields || []).filter((f) => !FIELD_LIBRARY[f.key]);
+  const groups = [
+    ...(legacy.length
+      ? [{
+          key: "__legacy",
+          label: { sw: "Fields za awali za category hii", en: "This category's existing fields" },
+          fields: legacy,
+        }]
+      : []),
+    ...getFieldsByGroup(),
+  ];
+
+  const label = (f) => f.label?.[lang] || f.label?.sw || f.key;
+  const needle = q.trim().toLowerCase();
+  const matches = (f) =>
+    !needle ||
+    f.key.toLowerCase().includes(needle) ||
+    (f.label?.sw || "").toLowerCase().includes(needle) ||
+    (f.label?.en || "").toLowerCase().includes(needle);
+
+  const toggle = (key) => {
+    if (selected.has(key)) onChange(value.filter((c) => c.key !== key));
+    else onChange([...value, { key, required: false }]);
+  };
+  const setRequired = (key, required) =>
+    onChange(value.map((c) => (c.key === key ? { ...c, required } : c)));
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <span className="text-[11px] font-semibold text-secondary">
+          {t("Fields za Fomu ya Kuweka Tangazo", "Posting Form Fields")}
+        </span>
+        <span className="text-[11px] text-muted">
+          {value.length} {t("zimechaguliwa", "selected")}
+          {value.length > 0 && (
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => onChange([])}
+              className="ml-2 underline"
+              style={{ color: COLORS.dangerText }}
+            >
+              {t("Ondoa zote", "Clear all")}
+            </button>
+          )}
+        </span>
+      </div>
+      <p className="text-[10px] text-muted mb-2">
+        {t(
+          "Chagua tu vipengele vinavyofaa bidhaa za category hii. Kichwa, maelezo, bei, picha na eneo huwa vipo kila mara.",
+          "Pick only what fits this category. Title, description, price, photos and location are always shown."
+        )}
+      </p>
+
+      <div className="relative mb-2">
+        <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 opacity-50" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={t("Tafuta field (mfano: GB, rangi, ukubwa)", "Search field (e.g. GB, color, size)")}
+          disabled={disabled}
+          className="input"
+          style={{ paddingLeft: 28 }}
+        />
+      </div>
+
+      <div
+        style={{ borderColor: "rgb(var(--c-hairline))" }}
+        className="border rounded-md bg-card max-h-96 overflow-y-auto divide-y"
+      >
+        {groups.map((g) => {
+          const visible = g.fields.filter(matches);
+          if (needle && visible.length === 0) return null;
+          const count = g.fields.filter((f) => selected.has(f.key)).length;
+          const isOpen = needle ? true : !!open[g.key];
+          return (
+            <div key={g.key} style={{ borderColor: "rgb(var(--c-hairline))" }}>
+              <button
+                type="button"
+                onClick={() => setOpen((o) => ({ ...o, [g.key]: !o[g.key] }))}
+                className="w-full flex items-center justify-between gap-2 px-2.5 py-2 text-left hover:bg-ink/5"
+              >
+                <span className="text-xs font-semibold text-primary">
+                  {g.label[lang] || g.label.sw}
+                </span>
+                <span className="flex items-center gap-2 shrink-0">
+                  {count > 0 && (
+                    <span
+                      className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                      style={{ background: `${COLORS.gold}25`, color: COLORS.goldText }}
+                    >
+                      {count}
+                    </span>
+                  )}
+                  <ChevronDown
+                    size={14}
+                    className={`transition-transform ${isOpen ? "rotate-180" : ""}`}
+                  />
+                </span>
+              </button>
+
+              {isOpen && (
+                <ul className="px-2.5 pb-2 flex flex-col gap-1">
+                  {visible.map((f) => {
+                    const on = selected.has(f.key);
+                    return (
+                      <li key={f.key} className="flex items-center justify-between gap-2 text-xs">
+                        <label className="flex items-center gap-1.5 cursor-pointer min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={on}
+                            onChange={() => toggle(f.key)}
+                            disabled={disabled}
+                            className="shrink-0"
+                          />
+                          <span className="truncate">{label(f)}</span>
+                          {f.showIf && (
+                            <span className="text-[9px] text-muted shrink-0">
+                              ({t("masharti", "conditional")})
+                            </span>
+                          )}
+                        </label>
+                        {on && (
+                          <label className="flex items-center gap-1 text-[11px] text-secondary shrink-0 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={!!selected.get(f.key).required}
+                              onChange={(e) => setRequired(f.key, e.target.checked)}
+                              disabled={disabled}
+                            />
+                            {t("Lazima", "Required")}
+                          </label>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default function CategoryForm({
   initial = {},
@@ -37,6 +201,10 @@ export default function CategoryForm({
     isPopular: initial.isPopular ?? true,
     active: initial.active ?? true,
   });
+  const [fieldsConfig, setFieldsConfig] = useState(
+    () => initial.fieldsConfig || fieldsConfigFromExtra(initial.extra)
+  );
+  const [fieldsTouched, setFieldsTouched] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [cropFile, setCropFile] = useState(null);
   const fileInputRef = useRef(null);
@@ -126,7 +294,14 @@ export default function CategoryForm({
       imageUrl: finalImageUrl,
       isPopular: form.isPopular,
       active: form.active,
-      extra: initial.extra || [],
+      // Kategoria mpya au admin alipobadilisha tick -> hifadhi fields_config.
+      // Vinginevyo acha kama ilivyo (seed haifutwi).
+      ...(fieldsTouched || !isEditing
+        ? {
+            fieldsConfig,
+            extra: resolveConfiguredFields(fieldsConfig, initial.extra),
+          }
+        : { extra: initial.extra || [] }),
     });
   };
 
@@ -370,6 +545,20 @@ export default function CategoryForm({
             />
           </label>
         </div>
+
+        {/* ═══════════════════════════════════════════════════════ */}
+        {/* POSTING FIELDS (tick-list) */}
+        {/* ═══════════════════════════════════════════════════════ */}
+        <FieldsPicker
+          value={fieldsConfig}
+          onChange={(next) => {
+            setFieldsConfig(next);
+            setFieldsTouched(true);
+          }}
+          seedFields={initial.extra}
+          lang={lang}
+          disabled={saving}
+        />
 
         {/* ═══════════════════════════════════════════════════════ */}
         {/* FLAGS */}

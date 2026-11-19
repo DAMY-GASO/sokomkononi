@@ -33,6 +33,7 @@ import {
 import { categoriesApi } from "../api/categories.js";
 import { api } from "../api/client.js";
 import { CATEGORY_EXTRA, getPostingConfig } from "./categorySchemas.js";
+import { resolveConfiguredFields } from "./fieldLibrary.js";
 
 export { getPostingConfig };
 
@@ -377,6 +378,11 @@ function toBackendPayload(category) {
       ...existingExtra,
       name_en: category.label?.en || "",
       description_en: category.description?.en || "",
+      // Andika fields_config TU admin alipoihariri (array). Vinginevyo
+      // category za seed zingefutwa fields zake kwa `[]`.
+      ...(Array.isArray(category.fieldsConfig)
+        ? { fields_config: category.fieldsConfig }
+        : {}),
     },
   };
 }
@@ -769,6 +775,10 @@ function normalizeCategoryFromApi(raw) {
     !Array.isArray(raw.extra)
       ? raw.extra
       : {};
+  // null = haijawahi kuhaririwa (tumia seed); [] = admin ameondoa fields zote
+  const fieldsConfig = Array.isArray(extraData.fields_config)
+    ? extraData.fields_config
+    : null;
   const nameEn =
     extraData.name_en ||
     raw.name_en ||
@@ -809,7 +819,10 @@ function normalizeCategoryFromApi(raw) {
       raw.listings_count === undefined || raw.listings_count === null
         ? null
         : Number(raw.listings_count) || 0,
-    extra: SEED_EXTRA_BY_KEY[seedKey] || [],
+    extra: fieldsConfig
+      ? resolveConfiguredFields(fieldsConfig, SEED_EXTRA_BY_KEY[seedKey])
+      : SEED_EXTRA_BY_KEY[seedKey] || [],
+    fieldsConfig,
     _backendExtra: extraData,
     createdAt: raw.created_at,
     updatedAt: raw.updated_at,
@@ -819,6 +832,9 @@ function normalizeCategoryFromApi(raw) {
 function preserveExtras(optimistic, fromApi) {
   return {
     extra: optimistic?.extra || fromApi?.extra || [],
+    fieldsConfig: Array.isArray(optimistic?.fieldsConfig)
+      ? optimistic.fieldsConfig
+      : fromApi?.fieldsConfig ?? null,
     _backendExtra: fromApi?._backendExtra || optimistic?._backendExtra || {},
     iconKey: optimistic?.iconKey || fromApi?.iconKey || "Home",
     imageUrl: optimistic?.imageUrl || fromApi?.imageUrl || null,

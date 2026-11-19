@@ -1,3 +1,5 @@
+import { matchShowIf } from "./fieldLibrary.js";
+
 const o = (sw, en = sw) => ({ value: sw, label: { sw, en } });
 const ph = (sw, en = sw) => ({ sw, en });
 const F = (key, sw, en, type = "text", rest = {}) => ({
@@ -298,7 +300,7 @@ export const CATEGORY_EXTRA = {
     }),
     F("brand", "Brand", "Brand", "text", { required: true, suggestions: ELECTRONICS_BRANDS }),
     F("model", "Model", "Model", "text"),
-    F("specs", "Specs (RAM/Storage/Inchi)", "Specs (RAM/Storage/Size)", "text", { placeholder: ph("mfano: 8GB / 256GB", "e.g. 8GB / 256GB") }),
+    F("specs", "Specs (RAM/Storage/Inchi)", "Specs (RAM/Storage/Size)", "text", { placeholder: ph("mfano: 8GB / 256GB", "e.g. 8GB / 256GB"), showIf: { key: "aina", values: ["Simu", "Kompyuta / Laptop", "TV"] } }),
     F("hali", "Hali", "Condition", "select", { required: true, options: CONDITION_OPTIONS }),
     F("dhamana", "Ina Dhamana (Warranty)?", "Warranty?", "select", { options: YES_NO }),
   ],
@@ -469,9 +471,7 @@ export function getPostingConfig(key) {
 export function getVisibleFields(baseExtra, cfg, modeKey, values) {
   const mode = cfg?.modes?.find((m) => m.key === modeKey);
   const fields = mode ? mode.extra : baseExtra || [];
-  return fields.filter(
-    (f) => !f.showIf || String(values[f.showIf.key] || "") === f.showIf.value
-  );
+  return fields.filter((f) => matchShowIf(f, values || {}));
 }
 
 /** Label ya bei + je bei ni hiari? */
