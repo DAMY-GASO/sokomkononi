@@ -177,9 +177,9 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50">
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-t-2xl sm:rounded-2xl max-w-lg w-full p-4 sm:p-6 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto"
+        className="bg-card rounded-t-2xl sm:rounded-2xl max-w-lg w-full p-4 sm:p-6 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto"
       >
-        <div className="flex items-center justify-between mb-4 sticky top-0 bg-white pb-2 border-b border-gray-100">
+        <div className="flex items-center justify-between mb-4 sticky top-0 bg-card pb-2 border-b border-hairline">
           <h3 className="font-bold text-primary text-sm sm:text-base">
             {bundle
               ? t("Hariri Kifurushi", "Edit Bundle")
@@ -198,28 +198,28 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
 
         <div className="space-y-3">
           <div>
-            <label className="block text-[11px] sm:text-xs font-semibold text-secondary mb-1">
+            <label className="block text-xs font-semibold text-secondary mb-1">
               {t("Kitambulisho (ID)", "Identifier (ID)")}{" "}
-              <span className="text-[#C1502E]">*</span>
+              <span className="text-rust">*</span>
             </label>
             <input
               value={form.code || ""}
               onChange={(e) => updateField("code", e.target.value)}
               disabled={!!bundle || saving}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:bg-gray-50 disabled:text-secondary"
+              className="w-full border border-hairline rounded-lg px-3 py-2 text-sm disabled:bg-page disabled:text-secondary"
               placeholder="b_listing_starter"
             />
           </div>
 
           <div>
-            <label className="block text-[11px] sm:text-xs font-semibold text-secondary mb-1">
+            <label className="block text-xs font-semibold text-secondary mb-1">
               {t("Aina", "Type")}
             </label>
             <select
               value={form.type}
               onChange={(e) => updateField("type", e.target.value)}
               disabled={saving}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
+              className="w-full border border-hairline rounded-lg px-3 py-2 text-sm disabled:opacity-50"
             >
               {Object.entries(TYPE_LABELS).map(([key, label]) => (
                 <option key={key} value={key}>
@@ -231,9 +231,9 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] sm:text-xs font-semibold text-secondary mb-1">
+              <label className="block text-xs font-semibold text-secondary mb-1">
                 {t("Jina (SW)", "Name (SW)")}{" "}
-                <span className="text-[#C1502E]">*</span>
+                <span className="text-rust">*</span>
               </label>
               <input
                 value={form.name?.sw || ""}
@@ -241,13 +241,13 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
                   updateField("name", { ...form.name, sw: e.target.value })
                 }
                 disabled={saving}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
+                className="w-full border border-hairline rounded-lg px-3 py-2 text-sm disabled:opacity-50"
               />
             </div>
             <div>
-              <label className="block text-[11px] sm:text-xs font-semibold text-secondary mb-1">
+              <label className="block text-xs font-semibold text-secondary mb-1">
                 {t("Jina (EN)", "Name (EN)")}{" "}
-                <span className="text-[#C1502E]">*</span>
+                <span className="text-rust">*</span>
               </label>
               <input
                 value={form.name?.en || ""}
@@ -255,16 +255,16 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
                   updateField("name", { ...form.name, en: e.target.value })
                 }
                 disabled={saving}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
+                className="w-full border border-hairline rounded-lg px-3 py-2 text-sm disabled:opacity-50"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] sm:text-xs font-semibold text-secondary mb-1">
+              <label className="block text-xs font-semibold text-secondary mb-1">
                 {t("Maelezo (SW)", "Description (SW)")}{" "}
-                <span className="text-[#C1502E]">*</span>
+                <span className="text-rust">*</span>
               </label>
               <textarea
                 value={form.description?.sw || ""}
@@ -276,13 +276,13 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
                 }
                 rows={2}
                 disabled={saving}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none disabled:opacity-50"
+                className="w-full border border-hairline rounded-lg px-3 py-2 text-sm resize-none disabled:opacity-50"
               />
             </div>
             <div>
-              <label className="block text-[11px] sm:text-xs font-semibold text-secondary mb-1">
+              <label className="block text-xs font-semibold text-secondary mb-1">
                 {t("Maelezo (EN)", "Description (EN)")}{" "}
-                <span className="text-[#C1502E]">*</span>
+                <span className="text-rust">*</span>
               </label>
               <textarea
                 value={form.description?.en || ""}
@@ -294,27 +294,27 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
                 }
                 rows={2}
                 disabled={saving}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none disabled:opacity-50"
+                className="w-full border border-hairline rounded-lg px-3 py-2 text-sm resize-none disabled:opacity-50"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] sm:text-xs font-semibold text-secondary mb-1">
+              <label className="block text-xs font-semibold text-secondary mb-1">
                 {t("Bei (TZS)", "Price (TZS)")}{" "}
-                <span className="text-[#C1502E]">*</span>
+                <span className="text-rust">*</span>
               </label>
               <input
                 type="number"
                 value={form.price}
                 onChange={(e) => updateField("price", Number(e.target.value))}
                 disabled={saving}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
+                className="w-full border border-hairline rounded-lg px-3 py-2 text-sm disabled:opacity-50"
               />
             </div>
             <div>
-              <label className="block text-[11px] sm:text-xs font-semibold text-secondary mb-1">
+              <label className="block text-xs font-semibold text-secondary mb-1">
                 {t("Salio", "Credits")}
               </label>
               <input
@@ -329,11 +329,11 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
                   })
                 }
                 disabled={saving}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
+                className="w-full border border-hairline rounded-lg px-3 py-2 text-sm disabled:opacity-50"
               />
             </div>
             <div>
-              <label className="block text-[11px] sm:text-xs font-semibold text-secondary mb-1">
+              <label className="block text-xs font-semibold text-secondary mb-1">
                 {t("Muda (siku)", "Validity (days)")}
               </label>
               <input
@@ -343,11 +343,11 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
                   updateField("validityDays", Number(e.target.value))
                 }
                 disabled={saving}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
+                className="w-full border border-hairline rounded-lg px-3 py-2 text-sm disabled:opacity-50"
               />
             </div>
             <div>
-              <label className="block text-[11px] sm:text-xs font-semibold text-secondary mb-1">
+              <label className="block text-xs font-semibold text-secondary mb-1">
                 {t("Punguzo (%)", "Discount (%)")}
               </label>
               <input
@@ -357,7 +357,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
                   updateField("discountPercent", Number(e.target.value))
                 }
                 disabled={saving}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
+                className="w-full border border-hairline rounded-lg px-3 py-2 text-sm disabled:opacity-50"
               />
             </div>
           </div>
@@ -368,7 +368,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
               checked={form.featured}
               onChange={(e) => updateField("featured", e.target.checked)}
               disabled={saving}
-              className="w-4 h-4 rounded text-[#FEA406] disabled:opacity-50"
+              className="w-4 h-4 rounded text-gold disabled:opacity-50"
             />
             <span className="text-xs sm:text-sm text-secondary">
               {t("Onyesha kama Maarufu", "Mark as Featured")}
@@ -381,7 +381,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
               checked={form.active !== false}
               onChange={(e) => updateField("active", e.target.checked)}
               disabled={saving}
-              className="w-4 h-4 rounded text-[#FEA406] disabled:opacity-50"
+              className="w-4 h-4 rounded text-gold disabled:opacity-50"
             />
             <span className="text-xs sm:text-sm text-secondary">
               {t("Hai (active)", "Active")}
@@ -389,26 +389,26 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
           </label>
 
           {displayError && (
-            <p className="text-[11px] sm:text-xs text-[#C1502E] bg-[#C1502E]/10 rounded-lg px-3 py-2">
+            <p className="text-xs text-rust bg-rust/10 rounded-lg px-3 py-2">
               {displayError}
             </p>
           )}
 
-          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 pt-3 sticky bottom-0 bg-white pb-1">
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 pt-3 sticky bottom-0 bg-card pb-1">
             <button
               type="button"
               onClick={onClose}
               disabled={saving}
-              className="flex-1 py-2.5 rounded-lg border border-gray-200 text-secondary text-xs sm:text-sm font-medium disabled:opacity-50"
+              className="flex-1 py-2.5 rounded-lg border border-hairline text-secondary text-xs sm:text-sm font-medium disabled:opacity-50"
             >
               {t("Ghairi", "Cancel")}
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-[#FEA406] text-[#101A2E] text-xs sm:text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-gold text-night text-xs sm:text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {saving ? <Loader2 size={13} className="animate-spin" /> : null}
+              {saving ? <Loader2 size={14} className="animate-spin" /> : null}
               {t("Hifadhi", "Save")}
             </button>
           </div>
@@ -428,22 +428,22 @@ const PURCHASE_STATUS = {
   PAID: {
     sw: "Imelipwa",
     en: "Paid",
-    cls: "bg-[#2F6D4F]/10 text-[#2F6D4F]",
+    cls: "bg-green/10 text-green",
   },
   PENDING: {
     sw: "Inasubiri",
     en: "Pending",
-    cls: "bg-[#FEA406]/15 text-[#9A6200]",
+    cls: "bg-gold/15 text-gold-ink",
   },
   FAILED: {
     sw: "Imeshindwa",
     en: "Failed",
-    cls: "bg-[#C1502E]/10 text-[#C1502E]",
+    cls: "bg-rust/10 text-rust",
   },
   REFUNDED: {
     sw: "Imerudishwa",
     en: "Refunded",
-    cls: "bg-gray-100 text-secondary",
+    cls: "bg-page text-secondary",
   },
 };
 
@@ -532,13 +532,13 @@ function BundleHistoryModal({ bundle, lang, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50">
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl max-w-3xl w-full p-4 sm:p-6 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4 sticky top-0 bg-white pb-2 border-b border-gray-100">
+      <div className="bg-card rounded-t-2xl sm:rounded-2xl max-w-3xl w-full p-4 sm:p-6 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4 sticky top-0 bg-card pb-2 border-b border-hairline">
           <div className="min-w-0">
             <h3 className="font-bold text-primary text-sm sm:text-base">
               {t("Historia ya Manunuzi", "Purchase History")}
             </h3>
-            <p className="text-[11px] sm:text-xs text-secondary truncate">
+            <p className="text-xs text-secondary truncate">
               {title}
             </p>
           </div>
@@ -553,35 +553,35 @@ function BundleHistoryModal({ bundle, lang, onClose }) {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
-          <div className="rounded-lg border border-gray-100 p-2.5 text-center">
+          <div className="rounded-lg border border-hairline p-2.5 text-center">
             <p className="text-lg font-bold text-primary">
               {summary ? summary.count : "—"}
             </p>
-            <p className="text-[10px] text-secondary">
+            <p className="text-xs text-secondary">
               {t("Manunuzi yote", "All purchases")}
             </p>
           </div>
-          <div className="rounded-lg border border-gray-100 p-2.5 text-center">
-            <p className="text-lg font-bold text-[#2F6D4F]">
+          <div className="rounded-lg border border-hairline p-2.5 text-center">
+            <p className="text-lg font-bold text-green">
               {summary ? summary.paidCount : "—"}
             </p>
-            <p className="text-[10px] text-secondary">
+            <p className="text-xs text-secondary">
               {t("Yaliyolipwa", "Paid")}
             </p>
           </div>
-          <div className="rounded-lg border border-gray-100 p-2.5 text-center">
-            <p className="text-sm sm:text-base font-bold text-[#C1502E] leading-7">
+          <div className="rounded-lg border border-hairline p-2.5 text-center">
+            <p className="text-sm sm:text-base font-bold text-rust leading-7">
               {summary ? formatTZS(summary.paidAmount) : "—"}
             </p>
-            <p className="text-[10px] text-secondary">
+            <p className="text-xs text-secondary">
               {t("Mapato", "Revenue")}
             </p>
           </div>
-          <div className="rounded-lg border border-gray-100 p-2.5 text-center">
-            <p className="text-lg font-bold text-[#FEA406]">
+          <div className="rounded-lg border border-hairline p-2.5 text-center">
+            <p className="text-lg font-bold text-gold-ink">
               {summary ? summary.creditsIssued : "—"}
             </p>
-            <p className="text-[10px] text-secondary">
+            <p className="text-xs text-secondary">
               {t("Credits zilizotolewa", "Credits issued")}
             </p>
           </div>
@@ -597,7 +597,7 @@ function BundleHistoryModal({ bundle, lang, onClose }) {
                 "Tafuta mnunuzi, simu, barua pepe, kumbukumbu...",
                 "Search buyer, phone, email, reference..."
               )}
-              className="w-full rounded-lg border border-gray-200 bg-white pl-3 pr-9 py-2 text-sm outline-none"
+              className="w-full rounded-lg border border-hairline bg-card pl-3 pr-9 py-2 text-sm outline-none"
             />
             <Search
               size={14}
@@ -610,7 +610,7 @@ function BundleHistoryModal({ bundle, lang, onClose }) {
               setStatus(e.target.value);
               setPage(1);
             }}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+            className="rounded-lg border border-hairline bg-card px-3 py-2 text-sm"
           >
             <option value="">{t("Hali zote", "All statuses")}</option>
             {Object.entries(PURCHASE_STATUS).map(([key, v]) => (
@@ -622,7 +622,7 @@ function BundleHistoryModal({ bundle, lang, onClose }) {
         </div>
 
         {error && (
-          <div className="text-xs font-semibold px-3 py-2 rounded-lg bg-[#C1502E]/10 text-[#C1502E] mb-3">
+          <div className="text-xs font-semibold px-3 py-2 rounded-lg bg-rust/10 text-rust mb-3">
             {error}
           </div>
         )}
@@ -632,7 +632,7 @@ function BundleHistoryModal({ bundle, lang, onClose }) {
             <Loader2 size={22} className="animate-spin text-muted" />
           </div>
         ) : items.length === 0 ? (
-          <div className="rounded-xl border-2 border-dashed border-gray-200 p-8 text-center">
+          <div className="rounded-xl border-2 border-dashed border-hairline p-8 text-center">
             <Package size={32} className="mx-auto text-muted mb-2" />
             <p className="text-xs sm:text-sm text-secondary">
               {t("Hakuna manunuzi yaliyopatikana.", "No purchases found.")}
@@ -645,21 +645,21 @@ function BundleHistoryModal({ bundle, lang, onClose }) {
               return (
                 <div
                   key={p.id}
-                  className="rounded-xl border border-gray-100 p-3 flex flex-col gap-1.5"
+                  className="rounded-xl border border-hairline p-3 flex flex-col gap-1.5"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-xs sm:text-sm font-semibold text-primary truncate">
                         {p.user.name || p.user.email || p.user.phone || "—"}
                       </p>
-                      <p className="text-[10px] sm:text-xs text-secondary truncate">
+                      <p className="text-xs text-secondary truncate">
                         {[p.user.phone, p.user.email]
                           .filter(Boolean)
                           .join(" · ") || "—"}
                       </p>
                     </div>
                     <span
-                      className={`text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${st.cls}`}
+                      className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${st.cls}`}
                     >
                       {pickLang(st, lang)}
                     </span>
@@ -667,25 +667,25 @@ function BundleHistoryModal({ bundle, lang, onClose }) {
 
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     {!bundle && (
-                      <span className="text-[11px] sm:text-xs text-secondary truncate">
+                      <span className="text-xs text-secondary truncate">
                         {pickLang(p.bundle.name, lang) ||
                           displayBundleCode(p.bundle.code, lang)}
                       </span>
                     )}
-                    <span className="text-sm font-bold text-[#C1502E]">
+                    <span className="text-sm font-bold text-rust">
                       {formatTZS(p.amount)}
                     </span>
                   </div>
 
-                  <p className="text-[10px] sm:text-xs text-secondary flex items-start gap-1">
-                    <Coins size={11} className="mt-0.5 shrink-0" />
+                  <p className="text-xs text-secondary flex items-start gap-1">
+                    <Coins size={12} className="mt-0.5 shrink-0" />
                     <span>
                       {creditsText(p.credits, lang)}
                       {p.creditsTotal > 0 && ` (${p.creditsTotal})`}
                     </span>
                   </p>
 
-                  <div className="flex items-center justify-between gap-2 text-[10px] text-muted flex-wrap">
+                  <div className="flex items-center justify-between gap-2 text-xs text-muted flex-wrap">
                     <span>
                       {p.paidAt
                         ? `${t("Imelipwa", "Paid")}: ${fmtDate(p.paidAt, lang)}`
@@ -715,19 +715,19 @@ function BundleHistoryModal({ bundle, lang, onClose }) {
               type="button"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="flex items-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-secondary disabled:opacity-40"
+              className="flex items-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg border border-hairline text-secondary disabled:opacity-40"
             >
               <ChevronLeft size={14} />
               {t("Nyuma", "Prev")}
             </button>
-            <span className="text-[11px] text-secondary">
+            <span className="text-xs text-secondary">
               {t("Ukurasa", "Page")} {page} / {totalPages}
             </span>
             <button
               type="button"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
-              className="flex items-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-secondary disabled:opacity-40"
+              className="flex items-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg border border-hairline text-secondary disabled:opacity-40"
             >
               {t("Mbele", "Next")}
               <ChevronRight size={14} />
@@ -859,27 +859,27 @@ export default function AdminBundles() {
           </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full max-w-2xl mt-2">
-            <div className="bg-white rounded-lg border border-gray-100 p-2.5 text-center">
+            <div className="bg-card rounded-lg border border-hairline p-2.5 text-center">
               <p className="text-lg font-bold text-primary">{stats.total}</p>
-              <p className="text-[10px] text-secondary">{t("Zote", "Total")}</p>
+              <p className="text-xs text-secondary">{t("Zote", "Total")}</p>
             </div>
-            <div className="bg-white rounded-lg border border-gray-100 p-2.5 text-center">
-              <p className="text-lg font-bold text-[#2F6D4F]">{stats.active}</p>
-              <p className="text-[10px] text-secondary">{t("Hai", "Active")}</p>
+            <div className="bg-card rounded-lg border border-hairline p-2.5 text-center">
+              <p className="text-lg font-bold text-green">{stats.active}</p>
+              <p className="text-xs text-secondary">{t("Hai", "Active")}</p>
             </div>
-            <div className="bg-white rounded-lg border border-gray-100 p-2.5 text-center">
+            <div className="bg-card rounded-lg border border-hairline p-2.5 text-center">
               <p className="text-lg font-bold text-secondary">
                 {stats.inactive}
               </p>
-              <p className="text-[10px] text-secondary">
+              <p className="text-xs text-secondary">
                 {t("Imesimamishwa", "Inactive")}
               </p>
             </div>
-            <div className="bg-white rounded-lg border border-gray-100 p-2.5 text-center">
-              <p className="text-lg font-bold text-[#FEA406]">
+            <div className="bg-card rounded-lg border border-hairline p-2.5 text-center">
+              <p className="text-lg font-bold text-gold-ink">
                 {stats.featured}
               </p>
-              <p className="text-[10px] text-secondary">
+              <p className="text-xs text-secondary">
                 {t("Maarufu", "Featured")}
               </p>
             </div>
@@ -893,14 +893,14 @@ export default function AdminBundles() {
                 setError("");
               }}
               disabled={saving}
-              className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-lg bg-[#FEA406] text-[#101A2E] disabled:opacity-50"
+              className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-lg bg-gold text-night disabled:opacity-50"
             >
               <Plus size={14} />
               {t("Ongeza Kifurushi", "Add Bundle")}
             </button>
             <button
               onClick={() => setHistory({ open: true, bundle: null })}
-              className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-lg border border-gray-200 bg-white text-secondary hover:bg-gray-50"
+              className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-lg border border-hairline bg-card text-secondary hover:bg-page"
             >
               <History size={14} />
               {t("Historia ya Manunuzi", "Purchase History")}
@@ -908,7 +908,7 @@ export default function AdminBundles() {
           </div>
 
           {error && !showForm && (
-            <div className="text-xs font-semibold px-3 py-2 rounded-lg bg-[#C1502E]/10 text-[#C1502E] max-w-xl">
+            <div className="text-xs font-semibold px-3 py-2 rounded-lg bg-rust/10 text-rust max-w-xl">
               {error}
             </div>
           )}
@@ -921,7 +921,7 @@ export default function AdminBundles() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("Tafuta kifurushi...", "Search bundle...")}
-              className="smk-inline-search w-full rounded-xl border border-gray-200 bg-white pl-3 pr-10 py-2.5 text-sm outline-none focus:outline-none focus-visible:outline-none"
+              className="smk-inline-search w-full rounded-xl border border-hairline bg-card pl-3 pr-10 py-2.5 text-sm outline-none focus:outline-none focus-visible:outline-none"
               style={{ WebkitAppearance: "none" }}
             />
             <Search
@@ -948,10 +948,10 @@ export default function AdminBundles() {
                 <button
                   key={key}
                   onClick={() => setFilterType(key)}
-                  className={`text-[11px] sm:text-xs font-semibold px-3 py-1.5 sm:py-2 rounded-full border whitespace-nowrap shrink-0 transition-colors ${
+                  className={`text-xs font-semibold px-3 py-1.5 sm:py-2 rounded-full border whitespace-nowrap shrink-0 transition-colors ${
                     filterType === key
-                      ? "bg-[#101A2E] text-[#F5F3EC] border-[#101A2E]"
-                      : "bg-white text-[#101A2E] border-gray-200"
+                      ? "bg-night text-sand border-night"
+                      : "bg-card text-primary border-hairline"
                   }`}
                 >
                   {label}
@@ -962,7 +962,7 @@ export default function AdminBundles() {
         </div>
 
         {filtered.length === 0 ? (
-          <div className="rounded-2xl border-2 border-dashed border-gray-200 p-8 sm:p-12 text-center bg-white">
+          <div className="rounded-2xl border-2 border-dashed border-hairline p-8 sm:p-12 text-center bg-card">
             <Package
               size={40}
               className="mx-auto text-muted mb-3 sm:w-12 sm:h-12"
@@ -979,7 +979,7 @@ export default function AdminBundles() {
               return (
                 <div
                   key={b.id}
-                  className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 flex flex-col gap-2"
+                  className="bg-card rounded-xl border border-hairline p-3 sm:p-4 flex flex-col gap-2"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
@@ -987,21 +987,21 @@ export default function AdminBundles() {
                         {pickLang(b.name, lang) ||
                           displayBundleCode(b.code, lang)}
                       </p>
-                      <p className="text-[10px] sm:text-xs text-secondary capitalize">
+                      <p className="text-xs text-secondary capitalize">
                         {pickLang(TYPE_LABELS[b.type], lang) || b.type}
                       </p>
                       <p
-                        className="text-[10px] text-muted font-mono truncate"
+                        className="text-xs text-muted font-mono truncate"
                         title={`Code: ${b.code}`}
                       >
                         {displayBundleCode(b.code, lang)}
                       </p>
                     </div>
                     <span
-                      className={`text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                      className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${
                         b.active
-                          ? "bg-[#2F6D4F]/10 text-[#2F6D4F]"
-                          : "bg-gray-100 text-secondary"
+                          ? "bg-green/10 text-green"
+                          : "bg-page text-secondary"
                       }`}
                     >
                       {b.active
@@ -1010,11 +1010,11 @@ export default function AdminBundles() {
                     </span>
                   </div>
 
-                  <p className="text-base sm:text-lg font-bold text-[#C1502E]">
+                  <p className="text-base sm:text-lg font-bold text-rust">
                     {formatTZS(b.price)}
                   </p>
 
-                  <p className="text-[10px] sm:text-xs text-secondary line-clamp-2">
+                  <p className="text-xs text-secondary line-clamp-2">
                     {t("Salio", "Credits")}:{" "}
                     {b && typeof b.credits === "object"
                       ? Object.entries(b.credits)
@@ -1026,7 +1026,7 @@ export default function AdminBundles() {
                       : b.credits}
                   </p>
 
-                  <div className="flex items-center gap-3 text-[10px] sm:text-xs text-secondary flex-wrap">
+                  <div className="flex items-center gap-3 text-xs text-secondary flex-wrap">
                     {b.validityDays && (
                       <span>
                         {t(
@@ -1036,7 +1036,7 @@ export default function AdminBundles() {
                       </span>
                     )}
                     {b.discountPercent > 0 && (
-                      <span className="text-[#2F6D4F] font-semibold">
+                      <span className="text-green font-semibold">
                         {t(
                           `Okoa ${b.discountPercent}%`,
                           `Save ${b.discountPercent}%`
@@ -1045,7 +1045,7 @@ export default function AdminBundles() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-3 text-[10px] sm:text-xs text-secondary flex-wrap">
+                  <div className="flex items-center gap-3 text-xs text-secondary flex-wrap">
                     <span title={t("Manunuzi yaliyolipwa", "Paid purchases")}>
                       {t("Zilizonunuliwa", "Purchased")}:{" "}
                       <b className="text-primary">{b.purchasesCount}</b>
@@ -1070,14 +1070,14 @@ export default function AdminBundles() {
                         setError("");
                       }}
                       disabled={saving || isToggling || isDeleting}
-                      className="flex-1 flex items-center justify-center gap-1 text-[11px] sm:text-xs font-semibold py-2 rounded-lg border border-gray-200 text-secondary hover:bg-gray-50 transition-colors disabled:opacity-50"
+                      className="flex-1 flex items-center justify-center gap-1 text-xs font-semibold py-2 rounded-lg border border-hairline text-secondary hover:bg-page transition-colors disabled:opacity-50"
                     >
                       <Pencil size={12} />
                       {t("Hariri", "Edit")}
                     </button>
                     <button
                       onClick={() => setHistory({ open: true, bundle: b })}
-                      className="p-2 text-muted hover:text-[#C1502E] rounded-lg hover:bg-gray-50 transition-colors"
+                      className="p-2 text-muted hover:text-rust rounded-lg hover:bg-page transition-colors"
                       title={t("Historia ya manunuzi", "Purchase history")}
                       aria-label={t("Historia ya manunuzi", "Purchase history")}
                     >
@@ -1086,7 +1086,7 @@ export default function AdminBundles() {
                     <button
                       onClick={() => handleToggle(b.id)}
                       disabled={isToggling || isDeleting}
-                      className="p-2 text-muted hover:text-[#2F6D4F] rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                      className="p-2 text-muted hover:text-green rounded-lg hover:bg-page transition-colors disabled:opacity-50"
                       title={
                         b.active
                           ? t("Simamisha", "Deactivate")
@@ -1109,7 +1109,7 @@ export default function AdminBundles() {
                     <button
                       onClick={() => handleDelete(b.id)}
                       disabled={isDeleting || isToggling}
-                      className="p-2 text-muted hover:text-[#C1502E] rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                      className="p-2 text-muted hover:text-rust rounded-lg hover:bg-page transition-colors disabled:opacity-50"
                       aria-label={t("Futa", "Delete")}
                     >
                       {isDeleting ? (

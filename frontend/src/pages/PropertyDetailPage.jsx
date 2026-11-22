@@ -139,7 +139,7 @@ function ImageGallery({ property, lang }) {
 
   if (images.length === 0) {
     return (
-      <div className="relative w-full aspect-square max-w-[640px] mx-auto rounded-2xl overflow-hidden bg-gray-100 flex items-center justify-center">
+      <div className="relative w-full aspect-square max-w-[640px] mx-auto rounded-2xl overflow-hidden bg-page flex items-center justify-center">
         <Icon size={64} className="text-muted" />
         {(isReserved || isSold) && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
@@ -246,7 +246,7 @@ function ImageGallery({ property, lang }) {
 
 function FeatureItem({ icon: Icon, label, value }) {
   return (
-    <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-100">
+    <div className="flex items-center gap-3 p-3 bg-card rounded-xl border border-hairline">
       <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center flex-shrink-0">
         <Icon size={18} color={COLORS.gold} />
       </div>
@@ -352,13 +352,13 @@ function AttributesTable({ property, lang }) {
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-100">
+    <div className="overflow-hidden rounded-xl border border-hairline">
       <table className="w-full text-sm">
         <tbody>
           {rows.map((row, idx) => (
             <tr
               key={idx}
-              className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
+              className={idx % 2 === 0 ? "bg-card" : "bg-page"}
             >
               <td className="px-4 py-2.5 font-medium text-secondary w-1/2 align-top">
                 {row.label}
@@ -398,7 +398,7 @@ function SellerCard({
     null;
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-5">
+    <div className="bg-card rounded-2xl border border-hairline p-5">
       <div className="flex items-center gap-4 mb-4">
         {sellerAvatar ? (
           <img
@@ -441,7 +441,7 @@ function SellerCard({
         <>
           <div className="mb-3 p-3 rounded-xl bg-gold/10 border border-gold/30">
             <p className="text-body-sm font-semibold text-gold-ink flex items-center gap-1.5">
-              {isSold ? <Ban size={13} /> : <Clock3 size={13} />}
+              {isSold ? <Ban size={14} /> : <Clock3 size={14} />}
               {isSold
                 ? t(lang, "Mali hii tayari imeuzwa.", "This property has already been sold.")
                 : t(lang, "Mali hii tayari ina Reservation.", "This property already has a Reservation.")}
@@ -467,7 +467,7 @@ function SellerCard({
             onClick={onJoinWaitlist}
             disabled={alreadyOnWaitlist || isSold}
             className={`w-full py-2.5 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2 ${
-              alreadyOnWaitlist || isSold ? "bg-gray-100 text-muted cursor-not-allowed" : "bg-night hover:bg-night-deep text-white"
+              alreadyOnWaitlist || isSold ? "bg-page text-muted cursor-not-allowed" : "bg-night hover:bg-night-deep text-white"
             }`}
           >
             <BellRing size={16} />
@@ -492,12 +492,12 @@ function SellerCard({
         </button>
       )}
 
-      <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col gap-2">
+      <div className="mt-4 pt-4 border-t border-hairline flex flex-col gap-2">
         {!isOwner && !isUnavailable && (
           <button
             type="button"
             onClick={onReportSeller}
-            className="w-full text-[11px] font-semibold text-muted hover:text-rust transition-colors py-1"
+            className="w-full text-xs font-semibold text-muted hover:text-rust transition-colors py-1"
           >
             {t(lang, "Ripoti Muuzaji Huyu", "Report this Seller")}
           </button>
@@ -512,7 +512,7 @@ function SellerCard({
 
 function ListingNotFound({ lang }) {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-page">
       <Navbar />
       <div className="max-w-2xl mx-auto px-4 py-20 text-center">
         <HomeIcon size={64} className="mx-auto text-muted mb-4" />
@@ -731,20 +731,20 @@ export default function PropertyDetailPage() {
 
   if (!hydrated && !property) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-page">
         <Navbar />
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
               <div className="aspect-square rounded-2xl skeleton" />
-              <div className="bg-white rounded-2xl p-5 space-y-3">
+              <div className="bg-card rounded-2xl p-5 space-y-3">
                 <div className="h-6 w-3/4 skeleton" />
                 <div className="h-4 w-1/2 skeleton" />
                 <div className="h-8 w-1/3 skeleton" />
               </div>
             </div>
             <div className="space-y-4">
-              <div className="bg-white rounded-2xl p-5 space-y-3">
+              <div className="bg-card rounded-2xl p-5 space-y-3">
                 <div className="h-14 w-14 rounded-full skeleton" />
                 <div className="h-4 w-full skeleton" />
                 <div className="h-10 w-full skeleton" />
@@ -1000,7 +1000,7 @@ export default function PropertyDetailPage() {
     t(lang, "Mali", "Property");
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-page">
       <Navbar />
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
@@ -1035,7 +1035,7 @@ export default function PropertyDetailPage() {
               lang={lang}
             />
 
-            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <div className="bg-card rounded-2xl border border-hairline p-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <h1 className="text-xl sm:text-2xl font-bold text-primary">{property.title}</h1>
@@ -1057,7 +1057,7 @@ export default function PropertyDetailPage() {
                     className={`w-10 h-10 rounded-full border flex items-center justify-center transition-colors ${
                       isSaved
                         ? "bg-rust border-rust text-white"
-                        : "border-gray-200 text-muted hover:text-rust hover:border-rust"
+                        : "border-hairline text-muted hover:text-rust hover:border-rust"
                     }`}
                     aria-label={t(lang, "Hifadhi", "Save")}
                   >
@@ -1065,7 +1065,7 @@ export default function PropertyDetailPage() {
                   </button>
                   <button
                     onClick={handleShare}
-                    className="w-10 h-10 rounded-full border border-gray-200 text-muted hover:text-secondary flex items-center justify-center transition-colors"
+                    className="w-10 h-10 rounded-full border border-hairline text-muted hover:text-secondary flex items-center justify-center transition-colors"
                     aria-label={t(lang, "Shiriki", "Share")}
                   >
                     <Share2 size={18} />
@@ -1073,7 +1073,7 @@ export default function PropertyDetailPage() {
                   <button
                     onClick={handleReport}
                     disabled={reporting}
-                    className="w-10 h-10 rounded-full border border-gray-200 text-muted hover:text-rust flex items-center justify-center transition-colors disabled:opacity-50"
+                    className="w-10 h-10 rounded-full border border-hairline text-muted hover:text-rust flex items-center justify-center transition-colors disabled:opacity-50"
                     aria-label={t(lang, "Ripoti", "Report")}
                   >
                     <Flag size={18} />
@@ -1081,7 +1081,7 @@ export default function PropertyDetailPage() {
                 </div>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-gray-100">
+              <div className="mt-4 pt-4 border-t border-hairline">
                 <div className="flex items-end gap-3 flex-wrap">
                   <p className="text-2xl sm:text-3xl font-bold text-night">
                     {formatTZS(property.price)}
@@ -1116,8 +1116,8 @@ export default function PropertyDetailPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-              <div className="flex border-b border-gray-100">
+            <div className="bg-card rounded-2xl border border-hairline overflow-hidden">
+              <div className="flex border-b border-hairline">
                 <button
                   onClick={() => setActiveTab("details")}
                   className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
@@ -1158,7 +1158,7 @@ export default function PropertyDetailPage() {
                   <div>
                     <h3 className="font-semibold text-primary mb-4">{t(lang, "Mahali", "Location")}</h3>
                     <div className="mb-4 flex items-center gap-2 text-sm text-secondary">
-                      <MapPin size={14} className="text-[#FEA406] shrink-0" />
+                      <MapPin size={14} className="text-gold-ink shrink-0" />
                       <span>{property.location}</span>
                     </div>
                     {property.latitude != null && property.longitude != null ? (
@@ -1219,7 +1219,7 @@ export default function PropertyDetailPage() {
               contactLoading={contactLoading}
             />
 
-            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <div className="bg-card rounded-2xl border border-hairline p-5">
               <h3 className="font-semibold text-primary mb-3 flex items-center gap-2">
                 <Shield size={16} className="text-gold-ink" />
                 {t(lang, "Vidokezo vya Usalama", "Safety Tips")}
@@ -1239,7 +1239,7 @@ export default function PropertyDetailPage() {
               </ul>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <div className="bg-card rounded-2xl border border-hairline p-5">
               <h3 className="font-semibold text-primary mb-3">{t(lang, "Takwimu", "Statistics")}</h3>
               <div className="grid grid-cols-2 gap-3 text-center">
                 <div>

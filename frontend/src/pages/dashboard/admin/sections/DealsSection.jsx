@@ -225,14 +225,14 @@ export default function DealsSection() {
           onClick={() => handleViewRoom(deal)}
           disabled={isLoading}
           style={{ borderColor: COLORS.sandLine, color: "var(--text-primary)" }}
-          className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg border hover:bg-gray-50 transition-colors disabled:opacity-50 ${
+          className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg border hover:bg-page transition-colors disabled:opacity-50 ${
             fullWidth ? "w-full" : ""
           }`}
         >
           {isLoading ? (
-            <Loader2 size={13} className="animate-spin" />
+            <Loader2 size={14} className="animate-spin" />
           ) : (
-            <Eye size={13} />
+            <Eye size={14} />
           )}
           {isRoomOpen ? t("Funga", "Close") : t("Angalia Room", "View Room")}
         </button>
@@ -260,10 +260,10 @@ export default function DealsSection() {
           style={{
             borderColor: COLORS.sandLine,
             color: "var(--text-primary)",
-            background: "white",
+            background: "rgb(var(--c-card))",
           }}
         >
-          <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />
+          <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
           <span className="hidden sm:inline">
             {refreshing
               ? t("Inasasisha...", "Refreshing...")
@@ -291,7 +291,7 @@ export default function DealsSection() {
               "Tafuta mali, mnunuzi, muuzaji...",
               "Search listing, buyer, seller..."
             )}
-            className="smk-inline-search w-full rounded-lg border border-gray-200 bg-white pl-3 pr-16 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
+            className="smk-inline-search w-full rounded-lg border border-hairline bg-card pl-3 pr-16 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
             style={{ WebkitAppearance: "none" }}
           />
           {query && (
@@ -300,7 +300,7 @@ export default function DealsSection() {
               className="absolute right-9 top-1/2 -translate-y-1/2 text-muted hover:text-secondary"
               aria-label={t("Futa", "Clear")}
             >
-              <X size={13} />
+              <X size={14} />
             </button>
           )}
           <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" />
@@ -314,11 +314,11 @@ export default function DealsSection() {
                 key={tab.key || "all"}
                 onClick={() => setStatusFilter(tab.key)}
                 style={{
-                  background: isActive ? COLORS.night : "white",
+                  background: isActive ? COLORS.night : "rgb(var(--c-card))",
                   color: isActive ? COLORS.sand : "var(--text-primary)",
                   borderColor: COLORS.sandLine,
                 }}
-                className="text-[11px] font-semibold px-3 py-2 rounded-full border whitespace-nowrap shrink-0"
+                className="text-xs font-semibold px-3 py-2 rounded-full border whitespace-nowrap shrink-0"
               >
                 {tab.label?.[lang] || tab.label?.sw}
               </button>
@@ -329,7 +329,7 @@ export default function DealsSection() {
 
       {/* Loading */}
       {loading && deals.length === 0 && (
-        <div className="bg-white rounded-xl border border-gray-100 p-8 flex items-center justify-center gap-2">
+        <div className="bg-card rounded-xl border border-hairline p-8 flex items-center justify-center gap-2">
           <Loader2 size={18} className="animate-spin text-muted" />
           <span className="text-xs text-muted">
             {t("Inapakia deals...", "Loading deals...")}
@@ -339,8 +339,8 @@ export default function DealsSection() {
 
       {/* DESKTOP — MODERN GRID LIST */}
       {deals.length > 0 && (
-        <div className="hidden sm:block bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
-          <div className="grid grid-cols-12 gap-4 px-5 py-3 bg-page border-b border-hairline text-[11px] font-bold text-secondary uppercase tracking-wider">
+        <div className="hidden sm:block bg-card rounded-xl border border-hairline overflow-hidden shadow-sm">
+          <div className="grid grid-cols-12 gap-4 px-5 py-3 bg-page border-b border-hairline text-xs font-bold text-secondary uppercase tracking-wider">
             <div className="col-span-3">Listing</div>
             <div className="col-span-2">Buyer</div>
             <div className="col-span-2">Seller</div>
@@ -360,7 +360,7 @@ export default function DealsSection() {
                       <span className="font-semibold text-primary text-sm truncate" title={displayListing(d)}>
                         {displayListing(d)}
                       </span>
-                      <span className="text-[11px] text-muted truncate mt-0.5">
+                      <span className="text-xs text-muted truncate mt-0.5">
                         {displayCategory(d)} · {d.location || "—"}
                       </span>
                     </div>
@@ -370,7 +370,7 @@ export default function DealsSection() {
                         {displayDealName(d.buyerName, d.buyerId)}
                       </span>
                       {d.buyerEmail && (
-                        <span className="text-[11px] text-muted truncate mt-0.5" title={d.buyerEmail}>
+                        <span className="text-xs text-muted truncate mt-0.5" title={d.buyerEmail}>
                           {d.buyerEmail}
                         </span>
                       )}
@@ -381,7 +381,7 @@ export default function DealsSection() {
                         {displayDealName(d.sellerName, d.sellerId)}
                       </span>
                       {d.sellerEmail && (
-                        <span className="text-[11px] text-muted truncate mt-0.5" title={d.sellerEmail}>
+                        <span className="text-xs text-muted truncate mt-0.5" title={d.sellerEmail}>
                           {d.sellerEmail}
                         </span>
                       )}
@@ -398,7 +398,7 @@ export default function DealsSection() {
                     </div>
 
                     <div className="col-span-1 text-right">
-                      <span className="text-[11px] text-muted whitespace-nowrap">
+                      <span className="text-xs text-muted whitespace-nowrap">
                         {d.createdAt ? timeAgo(d.createdAt, lang) : "—"}
                       </span>
                     </div>
@@ -409,7 +409,7 @@ export default function DealsSection() {
                   </div>
 
                   {isExpanded && (
-                    <div className="bg-white border-b border-gray-100">
+                    <div className="bg-card border-b border-hairline">
                       <DealRoomViewer
                         deal={d}
                         roomData={dealRooms[d.id]}
@@ -437,32 +437,32 @@ export default function DealsSection() {
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-bold text-primary truncate">{displayListing(d)}</p>
-                      <p className="text-[11px] text-muted truncate mt-0.5">{displayCategory(d)} · {d.location || "—"}</p>
+                      <p className="text-xs text-muted truncate mt-0.5">{displayCategory(d)} · {d.location || "—"}</p>
                     </div>
                     <StatusBadge status={d.status} lang={lang} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 mb-3 bg-page rounded-lg p-3 border border-hairline">
                     <div className="min-w-0">
-                      <p className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">{t("Mnunuzi", "Buyer")}</p>
+                      <p className="text-xs font-bold text-secondary uppercase tracking-wider mb-1">{t("Mnunuzi", "Buyer")}</p>
                       <p className="text-xs font-semibold text-primary truncate">{displayDealName(d.buyerName, d.buyerId)}</p>
-                      {d.buyerEmail && <p className="text-[10px] text-muted truncate">{d.buyerEmail}</p>}
+                      {d.buyerEmail && <p className="text-xs text-muted truncate">{d.buyerEmail}</p>}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">{t("Muuzaji", "Seller")}</p>
+                      <p className="text-xs font-bold text-secondary uppercase tracking-wider mb-1">{t("Muuzaji", "Seller")}</p>
                       <p className="text-xs font-semibold text-primary truncate">{displayDealName(d.sellerName, d.sellerId)}</p>
-                      {d.sellerEmail && <p className="text-[10px] text-muted truncate">{d.sellerEmail}</p>}
+                      {d.sellerEmail && <p className="text-xs text-muted truncate">{d.sellerEmail}</p>}
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <p className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">{t("Bei / Ofa", "Price / Offer")}</p>
+                      <p className="text-xs font-bold text-secondary uppercase tracking-wider mb-1">{t("Bei / Ofa", "Price / Offer")}</p>
                       <p className="text-sm font-bold" style={{ color: COLORS.rust }}>{displayDealAmount(d)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">{t("Ilianzishwa", "Created")}</p>
-                      <p className="text-[11px] text-muted">{d.createdAt ? timeAgo(d.createdAt, lang) : "—"}</p>
+                      <p className="text-xs font-bold text-secondary uppercase tracking-wider mb-1">{t("Ilianzishwa", "Created")}</p>
+                      <p className="text-xs text-muted">{d.createdAt ? timeAgo(d.createdAt, lang) : "—"}</p>
                     </div>
                   </div>
 
@@ -470,7 +470,7 @@ export default function DealsSection() {
                 </div>
 
                 {isExpanded && (
-                  <div className="border-t border-gray-100">
+                  <div className="border-t border-hairline">
                     <DealRoomViewer
                       deal={d}
                       roomData={dealRooms[d.id]}
@@ -488,7 +488,7 @@ export default function DealsSection() {
 
       {/* Empty */}
       {!loading && deals.length === 0 && (
-        <div className="bg-white rounded-xl border border-gray-100 p-8 text-center">
+        <div className="bg-card rounded-xl border border-hairline p-8 text-center">
           <p className="text-sm text-muted">
             {query || statusFilter
               ? t("Hakuna matokeo", "No results")
@@ -509,19 +509,19 @@ export default function DealsSection() {
               onClick={() => loadDeals(page - 1)}
               disabled={page <= 1 || loading}
               style={{ borderColor: COLORS.sandLine }}
-              className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border bg-white disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border bg-card disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <ChevronLeft size={13} />
+              <ChevronLeft size={14} />
               {t("Nyuma", "Prev")}
             </button>
             <button
               onClick={() => loadDeals(page + 1)}
               disabled={page >= totalPages || loading}
               style={{ borderColor: COLORS.sandLine }}
-              className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border bg-white disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border bg-card disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {t("Mbele", "Next")}
-              <ChevronRight size={13} />
+              <ChevronRight size={14} />
             </button>
           </div>
         </div>

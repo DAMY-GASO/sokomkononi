@@ -797,7 +797,7 @@ export default function DashboardShell() {
   return (
     <div data-surface="sand" className="bg-page w-full flex flex-col pb-16 md:pb-0 min-h-screen">
       <header
-        style={{ background: "#011957" }}
+        style={{ background: COLORS.night }}
         className="w-full flex items-center gap-3 px-3 sm:px-5 py-3 sticky top-0 z-30 text-white border-b border-white/[0.08]"
       >
         <button
@@ -829,8 +829,8 @@ export default function DashboardShell() {
           SokoMkononi
         </a>
 
-        <div style={{ background: "#042475", borderColor: "rgba(245,243,236,0.12)" }} className="hidden sm:flex items-center flex-1 max-w-md rounded-full border px-3 py-1.5 gap-2">
-          <Search size={16} color="rgba(245,243,236,0.6)" />
+        <div style={{ background: "#042475", borderColor: "rgba(244,247,252,0.12)" }} className="hidden sm:flex items-center flex-1 max-w-md rounded-full border px-3 py-1.5 gap-2">
+          <Search size={16} color="rgba(244,247,252,0.6)" />
           <input placeholder={t("Tafuta mali...", "Search properties...")} className="bg-transparent outline-none text-sm flex-1 text-white placeholder:text-white/50" />
         </div>
 
@@ -866,7 +866,7 @@ export default function DashboardShell() {
           <div className="relative">
             <button
               onClick={() => setLangOpen((v) => !v)}
-              style={{ background: "#042475", borderColor: "rgba(245,243,236,0.15)" }}
+              style={{ background: "#042475", borderColor: "rgba(244,247,252,0.15)" }}
               className="text-white/80 hover:text-white text-sm font-medium border rounded-md px-2 sm:px-3 py-1.5 transition-colors flex items-center gap-1"
             >
               <Globe size={14} />
@@ -876,10 +876,10 @@ export default function DashboardShell() {
             {langOpen && (
               <div
                 data-keep-light
-                style={{ background: "#042475", borderColor: "rgba(245,243,236,0.1)" }}
+                style={{ background: "#042475", borderColor: "rgba(244,247,252,0.1)" }}
                 className="absolute right-0 mt-2 w-48 border rounded-lg shadow-xl py-2 z-50"
               >
-                <div style={{ borderColor: "rgba(245,243,236,0.1)" }} className="px-4 py-2 border-b">
+                <div style={{ borderColor: "rgba(244,247,252,0.1)" }} className="px-4 py-2 border-b">
                   <p className="text-white/50 text-xs font-semibold">
                     {t("Chagua Lugha", "Choose Language")}
                   </p>
@@ -888,7 +888,7 @@ export default function DashboardShell() {
                   <button
                     key={l.code}
                     onClick={() => handleLanguageSelect(l.code)}
-                    style={{ background: lang === l.code ? "rgba(245,243,236,0.05)" : "transparent", color: "#F5F3EC" }}
+                    style={{ background: lang === l.code ? "rgba(244,247,252,0.05)" : "transparent", color: COLORS.sand }}
                     className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-white/5 transition-colors"
                   >
                     <span className="text-sm font-medium">{l.native}</span>
@@ -910,7 +910,7 @@ export default function DashboardShell() {
           >
             <Bell size={20} />
             {unreadNotifCount > 0 && (
-              <span style={{ background: COLORS.rust }} className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center">
+              <span style={{ background: COLORS.rust }} className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full text-xs font-bold text-white flex items-center justify-center">
                 {unreadNotifCount > 99 ? "99+" : unreadNotifCount}
               </span>
             )}
@@ -923,7 +923,7 @@ export default function DashboardShell() {
                 e.stopPropagation();
                 setUserMenuOpen((v) => !v);
               }}
-              className="rounded-full transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[#FEA406]/50"
+              className="rounded-full transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-gold/50"
               aria-label={t("Menyu ya mtumiaji", "User menu")}
               aria-expanded={userMenuOpen}
             >
@@ -934,15 +934,15 @@ export default function DashboardShell() {
               <div
                 ref={userMenuRef}
                 data-keep-light
-                style={{ background: "#042475", borderColor: "rgba(245,243,236,0.1)" }}
+                style={{ background: "#042475", borderColor: "rgba(244,247,252,0.1)" }}
                 className="absolute right-0 mt-2 w-64 border rounded-lg shadow-xl py-1 z-50"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div style={{ borderColor: "rgba(245,243,236,0.1)" }} className="px-4 py-3 border-b">
+                <div style={{ borderColor: "rgba(244,247,252,0.1)" }} className="px-4 py-3 border-b">
                   <p className="text-sm font-semibold truncate" style={{ color: "#FFFFFF" }}>
                     {user?.name || "User"}
                   </p>
-                  <p className="text-xs truncate" style={{ color: "rgba(245,243,236,0.55)" }}>
+                  <p className="text-xs truncate" style={{ color: "rgba(244,247,252,0.55)" }}>
                     {user?.email || ""}
                   </p>
                 </div>
@@ -958,10 +958,10 @@ export default function DashboardShell() {
                       setUserMenuOpen(false);
                       navigate(to);
                     }}
-                    style={{ color: "#F5F3EC" }}
+                    style={{ color: COLORS.sand }}
                     className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-white/5 transition-colors text-left"
                   >
-                    <Icon size={15} color="rgba(245,243,236,0.55)" />
+                    <Icon size={16} color="rgba(244,247,252,0.55)" />
                     {label}
                   </button>
                 ))}
@@ -969,21 +969,21 @@ export default function DashboardShell() {
                 <button
                   onMouseDown={(e) => e.stopPropagation()}
                   onClick={handleShare}
-                  style={{ color: "#F5F3EC" }}
+                  style={{ color: COLORS.sand }}
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-white/5 transition-colors text-left"
                 >
-                  <Share2 size={15} color="rgba(245,243,236,0.55)" />
+                  <Share2 size={16} color="rgba(244,247,252,0.55)" />
                   {t("Shiriki SokoMkononi", "Share SokoMkononi")}
                 </button>
 
-                <div className="my-1 border-t" style={{ borderColor: "rgba(245,243,236,0.1)" }} />
+                <div className="my-1 border-t" style={{ borderColor: "rgba(244,247,252,0.1)" }} />
 
                 <button
                   onMouseDown={(e) => e.stopPropagation()}
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#FF8A65] hover:bg-[#C1502E]/10 transition-colors text-left"
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#FF8A65] hover:bg-rust/10 transition-colors text-left"
                 >
-                  <LogOut size={15} />
+                  <LogOut size={16} />
                   {t("Toka", "Logout")}
                 </button>
               </div>
@@ -1061,22 +1061,22 @@ export default function DashboardShell() {
                   <span className="truncate">{fullLabel}</span>
                 )}
                 {!sidebarCollapsed && key === "listings" && listings.length > 0 && (
-                  <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isActive ? "bg-white/20" : "bg-[rgb(var(--c-hairline))]"}`}>
+                  <span className={`ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full ${isActive ? "bg-white/20" : "bg-[rgb(var(--c-hairline))]"}`}>
                     {listings.length}
                   </span>
                 )}
                 {!sidebarCollapsed && key === "leads" && newLeadsCount > 0 && (
-                  <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isActive ? "bg-white/20" : "bg-[#C1502E] text-white"}`}>
+                  <span className={`ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full ${isActive ? "bg-white/20" : "bg-rust text-white"}`}>
                     {newLeadsCount}
                   </span>
                 )}
                 {!sidebarCollapsed && key === "searches" && buyerSearchesCount > 0 && (
-                  <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isActive ? "bg-white/20" : "bg-[rgb(var(--c-hairline))]"}`}>
+                  <span className={`ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full ${isActive ? "bg-white/20" : "bg-[rgb(var(--c-hairline))]"}`}>
                     {buyerSearchesCount}
                   </span>
                 )}
                 {sidebarCollapsed && key === "leads" && newLeadsCount > 0 && (
-                  <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-[#C1502E]" />
+                  <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-rust" />
                 )}
               </button>
             );
@@ -1116,12 +1116,12 @@ export default function DashboardShell() {
                     <Icon size={17} style={{ color: isActive ? accent : "currentColor" }} />
                     <span className="flex-1 truncate">{label[lang] || label.sw}</span>
                     {key === "leads" && newLeadsCount > 0 && (
-                      <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${isActive ? "bg-white/20" : "bg-[#C1502E] text-white"}`}>
+                      <span className={`ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full shrink-0 ${isActive ? "bg-white/20" : "bg-rust text-white"}`}>
                         {newLeadsCount}
                       </span>
                     )}
                     {key === "searches" && buyerSearchesCount > 0 && (
-                      <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${isActive ? "bg-white/20" : "bg-[rgb(var(--c-hairline))]"}`}>
+                      <span className={`ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full shrink-0 ${isActive ? "bg-white/20" : "bg-[rgb(var(--c-hairline))]"}`}>
                         {buyerSearchesCount}
                       </span>
                     )}

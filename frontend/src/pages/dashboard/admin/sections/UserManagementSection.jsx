@@ -88,7 +88,7 @@ function RoleBadge({ role, lang }) {
         color: conf.fg,
         borderColor: conf.border,
       }}
-      className="inline-block text-[11px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap"
+      className="inline-block text-xs font-bold px-2 py-0.5 rounded-full border whitespace-nowrap"
     >
       {conf.label?.[lang] || conf.label?.sw}
     </span>
@@ -222,7 +222,7 @@ function UserActivityModal({ user, lang, onClose }) {
             <p className="text-sm font-semibold text-primary truncate">
               {t("Historia ya Vitendo", "Activity History")}
             </p>
-            <p className="text-[11px] text-muted truncate">
+            <p className="text-xs text-muted truncate">
               {user.name || user.email}
             </p>
           </div>
@@ -252,21 +252,21 @@ function UserActivityModal({ user, lang, onClose }) {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span
                         style={{ background: "rgb(var(--c-ink) / 0.08)", color: COLORS.ink }}
-                        className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+                        className="text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
                       >
                         {a?.label?.[lang] || a?.label?.sw || l.action}
                       </span>
-                      <span className="text-[10px] text-muted whitespace-nowrap">
+                      <span className="text-xs text-muted whitespace-nowrap">
                         {timeAgo(l.at, lang)}
                       </span>
                       {l.adminName && (
-                        <span className="text-[10px] text-muted truncate">
+                        <span className="text-xs text-muted truncate">
                           · {l.adminName}
                         </span>
                       )}
                     </div>
                     {d && (
-                      <p className="text-[11px] text-secondary mt-1 break-words">
+                      <p className="text-xs text-secondary mt-1 break-words">
                         {d}
                       </p>
                     )}
@@ -275,7 +275,7 @@ function UserActivityModal({ user, lang, onClose }) {
               })}
             </ul>
           )}
-          <p className="text-[10px] text-muted mt-4">
+          <p className="text-xs text-muted mt-4">
             {t(
               "Zinaonyesha vitendo vya admin (simamisha, washa, n.k.) kutoka audit logs za hivi karibuni.",
               "Shows admin actions (suspend, activate, etc.) from the most recent audit logs."
@@ -652,7 +652,7 @@ export default function UserManagementSection() {
             fullWidth ? "flex-1" : ""
           }`}
         >
-          <History size={13} />
+          <History size={14} />
           {fullWidth && t("Historia", "History")}
         </button>
 
@@ -679,18 +679,18 @@ export default function UserManagementSection() {
         >
           {busyAction === "toggle" ? (
             <>
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
               {fullWidth &&
                 t("Inafanya...", "Working...")}
             </>
           ) : isSuspended ? (
             <>
-              <RotateCcw size={13} />
+              <RotateCcw size={14} />
               {fullWidth && t("Washa Tena", "Activate")}
             </>
           ) : (
             <>
-              <Ban size={13} />
+              <Ban size={14} />
               {fullWidth && t("Simamisha", "Suspend")}
             </>
           )}
@@ -717,12 +717,12 @@ export default function UserManagementSection() {
         >
           {busyAction === "delete" ? (
             <>
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
               {fullWidth && t("Inafuta...", "Deleting...")}
             </>
           ) : (
             <>
-              <Trash2 size={13} />
+              <Trash2 size={14} />
               {fullWidth && t("Futa", "Delete")}
             </>
           )}
@@ -895,7 +895,7 @@ export default function UserManagementSection() {
                 style={{ color: COLORS.successText, borderColor: `${COLORS.green}33` }}
                 className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border disabled:opacity-50"
               >
-                {bulkBusy && !bulkAction ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
+                {bulkBusy && !bulkAction ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
                 {t("Washa", "Activate")}
               </button>
               <button
@@ -904,7 +904,7 @@ export default function UserManagementSection() {
                 style={{ color: COLORS.dangerText, borderColor: `${COLORS.rust}33` }}
                 className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border disabled:opacity-50"
               >
-                <Ban size={13} />
+                <Ban size={14} />
                 {t("Simamisha", "Suspend")}
               </button>
               <button
@@ -913,7 +913,7 @@ export default function UserManagementSection() {
                 style={{ color: COLORS.dangerText, borderColor: `${COLORS.rust}33` }}
                 className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border disabled:opacity-50"
               >
-                <Trash2 size={13} />
+                <Trash2 size={14} />
                 {t("Futa Kabisa", "Delete")}
               </button>
               <button
@@ -980,7 +980,7 @@ export default function UserManagementSection() {
                   style={{ background: COLORS.rust, color: "white" }}
                   className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {bulkBusy && <Loader2 size={13} className="animate-spin" />}
+                  {bulkBusy && <Loader2 size={14} className="animate-spin" />}
                   {bulkAction === "delete" ? t("Futa Kabisa", "Delete Permanently") : t("Simamisha", "Suspend")}
                 </button>
               </div>
@@ -1061,7 +1061,7 @@ export default function UserManagementSection() {
                           <span>{u.name}</span>
                           {u.isVerified && (
                             <ShieldCheck
-                              size={13}
+                              size={14}
                               style={{ color: COLORS.successText }}
                               className="shrink-0"
                               title={t("Imethibitishwa", "Verified")}
@@ -1127,7 +1127,7 @@ export default function UserManagementSection() {
                       </p>
                       {u.isVerified && (
                         <ShieldCheck
-                          size={13}
+                          size={14}
                           style={{ color: COLORS.successText }}
                           className="shrink-0"
                           title={t("Imethibitishwa", "Verified")}

@@ -58,13 +58,13 @@ function StatusBadge({ status, lang }) {
 
   const styles = {
     PENDING: {
-      bg: "rgba(232,163,61,0.12)",
-      fg: "#8A5A16",
+      bg: "rgba(254,164,6,0.12)",
+      fg: COLORS.goldText,
       label: t("Haijalipwa", "Not Paid"),
     },
     PROCESSING: {
-      bg: "rgba(37,99,235,0.12)",
-      fg: "#2563EB",
+      bg: "rgba(0,98,253,0.12)",
+      fg: COLORS.royal,
       label: t("Inaendelea", "Processing"),
     },
     COMPLETED: {
@@ -84,7 +84,7 @@ function StatusBadge({ status, lang }) {
   return (
     <span
       style={{ background: s.bg, color: s.fg }}
-      className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+      className="inline-block text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
     >
       {s.label}
     </span>
@@ -114,7 +114,7 @@ function RefundCard({ refund, lang, onComplete, onFail, onOpen, isBusy }) {
           ? "rgba(47,109,79,0.03)"
           : isFailed
             ? "rgba(193,80,46,0.03)"
-            : "white",
+            : "rgb(var(--c-card))",
       }}
       className="rounded-xl border p-3 sm:p-4 w-full min-w-0"
     >
@@ -124,17 +124,17 @@ function RefundCard({ refund, lang, onComplete, onFail, onOpen, isBusy }) {
         className="w-full flex items-start gap-3 text-left min-w-0"
       >
         <div
-          style={{ background: "rgba(37,99,235,0.1)" }}
+          style={{ background: "rgba(0,98,253,0.1)" }}
           className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
         >
-          <Wallet size={16} color="#2563EB" />
+          <Wallet size={16} color={COLORS.royal} />
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <span
-              style={{ background: "rgba(16,26,46,0.08)", color: COLORS.night }}
-              className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase"
+              style={{ background: "rgba(1,25,87,0.08)", color: COLORS.night }}
+              className="text-xs font-bold px-2 py-0.5 rounded-full uppercase"
             >
               {refund.promotionType} #{refund.promotionId}
             </span>
@@ -162,7 +162,7 @@ function RefundCard({ refund, lang, onComplete, onFail, onOpen, isBusy }) {
             </p>
           )}
 
-          <p className="text-[11px] text-muted mt-1">
+          <p className="text-xs text-muted mt-1">
             {refund.createdAt ? timeAgo(refund.createdAt, lang) : "—"}
           </p>
         </div>
@@ -221,7 +221,7 @@ function RefundCard({ refund, lang, onComplete, onFail, onOpen, isBusy }) {
               type="button"
               onClick={() => downloadRefundReceipt(refund, lang, formatTZS)}
               style={{ color: COLORS.night, borderColor: COLORS.sandLine }}
-              className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg border bg-white hover:bg-gray-50"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border bg-card hover:bg-page"
             >
               <Download size={12} />
               {t("Pakua Risiti", "Download Receipt")}
@@ -375,7 +375,7 @@ export default function RefundsSection() {
 
       {/* Summary + Refresh */}
       <div
-        style={{ borderColor: COLORS.sandLine, background: "white" }}
+        style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
         className="rounded-xl border p-3 sm:p-4 mb-5 flex items-start gap-3 flex-wrap w-full min-w-0"
       >
         <div
@@ -399,9 +399,9 @@ export default function RefundsSection() {
           onClick={handleRefresh}
           disabled={refreshing}
           style={{ borderColor: COLORS.sandLine, color: "var(--text-primary)" }}
-          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 disabled:opacity-50 shrink-0"
+          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border bg-card hover:bg-page disabled:opacity-50 shrink-0"
         >
-          <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />
+          <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
           <span className="hidden sm:inline">
             {refreshing ? t("Inasasisha...", "Refreshing...") : t("Sasisha", "Refresh")}
           </span>
@@ -415,7 +415,7 @@ export default function RefundsSection() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("Tafuta kwa jina, simu, au promotion...", "Search by name, phone, or promotion...")}
-            className="smk-inline-search w-full rounded-lg border border-gray-200 bg-white pl-3 pr-16 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
+            className="smk-inline-search w-full rounded-lg border border-hairline bg-card pl-3 pr-16 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
             style={{ WebkitAppearance: "none" }}
           />
           {query && (
@@ -423,7 +423,7 @@ export default function RefundsSection() {
               onClick={() => setQuery("")}
               className="absolute right-9 top-1/2 -translate-y-1/2 text-muted hover:text-secondary"
             >
-              <X size={13} />
+              <X size={14} />
             </button>
           )}
           <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" />
@@ -436,11 +436,11 @@ export default function RefundsSection() {
                 key={tab.key}
                 onClick={() => setStatusFilter(tab.key)}
                 style={{
-                  background: isActive ? COLORS.night : "white",
+                  background: isActive ? COLORS.night : "rgb(var(--c-card))",
                   color: isActive ? COLORS.sand : "var(--text-primary)",
                   borderColor: COLORS.sandLine,
                 }}
-                className="text-[11px] font-semibold px-3 py-2 rounded-full border whitespace-nowrap shrink-0"
+                className="text-xs font-semibold px-3 py-2 rounded-full border whitespace-nowrap shrink-0"
               >
                 {tab.label[lang] || tab.label.sw}
                 {counts[tab.key] > 0 ? ` (${counts[tab.key]})` : ""}
@@ -453,7 +453,7 @@ export default function RefundsSection() {
       {/* List */}
       {filtered.length === 0 ? (
         <div
-          style={{ borderColor: COLORS.sandLine, background: "white" }}
+          style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
           className="rounded-2xl border-2 border-dashed p-8 sm:p-10 text-center w-full"
         >
           <Wallet size={40} className="mx-auto text-muted mb-3" />
@@ -505,7 +505,7 @@ export default function RefundsSection() {
       {/* Complete Confirm Modal */}
       {confirmComplete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6">
+          <div className="bg-card rounded-2xl max-w-sm w-full p-6">
             <div className="text-center mb-5">
               <div
                 style={{ background: `${COLORS.green}15` }}
@@ -530,7 +530,7 @@ export default function RefundsSection() {
               <button
                 onClick={() => setConfirmComplete(null)}
                 disabled={!!busy[confirmComplete.id]}
-                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
+                className="flex-1 py-2.5 border border-hairline rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
               >
                 {t("Ghairi", "Cancel")}
               </button>
@@ -555,7 +555,7 @@ export default function RefundsSection() {
       {/* Fail Confirm Modal */}
       {confirmFail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6">
+          <div className="bg-card rounded-2xl max-w-sm w-full p-6">
             <div className="text-center mb-5">
               <div
                 style={{ background: `${COLORS.rust}15` }}
@@ -574,7 +574,7 @@ export default function RefundsSection() {
               <button
                 onClick={() => setConfirmFail(null)}
                 disabled={!!busy[confirmFail.id]}
-                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
+                className="flex-1 py-2.5 border border-hairline rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
               >
                 {t("Ghairi", "Cancel")}
               </button>

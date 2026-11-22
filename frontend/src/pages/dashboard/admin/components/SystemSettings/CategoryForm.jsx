@@ -61,10 +61,10 @@ function FieldsPicker({ value, onChange, seedFields, lang, disabled }) {
   return (
     <div>
       <div className="flex items-center justify-between gap-2 mb-1">
-        <span className="text-[11px] font-semibold text-secondary">
+        <span className="text-xs font-semibold text-secondary">
           {t("Fields za Fomu ya Kuweka Tangazo", "Posting Form Fields")}
         </span>
-        <span className="text-[11px] text-muted">
+        <span className="text-xs text-muted">
           {value.length} {t("zimechaguliwa", "selected")}
           {value.length > 0 && (
             <button
@@ -79,7 +79,7 @@ function FieldsPicker({ value, onChange, seedFields, lang, disabled }) {
           )}
         </span>
       </div>
-      <p className="text-[10px] text-muted mb-2">
+      <p className="text-xs text-muted mb-2">
         {t(
           "Chagua tu vipengele vinavyofaa bidhaa za category hii. Kichwa, maelezo, bei, picha na eneo huwa vipo kila mara.",
           "Pick only what fits this category. Title, description, price, photos and location are always shown."
@@ -87,7 +87,7 @@ function FieldsPicker({ value, onChange, seedFields, lang, disabled }) {
       </p>
 
       <div className="relative mb-2">
-        <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 opacity-50" />
+        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 opacity-50" />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -120,7 +120,7 @@ function FieldsPicker({ value, onChange, seedFields, lang, disabled }) {
                 <span className="flex items-center gap-2 shrink-0">
                   {count > 0 && (
                     <span
-                      className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                      className="text-xs font-bold px-1.5 py-0.5 rounded-full"
                       style={{ background: `${COLORS.gold}25`, color: COLORS.goldText }}
                     >
                       {count}
@@ -149,13 +149,13 @@ function FieldsPicker({ value, onChange, seedFields, lang, disabled }) {
                           />
                           <span className="truncate">{label(f)}</span>
                           {f.showIf && (
-                            <span className="text-[9px] text-muted shrink-0">
+                            <span className="text-xs text-muted shrink-0">
                               ({t("masharti", "conditional")})
                             </span>
                           )}
                         </label>
                         {on && (
-                          <label className="flex items-center gap-1 text-[11px] text-secondary shrink-0 cursor-pointer">
+                          <label className="flex items-center gap-1 text-xs text-secondary shrink-0 cursor-pointer">
                             <input
                               type="checkbox"
                               checked={!!selected.get(f.key).required}
@@ -337,7 +337,7 @@ export default function CategoryForm({
         {/* PHOTO UPLOAD */}
         {/* ═══════════════════════════════════════════════════════ */}
         <div>
-          <span className="text-[11px] font-semibold text-secondary block mb-2">
+          <span className="text-xs font-semibold text-secondary block mb-2">
             {t("Picha ya Kuwakilisha Category", "Representative Photo")}
           </span>
           <input
@@ -361,7 +361,7 @@ export default function CategoryForm({
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={saving || uploadingImage}
-                  className="text-[11px] font-semibold px-3 py-1.5 rounded-lg border disabled:opacity-50"
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg border disabled:opacity-50"
                   style={{
                     borderColor: "rgb(var(--c-hairline))",
                     color: "var(--text-primary)",
@@ -373,7 +373,7 @@ export default function CategoryForm({
                   type="button"
                   onClick={handleRemoveImage}
                   disabled={saving || uploadingImage}
-                  className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 rounded-lg border disabled:opacity-50"
+                  className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border disabled:opacity-50"
                   style={{ borderColor: "rgb(var(--c-hairline))", color: COLORS.dangerText }}
                 >
                   <X size={12} />
@@ -401,7 +401,7 @@ export default function CategoryForm({
               </span>
             </button>
           )}
-          <p className="text-[10px] text-muted mt-1">
+          <p className="text-xs text-muted mt-1">
             {t(
               "Kama hutaweka picha, icon itatumika kama fallback.",
               "If no photo, icon will be used as fallback."
@@ -414,7 +414,7 @@ export default function CategoryForm({
         {/* ═══════════════════════════════════════════════════════ */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-semibold text-secondary">
+            <span className="text-xs font-semibold text-secondary">
               Key (slug)
             </span>
             <input
@@ -427,7 +427,7 @@ export default function CategoryForm({
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-semibold text-secondary">
+            <span className="text-xs font-semibold text-secondary">
               {t("Jina (Kiswahili)", "Label (Swahili)")}
             </span>
             <input
@@ -440,7 +440,7 @@ export default function CategoryForm({
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-semibold text-secondary">
+            <span className="text-xs font-semibold text-secondary">
               {t("Jina (Kiingereza)", "Label (English)")}
             </span>
             <input
@@ -457,7 +457,7 @@ export default function CategoryForm({
         {/* ICON GRID — full width, chini ya fields */}
         {/* ═══════════════════════════════════════════════════════ */}
         <div>
-          <span className="text-[11px] font-semibold text-secondary block mb-2">
+          <span className="text-xs font-semibold text-secondary block mb-2">
             {t("Icon (fallback)", "Icon (fallback)")}
           </span>
 
@@ -474,7 +474,7 @@ export default function CategoryForm({
                 }}
                 className="w-8 h-8 rounded-md border flex items-center justify-center shrink-0"
               >
-                <SelectedIcon size={16} style={{ color: COLORS.goldTextText }} />
+                <SelectedIcon size={16} style={{ color: COLORS.goldText }} />
               </div>
               <span className="text-xs font-semibold text-primary">
                 {form.iconKey}
@@ -510,7 +510,7 @@ export default function CategoryForm({
               );
             })}
           </div>
-          <p className="text-[10px] text-muted mt-1">
+          <p className="text-xs text-muted mt-1">
             {t(
               "Chagua icon inayowakilisha category hii vizuri.",
               "Choose an icon that best represents this category."
@@ -523,7 +523,7 @@ export default function CategoryForm({
         {/* ═══════════════════════════════════════════════════════ */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 sm:col-span-2">
-            <span className="text-[11px] font-semibold text-secondary">
+            <span className="text-xs font-semibold text-secondary">
               {t("Maelezo (Kiswahili) — hiari", "Description (Swahili) — optional")}
             </span>
             <input
@@ -534,7 +534,7 @@ export default function CategoryForm({
             />
           </label>
           <label className="flex flex-col gap-1 sm:col-span-2">
-            <span className="text-[11px] font-semibold text-secondary">
+            <span className="text-xs font-semibold text-secondary">
               {t("Maelezo (Kiingereza) — hiari", "Description (English) — optional")}
             </span>
             <input
@@ -595,7 +595,7 @@ export default function CategoryForm({
 
         {/* WARNING (only when adding new) */}
         {!isEditing && (
-          <p style={{ color: COLORS.dangerText }} className="text-[11px] leading-relaxed">
+          <p style={{ color: COLORS.dangerText }} className="text-xs leading-relaxed">
             {lang === "sw" ? (
               <>
                 ⚠️ Baada ya kuunda category hii, <b>LAZIMA</b> uende{" "}
@@ -633,7 +633,7 @@ export default function CategoryForm({
             }`}
           >
             {(saving || uploadingImage) && (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
             )}
             {uploadingImage
               ? t("Inapakia picha...", "Uploading photo...")

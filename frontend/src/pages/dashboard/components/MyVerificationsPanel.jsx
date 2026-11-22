@@ -12,7 +12,7 @@ import React, { useState, useEffect } from "react";
 import {
   ShieldCheck, Loader2, Upload, FileText, Plus, X,
   CheckCircle2, Award, Clock,
-  UserRound, Store, ShoppingBag, Info,
+  UserRound, Store, ShoppingBag, Info, IdCard, BookUser, Vote,
 } from "lucide-react";
 import { COLORS, timeAgo } from "./shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -33,19 +33,19 @@ const ID_TYPES = [
     key: "nida",
     labelSw: "Kadi ya NIDA",
     labelEn: "NIDA Card",
-    icon: "🪪",
+    icon: IdCard,
   },
   {
     key: "passport",
     labelSw: "Pasipoti",
     labelEn: "Passport",
-    icon: "📘",
+    icon: BookUser,
   },
   {
     key: "voter",
     labelSw: "Kadi ya Mpiga Kura",
     labelEn: "Voter's Card",
-    icon: "🗳️",
+    icon: Vote,
   },
 ];
 
@@ -87,7 +87,7 @@ const REQUIREMENTS_BY_TYPE = {
   },
   buyer: {
     icon: ShoppingBag,
-    color: "#2563EB",
+    color: COLORS.royal,
     titleSw: "Kwa Mnunuzi (Buyer)",
     titleEn: "For Buyer",
     documentsSw: [
@@ -131,7 +131,7 @@ function WhyGetVerifiedCard({ lang, type }) {
     <div
       className="rounded-2xl p-4 sm:p-5 mb-4"
       style={{
-        background: "linear-gradient(135deg, #011957 0%, #1a2842 100%)",
+        background: "linear-gradient(135deg, #011957 0%, #042475 100%)",
       }}
     >
       <div className="flex items-center gap-2 mb-3">
@@ -154,10 +154,10 @@ function WhyGetVerifiedCard({ lang, type }) {
       </ul>
       <div
         className="mt-3 rounded-lg px-3 py-2 flex items-center gap-2"
-        style={{ background: "rgba(232,163,61,0.15)" }}
+        style={{ background: "rgba(254,164,6,0.15)" }}
       >
-        <Info size={13} color={COLORS.gold} className="shrink-0" />
-        <p className="text-[11px] sm:text-xs !text-white">
+        <Info size={14} color={COLORS.gold} className="shrink-0" />
+        <p className="text-xs !text-white">
           {t(
             "Uthibitisho ni BURE. Utachukua siku 1-3 za kazi kukamilika.",
             "Verification is FREE. It takes 1-3 business days to complete."
@@ -188,7 +188,7 @@ function RequirementsCard({ lang, type, compact = false }) {
         }}
       >
         <div className="flex items-center gap-1.5 mb-2">
-          <FileText size={13} color={req.color} />
+          <FileText size={14} color={req.color} />
           <p className="text-xs font-bold" style={{ color: req.color }}>
             {t("Documents Zinazohitajika", "Required Documents")}
           </p>
@@ -197,7 +197,7 @@ function RequirementsCard({ lang, type, compact = false }) {
           {documents.map((d, i) => (
             <li
               key={i}
-              className="flex items-start gap-1.5 text-[11px] sm:text-xs text-secondary"
+              className="flex items-start gap-1.5 text-xs text-secondary"
             >
               <span className="font-bold shrink-0" style={{ color: req.color }}>
                 {i + 1}.
@@ -213,7 +213,7 @@ function RequirementsCard({ lang, type, compact = false }) {
   // Full — kwa kila aina (Seller + Buyer zote)
   return (
     <div
-      style={{ background: "white", borderColor: COLORS.sandLine }}
+      style={{ background: "rgb(var(--c-card))", borderColor: COLORS.sandLine }}
       className="rounded-2xl border p-4 mb-4"
     >
       <div className="flex items-center gap-2 mb-3">
@@ -238,7 +238,7 @@ function RequirementsCard({ lang, type, compact = false }) {
               }}
             >
               <div className="flex items-center gap-1.5 mb-1.5">
-                <rIcon size={13} color={r.color} />
+                <rIcon size={14} color={r.color} />
                 <p className="text-xs font-bold" style={{ color: r.color }}>
                   {lang === "sw" ? r.titleSw : r.titleEn}
                 </p>
@@ -247,7 +247,7 @@ function RequirementsCard({ lang, type, compact = false }) {
                 {docs.map((d, i) => (
                   <li
                     key={i}
-                    className="text-[11px] sm:text-xs text-secondary flex items-start gap-1.5"
+                    className="text-xs text-secondary flex items-start gap-1.5"
                   >
                     <span style={{ color: r.color }} className="font-bold shrink-0">
                       {i + 1}.
@@ -261,7 +261,7 @@ function RequirementsCard({ lang, type, compact = false }) {
         })}
       </div>
 
-      <p className="text-[10px] sm:text-xs text-muted mt-3 leading-relaxed">
+      <p className="text-xs text-muted mt-3 leading-relaxed">
         {t(
           "Kumbuka: Picha ziwe wazi. Ukikosa document moja, unaweza kuomba na kuipakia baadaye — Admin atakuomba.",
           "Note: Photos should be clear. If you miss a document, you can still submit and upload later — Admin will request it."
@@ -382,7 +382,7 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
         {showForm && (
           <form
             onSubmit={handleSubmit}
-            style={{ background: "white", borderColor: COLORS.sandLine }}
+            style={{ background: "rgb(var(--c-card))", borderColor: COLORS.sandLine }}
             className="rounded-2xl border p-4 mb-4 flex flex-col gap-3"
           >
             {/* Aina ya Uthibitisho */}
@@ -394,20 +394,20 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
                 {VERIFICATION_CREATE_TYPES.map((v) => {
                   const Icon = v.key === "seller" ? Store : ShoppingBag;
                   const active = form.type === v.key;
-                  const color = v.key === "seller" ? COLORS.green : "#2563EB";
+                  const color = v.key === "seller" ? COLORS.green : COLORS.royal;
                   return (
                     <button
                       type="button"
                       key={v.key}
                       onClick={() => setForm({ ...form, type: v.key })}
                       style={{
-                        background: active ? `${color}12` : "white",
+                        background: active ? `${color}12` : "rgb(var(--c-card))",
                         borderColor: active ? color : COLORS.sandLine,
                         color: active ? color : COLORS.night,
                       }}
                       className="flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2.5 rounded-lg border"
                     >
-                      <Icon size={13} />
+                      <Icon size={14} />
                       {v.label?.[lang] || v.label?.sw}
                     </button>
                   );
@@ -429,13 +429,13 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
                       key={id.key}
                       onClick={() => setForm({ ...form, idType: id.key })}
                       style={{
-                        background: active ? `${COLORS.gold}18` : "white",
+                        background: active ? `${COLORS.gold}18` : "rgb(var(--c-card))",
                         borderColor: active ? COLORS.gold : COLORS.sandLine,
-                        color: active ? "#8A5A16" : COLORS.night,
+                        color: active ? COLORS.goldText : COLORS.night,
                       }}
-                      className="flex flex-col items-center justify-center gap-1 text-[11px] font-semibold px-2 py-2 rounded-lg border"
+                      className="flex flex-col items-center justify-center gap-1 text-xs font-semibold px-2 py-2 rounded-lg border"
                     >
-                      <span className="text-base leading-none">{id.icon}</span>
+                      <id.icon size={18} />
                       <span className="text-center leading-tight">
                         {lang === "sw" ? id.labelSw : id.labelEn}
                       </span>
@@ -443,7 +443,7 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
                   );
                 })}
               </div>
-              <p className="text-[10px] text-muted mt-1">
+              <p className="text-xs text-muted mt-1">
                 {t(
                   "Chagua aina ya kitambulisho utakachopakia. Kadi ya Mpiga Kura inakubalika kama njia mbadala.",
                   "Choose the ID you will upload. Voter's Card is accepted as an alternative."
@@ -466,7 +466,7 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
                   "mfano: Juma Hamisi Mwakyusa",
                   "e.g. Juma Hamisi Mwakyusa"
                 )}
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"
+                className="border border-hairline rounded-lg px-3 py-2 text-sm outline-none"
               />
             </label>
 
@@ -483,13 +483,13 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
                   "Eleza uzoefu wako au sababu ya kuomba uthibitisho...",
                   "Describe your experience or why you're requesting verification..."
                 )}
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none resize-none"
+                className="border border-hairline rounded-lg px-3 py-2 text-sm outline-none resize-none"
               />
             </label>
 
             <div
-              style={{ background: "rgba(232,163,61,0.10)", color: "#8A5A16" }}
-              className="rounded-lg px-3 py-2 text-[11px] flex items-start gap-2"
+              style={{ background: "rgba(254,164,6,0.10)", color: COLORS.goldText }}
+              className="rounded-lg px-3 py-2 text-xs flex items-start gap-2"
             >
               <Clock size={12} className="shrink-0 mt-0.5" />
               <span>
@@ -516,10 +516,10 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
         <div className="flex flex-col gap-3">
           {requests.length === 0 ? (
             <div
-              style={{ borderColor: COLORS.sandLine, background: "white" }}
+              style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
               className="rounded-2xl border-2 border-dashed p-8 text-center"
             >
-              <UserRound size={28} color="rgba(16,26,46,0.25)" className="mx-auto mb-2" />
+              <UserRound size={28} color="rgba(1,25,87,0.25)" className="mx-auto mb-2" />
               <p className="text-sm font-semibold text-primary mb-1">
                 {t("Bado hujaomba uthibitisho.", "You haven't requested verification yet.")}
               </p>
@@ -537,11 +537,11 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
               return (
                 <div
                   key={r.id}
-                  style={{ background: "white", borderColor: COLORS.sandLine }}
+                  style={{ background: "rgb(var(--c-card))", borderColor: COLORS.sandLine }}
                   className="rounded-xl border p-4"
                 >
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#FEA406]/20 text-[#8A5A16]">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gold/20 text-gold-ink">
                       {VERIFICATION_TYPES.find((v) => v.key === r.type)?.label?.[lang] ||
                         r.type}
                     </span>
@@ -553,13 +553,13 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
                             ? "rgba(47,109,79,0.16)"
                             : r.status === "rejected"
                               ? "rgba(193,80,46,0.16)"
-                              : "rgba(232,163,61,0.16)",
+                              : "rgba(254,164,6,0.16)",
                         color:
                           r.status === "approved"
                             ? COLORS.green
                             : r.status === "rejected"
                               ? COLORS.rust
-                              : "#8A5A16",
+                              : COLORS.goldText,
                       }}
                     >
                       {r.status === "approved"
@@ -576,10 +576,10 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
 
                   {/* ✅ Onyesha Aina ya Utambulisho */}
                   {idTypeObj && (
-                    <p className="text-[11px] text-muted mb-2">
+                    <p className="text-xs text-muted mb-2">
                       {t("Utambulisho:", "ID:")}{" "}
                       <span className="font-semibold text-secondary">
-                        {idTypeObj.icon}{" "}
+                        <idTypeObj.icon size={12} className="inline -mt-0.5 mr-1" />
                         {lang === "sw" ? idTypeObj.labelSw : idTypeObj.labelEn}
                       </span>
                     </p>
@@ -588,8 +588,8 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
                   {r.documentsRequestMessage && (
                     <div
                       style={{
-                        background: "rgba(232,163,61,0.10)",
-                        color: "#8A5A16",
+                        background: "rgba(254,164,6,0.10)",
+                        color: COLORS.goldText,
                       }}
                       className="rounded-lg px-2.5 py-2 text-xs mb-2"
                     >
@@ -619,9 +619,9 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
                           href={doc.url || doc.file || "#"}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center gap-1.5 text-xs text-primary hover:text-[#FEA406]"
+                          className="flex items-center gap-1.5 text-xs text-primary hover:text-gold-ink"
                         >
-                          <FileText size={11} />{" "}
+                          <FileText size={12} />{" "}
                           {doc.name || `Document ${i + 1}`}
                         </a>
                       ))}
@@ -639,7 +639,7 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
                         className="rounded-lg border p-2.5 mb-2"
                       >
                         <p
-                          className="text-[11px] font-semibold mb-1"
+                          className="text-xs font-semibold mb-1"
                           style={{ color: req.color }}
                         >
                           {t(
@@ -652,7 +652,7 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
                             (d, i) => (
                               <li
                                 key={i}
-                                className="text-[10px] sm:text-[11px] text-secondary flex items-start gap-1"
+                                className="text-xs text-secondary flex items-start gap-1"
                               >
                                 <span style={{ color: req.color }}>•</span>
                                 <span>{d}</span>

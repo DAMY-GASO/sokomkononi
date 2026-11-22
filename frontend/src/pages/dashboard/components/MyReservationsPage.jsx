@@ -35,7 +35,7 @@ const POLL_INTERVAL_MS = 60_000;
 const RESERVATION_STATUS = {
   pending_payment: {
     label: { sw: "Inasubiri Malipo", en: "Awaiting Payment" },
-    color: "#D97706", bg: "rgba(217,119,6,0.12)",
+    color: COLORS.flame, bg: "rgba(253,135,6,0.12)",
   },
   active: {
     label: { sw: "Inatumika", en: "Active" },
@@ -43,15 +43,15 @@ const RESERVATION_STATUS = {
   },
   reserved: {
     label: { sw: "Kipindi cha Ukaguzi", en: "Inspection Period" },
-    color: COLORS.night, bg: "rgba(16,26,46,0.08)",
+    color: COLORS.night, bg: "rgba(1,25,87,0.08)",
   },
   awaiting_final_payment: {
     label: { sw: "Tayari kwa Malipo ya Mwisho", en: "Ready for Final Payment" },
-    color: "#2563EB", bg: "rgba(37,99,235,0.12)",
+    color: COLORS.royal, bg: "rgba(0,98,253,0.12)",
   },
   payment_proof_submitted: {
     label: { sw: "Uthibitisho Umetumwa", en: "Proof Submitted" },
-    color: "#8A5A16", bg: "rgba(232,163,61,0.16)",
+    color: COLORS.goldText, bg: "rgba(254,164,6,0.16)",
   },
   completed: {
     label: { sw: "Imekamilika", en: "Completed" },
@@ -63,7 +63,7 @@ const RESERVATION_STATUS = {
   },
   cancelled: {
     label: { sw: "Imeghairiwa", en: "Cancelled" },
-    color: COLORS.night, bg: "rgba(16,26,46,0.08)",
+    color: COLORS.night, bg: "rgba(1,25,87,0.08)",
   },
   disputed: {
     label: { sw: "Mgogoro — Chini ya Ukaguzi", en: "Dispute — Under Review" },
@@ -165,7 +165,7 @@ function ExpiryBanner({ cd, lang }) {
     return (
       <div
         className="mt-3 flex items-start gap-2 rounded-lg px-3 py-2 text-xs"
-        style={{ background: "rgba(232,163,61,0.12)", color: "#8A5A16" }}
+        style={{ background: "rgba(254,164,6,0.12)", color: COLORS.goldText }}
       >
         <Info size={14} className="shrink-0 mt-0.5" />
         <span>
@@ -296,7 +296,7 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
   // ---------- RENDER ----------
   return (
     <div
-      style={{ background: "white", borderColor: COLORS.sandLine }}
+      style={{ background: "rgb(var(--c-card))", borderColor: COLORS.sandLine }}
       className="rounded-2xl border p-4"
     >
       {/* Header */}
@@ -310,13 +310,13 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
         <div className="flex-1 min-w-0">
           <Link
             to={listingId ? `/mali/${listingId}` : "#"}
-            className="text-primary text-sm font-semibold hover:text-[#FEA406] transition-colors line-clamp-2"
+            className="text-primary text-sm font-semibold hover:text-gold-ink transition-colors line-clamp-2"
           >
             {listingTitle}
           </Link>
           {listingLocation && (
             <p className="text-secondary text-xs flex items-center gap-1 mt-0.5">
-              <MapPin size={11} />
+              <MapPin size={12} />
               <span className="truncate">{listingLocation}</span>
             </p>
           )}
@@ -329,10 +329,10 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
             </span>
             {cd && (
               <span
-                style={{ color: cd.expired ? COLORS.rust : "#8A5A16" }}
+                style={{ color: cd.expired ? COLORS.rust : COLORS.goldText }}
                 className="text-xs font-semibold flex items-center gap-1 tabular-nums"
               >
-                <Clock3 size={11} /> {cd.text}
+                <Clock3 size={12} /> {cd.text}
               </span>
             )}
           </div>
@@ -347,7 +347,7 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
         style={{ borderColor: COLORS.sandLine }}
       >
         <div>
-          <p className="text-[11px] font-semibold text-secondary uppercase">
+          <p className="text-xs font-semibold text-secondary uppercase">
             {t("Muda wa Reservation", "Reservation Duration")}
           </p>
           <p className="text-sm font-semibold text-primary">
@@ -357,7 +357,7 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
           </p>
         </div>
         <div>
-          <p className="text-[11px] font-semibold text-secondary uppercase">
+          <p className="text-xs font-semibold text-secondary uppercase">
             {t("Ada ya Reservation", "Reservation Fee")}
           </p>
           <p className="text-sm font-semibold text-primary">
@@ -367,7 +367,7 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
           </p>
         </div>
         <div>
-          <p className="text-[11px] font-semibold text-secondary uppercase">
+          <p className="text-xs font-semibold text-secondary uppercase">
             {t("Inaisha", "Expires")}
           </p>
           <p className="text-xs font-medium text-primary">
@@ -375,7 +375,7 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
           </p>
         </div>
         <div>
-          <p className="text-[11px] font-semibold text-secondary uppercase">
+          <p className="text-xs font-semibold text-secondary uppercase">
             {t("Iliwekwa", "Placed")}
           </p>
           <p className="text-xs font-medium text-primary">
@@ -386,7 +386,7 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
 
       {/* Transaction ID kwa support/refund */}
       {transactionId && (
-        <p className="mt-2 text-[10px] text-muted font-mono">
+        <p className="mt-2 text-xs text-muted font-mono">
           {t("Kumbukumbu", "Reference")}: #{transactionId}
         </p>
       )}
@@ -394,8 +394,8 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
       {/* Disclaimer kwa active reservations */}
       {isActive && (
         <div
-          className="mt-3 flex items-start gap-2 rounded-lg px-3 py-2 text-[11px] leading-relaxed"
-          style={{ background: "rgba(16,26,46,0.04)", color: COLORS.night }}
+          className="mt-3 flex items-start gap-2 rounded-lg px-3 py-2 text-xs leading-relaxed"
+          style={{ background: "rgba(1,25,87,0.04)", color: COLORS.night }}
         >
           <Info size={12} className="shrink-0 mt-0.5 opacity-70" />
           <span>
@@ -422,7 +422,7 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
         style={{ background: COLORS.gold, color: COLORS.night }}
         className="mt-3 w-full flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg"
       >
-        {t("Fungua Deal Room", "Open Deal Room")} <ArrowRight size={13} />
+        {t("Fungua Deal Room", "Open Deal Room")} <ArrowRight size={14} />
       </button>
 
       {/* Actions */}
@@ -431,7 +431,7 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
           onClick={handleViewListing}
           disabled={!listingId}
           style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
-          className="text-xs font-semibold px-2 py-2 rounded-lg border bg-white flex items-center justify-center gap-1 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          className="text-xs font-semibold px-2 py-2 rounded-lg border bg-card flex items-center justify-center gap-1 hover:bg-page transition-colors disabled:opacity-50"
         >
           <ExternalLink size={12} />
           <span className="hidden sm:inline">{t("Angalia", "View")}</span>
@@ -440,7 +440,7 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
           onClick={handleExtend}
           disabled={!isActive || busy === "extend"}
           style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
-          className="text-xs font-semibold px-2 py-2 rounded-lg border bg-white flex items-center justify-center gap-1 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          className="text-xs font-semibold px-2 py-2 rounded-lg border bg-card flex items-center justify-center gap-1 hover:bg-page transition-colors disabled:opacity-50"
         >
           {busy === "extend" ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
           <span className="hidden sm:inline">{t("Ongeza Muda", "Extend")}</span>
@@ -449,7 +449,7 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
           onClick={handleCancel}
           disabled={!isActive || busy === "cancel"}
           style={{ borderColor: "rgba(193,80,46,0.35)", color: COLORS.rust }}
-          className="text-xs font-semibold px-2 py-2 rounded-lg border bg-white flex items-center justify-center gap-1 hover:bg-red-50 transition-colors disabled:opacity-50"
+          className="text-xs font-semibold px-2 py-2 rounded-lg border bg-card flex items-center justify-center gap-1 hover:bg-rust/10 transition-colors disabled:opacity-50"
         >
           {busy === "cancel" ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />}
           <span className="hidden sm:inline">{t("Ondoa", "Remove")}</span>
@@ -546,14 +546,14 @@ export default function MyReservationsPage() {
 
             {/* Polling strip */}
             <div className="mt-2 flex items-center gap-2">
-              <span className="text-[11px] text-muted">
+              <span className="text-xs text-muted">
                 {t("Imesasishwa", "Updated")} {timeAgoShort(lastRefreshedAt, lang)}
               </span>
               <button
                 onClick={refresh}
                 disabled={isRefreshing}
-                style={{ borderColor: COLORS.sandLine, color: COLORS.night, background: "white" }}
-                className="text-[11px] font-semibold px-2 py-1 rounded-md border flex items-center gap-1 disabled:opacity-50"
+                style={{ borderColor: COLORS.sandLine, color: COLORS.night, background: "rgb(var(--c-card))" }}
+                className="text-xs font-semibold px-2 py-1 rounded-md border flex items-center gap-1 disabled:opacity-50"
               >
                 <RefreshCw size={10} className={isRefreshing ? "animate-spin" : ""} />
                 {isRefreshing ? t("Inasasisha...", "Refreshing...") : t("Sasisha", "Refresh")}
@@ -633,8 +633,8 @@ export default function MyReservationsPage() {
               <div className="mt-3 flex justify-center">
                 <button
                   onClick={() => setShowAllPast(true)}
-                  style={{ borderColor: COLORS.sandLine, color: COLORS.night, background: "white" }}
-                  className="text-xs font-semibold px-4 py-2 rounded-lg border hover:bg-gray-50"
+                  style={{ borderColor: COLORS.sandLine, color: COLORS.night, background: "rgb(var(--c-card))" }}
+                  className="text-xs font-semibold px-4 py-2 rounded-lg border hover:bg-page"
                 >
                   {t(
                     `Onyesha zote (${past.length - 20} zaidi)`,
@@ -649,10 +649,10 @@ export default function MyReservationsPage() {
         {/* Empty */}
         {!loading && reservations.length === 0 && !error && (
           <div
-            style={{ borderColor: COLORS.sandLine, background: "white" }}
+            style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
             className="rounded-2xl border-2 border-dashed p-10 text-center"
           >
-            <Inbox size={44} className="mx-auto mb-3" color="rgba(16,26,46,0.25)" />
+            <Inbox size={44} className="mx-auto mb-3" color="rgba(1,25,87,0.25)" />
             <p className="text-sm font-semibold text-primary mb-1">
               {t("Hakuna reservations bado.", "No reservations yet.")}
             </p>

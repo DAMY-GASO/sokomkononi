@@ -11,15 +11,16 @@ import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import { financeApi } from "../../../../api/finance.js";
 import { usePlatformRevenue } from "../shared/revenue.js";
+import { CHART } from "../shared/chartColors.js";
 
 const STREAM_META = {
-  listing:     { icon: Tag,          color: "#0891B2", labelSw: "Listing Fee",   labelEn: "Listing Fee" },
-  reservation: { icon: Store,        color: "#2F6D4F", labelSw: "Reservation",   labelEn: "Reservation" },
-  boost:       { icon: Sparkles,     color: "#FEA406", labelSw: "Boost",         labelEn: "Boost" },
-  leading:     { icon: TrendingUp,   color: "#7C3AED", labelSw: "Leading",       labelEn: "Leading" },
-  advertise:   { icon: Megaphone,    color: "#C1502E", labelSw: "Advertise",     labelEn: "Advertise" },
-  success:     { icon: CheckCircle2, color: "#2563EB", labelSw: "Success Fee",   labelEn: "Success Fee" },
-  bundle:      { icon: Package,      color: "#DB2777", labelSw: "Bundle",        labelEn: "Bundle" },
+  listing:     { icon: Tag,          color: CHART.slate, labelSw: "Listing Fee",   labelEn: "Listing Fee" },
+  reservation: { icon: Store,        color: COLORS.green, labelSw: "Reservation",   labelEn: "Reservation" },
+  boost:       { icon: Sparkles,     color: COLORS.gold, labelSw: "Boost",         labelEn: "Boost" },
+  leading:     { icon: TrendingUp,   color: COLORS.royalLight, labelSw: "Leading",       labelEn: "Leading" },
+  advertise:   { icon: Megaphone,    color: COLORS.rust, labelSw: "Advertise",     labelEn: "Advertise" },
+  success:     { icon: CheckCircle2, color: COLORS.royal, labelSw: "Success Fee",   labelEn: "Success Fee" },
+  bundle:      { icon: Package,      color: COLORS.goldInk, labelSw: "Bundle",        labelEn: "Bundle" },
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -63,27 +64,27 @@ export default function OverviewSection() {
 
   const userStatsGrid = [
     { id: "users",       label: t("Watumiaji Wote", "Total Users"),  value: num(u?.totalUsers),   icon: Users,       color: COLORS.gold },
-    { id: "sellersOnly", label: t("Wauzaji Pekee", "Sellers Only"),  value: num(u?.sellersOnly),  icon: Store,       color: "#2563EB" },
+    { id: "sellersOnly", label: t("Wauzaji Pekee", "Sellers Only"),  value: num(u?.sellersOnly),  icon: Store,       color: COLORS.royal },
     { id: "buyersOnly",  label: t("Wanunuzi Pekee", "Buyers Only"),  value: num(u?.buyersOnly),   icon: UserCheck,   color: COLORS.green },
-    { id: "bothRoles",   label: t("Wote Wawili", "Both Roles"),      value: num(u?.bothRoles),    icon: User,        color: "#7C3AED" },
-    { id: "neitherRole", label: t("Wapya", "Neither"),               value: num(u?.neitherRole),  icon: UserPlus,    color: "#D97706" },
-    { id: "admins",      label: t("Admins", "Admins"),               value: num(u?.totalAdmins),  icon: ShieldCheck, color: "#DC2626" },
+    { id: "bothRoles",   label: t("Wote Wawili", "Both Roles"),      value: num(u?.bothRoles),    icon: User,        color: COLORS.royalLight },
+    { id: "neitherRole", label: t("Wapya", "Neither"),               value: num(u?.neitherRole),  icon: UserPlus,    color: COLORS.flame },
+    { id: "admins",      label: t("Admins", "Admins"),               value: num(u?.totalAdmins),  icon: ShieldCheck, color: COLORS.rust },
   ];
 
   const activityStats = [
     { id: "listings",        label: t("Mali Zote", "Total Listings"),             value: num(l?.total),           icon: Home,          color: COLORS.green },
-    { id: "draftListings",   label: t("Rasimu (Haijawasilishwa)", "Drafts (Not submitted)"), value: num(l?.drafts), icon: Tag,           color: "#9CA3AF" },
-    { id: "pendingListings", label: t("Mali Zinazosubiri", "Pending Listings"),   value: num(l?.pending),         icon: ClipboardList, color: "#D97706" },
-    { id: "activeDeals",     label: t("Deals Hai", "Active Deals"),               value: num(d?.active),          icon: ShoppingBag,   color: "#2563EB" },
+    { id: "draftListings",   label: t("Rasimu (Haijawasilishwa)", "Drafts (Not submitted)"), value: num(l?.drafts), icon: Tag,           color: CHART.slateLight },
+    { id: "pendingListings", label: t("Mali Zinazosubiri", "Pending Listings"),   value: num(l?.pending),         icon: ClipboardList, color: COLORS.flame },
+    { id: "activeDeals",     label: t("Deals Hai", "Active Deals"),               value: num(d?.active),          icon: ShoppingBag,   color: COLORS.royal },
     { id: "completedDeals",  label: t("Deals Zilizokamilika", "Completed Deals"), value: num(d?.completed),       icon: CheckCircle2,  color: COLORS.green },
-    { id: "pendingPayments", label: t("Malipo Yanayosubiri", "Pending Payments"), value: num(data?.pendingPayments), icon: CreditCard, color: "#D97706" },
+    { id: "pendingPayments", label: t("Malipo Yanayosubiri", "Pending Payments"), value: num(data?.pendingPayments), icon: CreditCard, color: COLORS.flame },
   ];
 
   const revenueStreamCards = useMemo(() => {
     if (revenue.loading) return [];
     return revenue.streams
       .map((s) => {
-        const meta = STREAM_META[s.key] || { icon: Banknote, color: "#9CA3AF", labelSw: s.label, labelEn: s.label };
+        const meta = STREAM_META[s.key] || { icon: Banknote, color: CHART.slateLight, labelSw: s.label, labelEn: s.label };
         const amount = Number(revenue.byType[s.key]) || 0;
         return {
           id: `rev-${s.key}`,
@@ -145,14 +146,14 @@ export default function OverviewSection() {
         <div
           className="mb-3 rounded-2xl p-5 sm:p-7 lg:p-8"
           style={{
-            background: "linear-gradient(135deg, #011957 0%, #1a2842 100%)",
+            background: "linear-gradient(135deg, #011957 0%, #042475 100%)",
             color: "#FFFFFF",
           }}
         >
           <div className="flex items-center gap-4 min-w-0">
             <div
               className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl sm:h-16 sm:w-16"
-              style={{ background: "rgba(232,163,61,0.25)" }}
+              style={{ background: "rgba(254,164,6,0.25)" }}
             >
               <Wallet size={28} color={COLORS.gold} />
             </div>

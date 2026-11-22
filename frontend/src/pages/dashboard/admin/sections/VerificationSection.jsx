@@ -38,8 +38,8 @@ function StatusBadge({ status, lang }) {
   const config = {
     pending: {
       label: { sw: "Inasubiri", en: "Pending" },
-      bg: "rgba(232,163,61,0.16)",
-      fg: "#8A5A16",
+      bg: "rgba(254,164,6,0.16)",
+      fg: COLORS.goldText,
     },
     approved: {
       label: { sw: "Imeidhinishwa", en: "Approved" },
@@ -56,7 +56,7 @@ function StatusBadge({ status, lang }) {
   return (
     <span
       style={{ background: s?.bg, color: s?.fg }}
-      className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+      className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
     >
       {s.label?.[lang] || s.label?.sw}
     </span>
@@ -68,8 +68,8 @@ function RoleBadge({ role, lang }) {
   if (role === "both") {
     return (
       <span
-        style={{ background: "rgba(124,58,237,0.14)", color: "#7C3AED" }}
-        className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+        style={{ background: "rgba(61,139,255,0.14)", color: COLORS.royalLight }}
+        className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
       >
         {t("Wote Wawili", "Both Roles")}
       </span>
@@ -78,8 +78,8 @@ function RoleBadge({ role, lang }) {
   if (role === "seller") {
     return (
       <span
-        style={{ background: "rgba(232,163,61,0.16)", color: "#8A5A16" }}
-        className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+        style={{ background: "rgba(254,164,6,0.16)", color: COLORS.goldText }}
+        className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
       >
         {t("Muuzaji", "Seller")}
       </span>
@@ -89,7 +89,7 @@ function RoleBadge({ role, lang }) {
     return (
       <span
         style={{ background: "rgba(47,109,79,0.14)", color: COLORS.green }}
-        className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+        className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
       >
         {t("Mnunuzi", "Buyer")}
       </span>
@@ -172,12 +172,12 @@ function DocumentPreview({ doc, verificationId, lang }) {
 
   if (!doc.id) {
     return (
-      <div className="flex items-center gap-2 text-xs text-muted bg-white rounded-lg px-3 py-2">
+      <div className="flex items-center gap-2 text-xs text-muted bg-card rounded-lg px-3 py-2">
         <FileText size={12} className="shrink-0" />
         <span className="truncate flex-1">
           {doc.name || t("Document", "Document")}
         </span>
-        <span className="text-[10px] text-muted italic">
+        <span className="text-xs text-muted italic">
           {t("Hakuna ID", "No ID")}
         </span>
       </div>
@@ -186,7 +186,7 @@ function DocumentPreview({ doc, verificationId, lang }) {
 
   return (
     <div
-      className="bg-white rounded-lg overflow-hidden"
+      className="bg-card rounded-lg overflow-hidden"
       style={{ borderColor: COLORS.sandLine }}
     >
       <div
@@ -201,12 +201,12 @@ function DocumentPreview({ doc, verificationId, lang }) {
           type="button"
           onClick={handleExpand}
           disabled={loading}
-          className="text-[10px] font-semibold text-muted hover:text-secondary flex items-center gap-1 disabled:opacity-50"
+          className="text-xs font-semibold text-muted hover:text-secondary flex items-center gap-1 disabled:opacity-50"
         >
           {loading ? (
-            <Loader2 size={11} className="animate-spin" />
+            <Loader2 size={12} className="animate-spin" />
           ) : (
-            <Eye size={11} />
+            <Eye size={12} />
           )}
           {expanded ? t("Funga", "Close") : t("Onyesha", "Show")}
         </button>
@@ -214,13 +214,13 @@ function DocumentPreview({ doc, verificationId, lang }) {
           type="button"
           onClick={handleOpen}
           disabled={loading}
-          className="text-[10px] font-semibold hover:underline flex items-center gap-1 disabled:opacity-50"
+          className="text-xs font-semibold hover:underline flex items-center gap-1 disabled:opacity-50"
           style={{ color: COLORS.rust }}
         >
           {loading ? (
-            <Loader2 size={11} className="animate-spin" />
+            <Loader2 size={12} className="animate-spin" />
           ) : (
-            <ExternalLink size={11} />
+            <ExternalLink size={12} />
           )}
           {t("Fungua", "Open")}
         </button>
@@ -393,7 +393,7 @@ function VerificationCard({ request, lang, onOpenUser }) {
 
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
       className="rounded-xl border overflow-hidden w-full"
     >
       <div className="p-3 sm:p-4">
@@ -402,7 +402,7 @@ function VerificationCard({ request, lang, onOpenUser }) {
             style={{ background: `${COLORS.night}0D` }}
             className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
           >
-            <TypeIcon size={15} color={COLORS.night} />
+            <TypeIcon size={16} color={COLORS.night} />
           </div>
 
           <div className="flex-1 min-w-0">
@@ -411,8 +411,8 @@ function VerificationCard({ request, lang, onOpenUser }) {
                 <RoleBadge role="both" lang={lang} />
               ) : (
                 <span
-                  style={{ background: `${COLORS.gold}20`, color: "#8A5A16" }}
-                  className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+                  style={{ background: `${COLORS.gold}20`, color: COLORS.goldText }}
+                  className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
                 >
                   {VERIFICATION_TYPES.find((v) => v.key === request.type)
                     ?.label?.[lang] || request.type}
@@ -422,10 +422,10 @@ function VerificationCard({ request, lang, onOpenUser }) {
               {hasDocsRequest && (
                 <span
                   style={{
-                    background: "rgba(232,163,61,0.20)",
-                    color: "#8A5A16",
+                    background: "rgba(254,164,6,0.20)",
+                    color: COLORS.goldText,
                   }}
-                  className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+                  className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
                 >
                   {t("Docs zimeombwa", "Docs requested")}
                 </span>
@@ -436,16 +436,16 @@ function VerificationCard({ request, lang, onOpenUser }) {
             <p className="text-xs text-secondary mt-0.5 truncate">
               {request.userName}
             </p>
-            <p className="text-[10px] text-muted mt-0.5 truncate">
+            <p className="text-xs text-muted mt-0.5 truncate">
               {request.userEmail}
             </p>
-            <p className="text-[11px] text-muted mt-1">
+            <p className="text-xs text-muted mt-1">
               {t("Iliwasilishwa", "Submitted")}{" "}
               {timeAgo(request.submittedAt, lang)}
             </p>
             {request.reviewedAt && request.status !== "pending" && (
               <p
-                className="text-[11px] mt-0.5 font-medium"
+                className="text-xs mt-0.5 font-medium"
                 style={{
                   color:
                     request.status === "approved" ? COLORS.green : COLORS.rust,
@@ -503,10 +503,10 @@ function VerificationCard({ request, lang, onOpenUser }) {
 
           {request.notes && (
             <div>
-              <p className="text-[10px] font-semibold text-secondary uppercase mb-1">
+              <p className="text-xs font-semibold text-secondary uppercase mb-1">
                 {t("Maelezo", "Notes")}
               </p>
-              <p className="text-xs text-primary bg-white rounded-lg p-2.5 leading-relaxed">
+              <p className="text-xs text-primary bg-card rounded-lg p-2.5 leading-relaxed">
                 {request.notes}
               </p>
             </div>
@@ -514,7 +514,7 @@ function VerificationCard({ request, lang, onOpenUser }) {
 
           {request.documents && request.documents.length > 0 && (
             <div>
-              <p className="text-[10px] font-semibold text-secondary uppercase mb-1">
+              <p className="text-xs font-semibold text-secondary uppercase mb-1">
                 {t("Nyaraka", "Documents")} ({request.documents.length})
               </p>
               <div className="flex flex-col gap-2">
@@ -533,18 +533,18 @@ function VerificationCard({ request, lang, onOpenUser }) {
           {hasDocsRequest && request.documentsRequestMessage && (
             <div
               style={{
-                background: "rgba(232,163,61,0.12)",
-                color: "#8A5A16",
-                borderColor: "rgba(232,163,61,0.35)",
+                background: "rgba(254,164,6,0.12)",
+                color: COLORS.goldText,
+                borderColor: "rgba(254,164,6,0.35)",
               }}
               className="rounded-lg border px-3 py-2 text-xs"
             >
               <div className="flex items-center gap-1.5 font-semibold mb-1">
-                <MessageSquare size={11} />
+                <MessageSquare size={12} />
                 {t("Ujumbe kwa mtumiaji", "Message to user")}
               </div>
               {request.documentsRequestMessage}
-              <p className="text-[10px] mt-1 opacity-75">
+              <p className="text-xs mt-1 opacity-75">
                 {timeAgo(request.documentsRequestedAt, lang)}
               </p>
             </div>
@@ -563,7 +563,7 @@ function VerificationCard({ request, lang, onOpenUser }) {
           )}
 
           {request.reviewedAt && (
-            <p className="text-[11px] text-muted">
+            <p className="text-xs text-muted">
               {request.status === "approved"
                 ? t("Ilidhinishwa", "Approved")
                 : t("Ilikaguliwa", "Reviewed")}{" "}
@@ -585,10 +585,10 @@ function VerificationCard({ request, lang, onOpenUser }) {
                   "Reason for rejection (at least 5 characters)..."
                 )}
                 rows={2}
-                className="w-full rounded-lg border px-3 py-2 text-xs outline-none resize-none bg-white"
+                className="w-full rounded-lg border px-3 py-2 text-xs outline-none resize-none bg-card"
                 style={{ borderColor: COLORS.sandLine }}
               />
-              <p className="text-[10px] text-muted mt-1 text-right">
+              <p className="text-xs text-muted mt-1 text-right">
                 {rejectReason.trim().length}/{MIN_REASON}+
               </p>
             </div>
@@ -603,7 +603,7 @@ function VerificationCard({ request, lang, onOpenUser }) {
                 "Explain which documents you need..."
               )}
               rows={3}
-              className="w-full rounded-lg border px-3 py-2 text-xs outline-none resize-none bg-white"
+              className="w-full rounded-lg border px-3 py-2 text-xs outline-none resize-none bg-card"
               style={{ borderColor: COLORS.sandLine }}
             />
           )}
@@ -651,7 +651,7 @@ function VerificationCard({ request, lang, onOpenUser }) {
                     setRejectReason("");
                   }}
                   disabled={busy}
-                  className="text-xs font-semibold px-3 py-2 rounded-lg text-secondary hover:bg-gray-100"
+                  className="text-xs font-semibold px-3 py-2 rounded-lg text-secondary hover:bg-page"
                 >
                   {t("Ghairi", "Cancel")}
                 </button>
@@ -662,8 +662,8 @@ function VerificationCard({ request, lang, onOpenUser }) {
                 disabled={busy}
                 style={{
                   background: requestingDocs ? COLORS.gold : "transparent",
-                  color: requestingDocs ? COLORS.night : "#8A5A16",
-                  borderColor: "rgba(232,163,61,0.5)",
+                  color: requestingDocs ? COLORS.night : COLORS.goldText,
+                  borderColor: "rgba(254,164,6,0.5)",
                 }}
                 className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border disabled:opacity-50"
               >
@@ -684,7 +684,7 @@ function VerificationCard({ request, lang, onOpenUser }) {
                     setDocsMessage("");
                   }}
                   disabled={busy}
-                  className="text-xs font-semibold px-3 py-2 rounded-lg text-secondary hover:bg-gray-100"
+                  className="text-xs font-semibold px-3 py-2 rounded-lg text-secondary hover:bg-page"
                 >
                   {t("Ghairi", "Cancel")}
                 </button>
@@ -696,10 +696,10 @@ function VerificationCard({ request, lang, onOpenUser }) {
             <button
               onClick={handleDelete}
               disabled={busy}
-              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg text-[#C1502E] hover:bg-[#C1502E]/10 disabled:opacity-50"
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg text-rust hover:bg-rust/10 disabled:opacity-50"
               title={t("Futa Ombi Kabisa", "Delete Request Permanently")}
             >
-              <Trash2 size={13} />
+              <Trash2 size={14} />
               {t("Futa Ombi", "Delete Request")}
             </button>
           </div>
@@ -807,7 +807,7 @@ export default function VerificationSection() {
           {
             label: t("Zinasubiri", "Pending"),
             value: counts.pending,
-            color: "#8A5A16",
+            color: COLORS.goldText,
           },
           {
             label: t("Zimeidhinishwa", "Approved"),
@@ -822,10 +822,10 @@ export default function VerificationSection() {
         ].map((stat, i) => (
           <div
             key={i}
-            style={{ borderColor: COLORS.sandLine, background: "white" }}
+            style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
             className="rounded-xl border p-2.5 sm:p-3"
           >
-            <p className="text-[10px] font-semibold text-secondary uppercase truncate">
+            <p className="text-xs font-semibold text-secondary uppercase truncate">
               {stat.label}
             </p>
             <p
@@ -840,7 +840,7 @@ export default function VerificationSection() {
 
       <div className="flex justify-center mb-3">
         <div
-          style={{ background: "white", borderColor: COLORS.sandLine }}
+          style={{ background: "rgb(var(--c-card))", borderColor: COLORS.sandLine }}
           className="flex rounded-full border p-1"
         >
           {[
@@ -864,10 +864,10 @@ export default function VerificationSection() {
               <span
                 style={{
                   background:
-                    view === v.key ? "rgba(245,243,236,0.18)" : COLORS.sandLine,
+                    view === v.key ? "rgba(244,247,252,0.18)" : COLORS.sandLine,
                   color: view === v.key ? COLORS.sand : "var(--text-primary)",
                 }}
-                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                className="text-xs font-bold px-1.5 py-0.5 rounded-full"
               >
                 {v.count}
               </span>
@@ -880,7 +880,7 @@ export default function VerificationSection() {
         <button
           onClick={() => setStatusFilter("all")}
           style={{
-            background: statusFilter === "all" ? COLORS.gold : "white",
+            background: statusFilter === "all" ? COLORS.gold : "rgb(var(--c-card))",
             color: "var(--text-primary)",
             borderColor: COLORS.sandLine,
           }}
@@ -895,7 +895,7 @@ export default function VerificationSection() {
             key={status.key}
             onClick={() => setStatusFilter(status.key)}
             style={{
-              background: statusFilter === status.key ? COLORS.gold : "white",
+              background: statusFilter === status.key ? COLORS.gold : "rgb(var(--c-card))",
               color: "var(--text-primary)",
               borderColor: COLORS.sandLine,
             }}
@@ -916,7 +916,7 @@ export default function VerificationSection() {
                 ? t("Tafuta kwa jina, barua pepe, au aliyekagua...", "Search by name, email, or reviewer...")
                 : t("Tafuta...", "Search...")
             }
-            className="smk-inline-search w-full rounded-lg border border-gray-200 bg-white pl-3 pr-10 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
+            className="smk-inline-search w-full rounded-lg border border-hairline bg-card pl-3 pr-10 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
             style={{ WebkitAppearance: "none" }}
           />
           <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" />
@@ -925,7 +925,7 @@ export default function VerificationSection() {
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary shrink-0"
+          className="bg-card border border-hairline rounded-lg px-3 py-2 text-xs text-primary shrink-0"
         >
           <option value="all">{t("Aina: Zote", "Type: All")}</option>
           {VERIFICATION_TYPES.map((type) => (
@@ -938,7 +938,7 @@ export default function VerificationSection() {
 
       {filtered.length === 0 ? (
         <div
-          style={{ borderColor: COLORS.sandLine, background: "white" }}
+          style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
           className="rounded-2xl border-2 border-dashed p-8 text-center"
         >
           <ShieldCheck size={40} className="mx-auto text-muted mb-3" />

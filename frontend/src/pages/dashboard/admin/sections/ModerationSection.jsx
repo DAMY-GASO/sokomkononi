@@ -33,6 +33,7 @@ import {
 } from "../../../../config/moderationStore.js";
 import { fetchListingsByStatusAsync } from "../../../../config/listingsStore.js";
 import AdminListingImageManager from "../components/AdminListingImageManager.jsx";
+import { CHART } from "../shared/chartColors.js";
 
 // ============================================================
 // Normalize status: PENDING_APPROVAL → pending_approval
@@ -775,11 +776,11 @@ export default function ModerationSection() {
       onClick={() => setImageListing(listing)}
       title={t("Simamia picha", "Manage images")}
       style={{ color: COLORS.gold, borderColor: `${COLORS.gold}55` }}
-      className={`inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-amber-50 ${
+      className={`inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-gold/10 ${
         fullWidth ? "flex-1" : ""
       }`}
     >
-      <Image size={13} />
+      <Image size={14} />
       {t("Picha", "Images")}
     </button>
   );
@@ -807,15 +808,15 @@ export default function ModerationSection() {
           <button
             onClick={() => openRequestEditModal(listing.id)}
             disabled={isBusy}
-            style={{ color: "#B45309" }}
-            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-amber-50 disabled:opacity-50 ${
+            style={{ color: COLORS.goldInk }}
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-hairline hover:bg-gold/10 disabled:opacity-50 ${
               fullWidth ? "flex-1" : ""
             }`}
           >
             {currentAction === "request_edit" ? (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
             ) : (
-              <Pencil size={13} />
+              <Pencil size={14} />
             )}
             {t("Omba Uhariri", "Request Edit")}
           </button>
@@ -823,14 +824,14 @@ export default function ModerationSection() {
             onClick={() => openRejectModal(listing.id)}
             disabled={isBusy}
             style={{ color: COLORS.rust }}
-            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-red-50 disabled:opacity-50 ${
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-hairline hover:bg-rust/10 disabled:opacity-50 ${
               fullWidth ? "flex-1" : ""
             }`}
           >
             {currentAction === "reject" ? (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
             ) : (
-              <XCircle size={13} />
+              <XCircle size={14} />
             )}
             {t("Kataa", "Reject")}
           </button>
@@ -838,14 +839,14 @@ export default function ModerationSection() {
             onClick={() => openRequestPaymentModal(listing.id, isFree)}
             disabled={isBusy}
             style={{ color: COLORS.green }}
-            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-green-50 disabled:opacity-50 ${
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-hairline hover:bg-green/10 disabled:opacity-50 ${
               fullWidth ? "flex-1" : ""
             }`}
           >
             {currentAction === "request_payment" ? (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
             ) : (
-              <PayIcon size={13} />
+              <PayIcon size={14} />
             )}
             {payLabel}
           </button>
@@ -865,15 +866,15 @@ export default function ModerationSection() {
           <button
             onClick={() => openRequestEditModal(listing.id)}
             disabled={isBusy}
-            style={{ color: "#B45309" }}
-            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-amber-50 disabled:opacity-50 ${
+            style={{ color: COLORS.goldInk }}
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-hairline hover:bg-gold/10 disabled:opacity-50 ${
               fullWidth ? "flex-1" : ""
             }`}
           >
             {currentAction === "request_edit" ? (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
             ) : (
-              <Pencil size={13} />
+              <Pencil size={14} />
             )}
             {t("Omba Uhariri", "Request Edit")}
           </button>
@@ -881,14 +882,14 @@ export default function ModerationSection() {
             onClick={() => openRejectModal(listing.id)}
             disabled={isBusy}
             style={{ color: COLORS.rust }}
-            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-red-50 disabled:opacity-50 ${
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-hairline hover:bg-rust/10 disabled:opacity-50 ${
               fullWidth ? "flex-1" : ""
             }`}
           >
             {currentAction === "reject" ? (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
             ) : (
-              <XCircle size={13} />
+              <XCircle size={14} />
             )}
             {t("Kataa", "Reject")}
           </button>
@@ -897,14 +898,14 @@ export default function ModerationSection() {
             onClick={() => openRequestPaymentModal(listing.id, isFree)}
             disabled={isBusy}
             style={{ color: COLORS.green }}
-            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-green-50 disabled:opacity-50 ${
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-hairline hover:bg-green/10 disabled:opacity-50 ${
               fullWidth ? "flex-1" : ""
             }`}
           >
             {currentAction === "request_payment" ? (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
             ) : (
-              <PayIcon size={13} />
+              <PayIcon size={14} />
             )}
             {payLabel}
           </button>
@@ -925,14 +926,14 @@ export default function ModerationSection() {
             onClick={() => handleFinalize(listing.id)}
             disabled={isBusy}
             style={{ color: COLORS.green }}
-            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-green-50 disabled:opacity-50 ${
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-hairline hover:bg-green/10 disabled:opacity-50 ${
               fullWidth ? "flex-1" : ""
             }`}
           >
             {currentAction === "finalize" ? (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
             ) : (
-              <CheckCheck size={13} />
+              <CheckCheck size={14} />
             )}
             {t("Idhinisha Mwisho", "Finalize")}
           </button>
@@ -940,14 +941,14 @@ export default function ModerationSection() {
             onClick={() => openRejectModal(listing.id)}
             disabled={isBusy}
             style={{ color: COLORS.rust }}
-            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-red-50 disabled:opacity-50 ${
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-hairline hover:bg-rust/10 disabled:opacity-50 ${
               fullWidth ? "flex-1" : ""
             }`}
           >
             {currentAction === "reject" ? (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
             ) : (
-              <XCircle size={13} />
+              <XCircle size={14} />
             )}
             {t("Kataa", "Reject")}
           </button>
@@ -968,11 +969,11 @@ export default function ModerationSection() {
             onClick={() => openRejectModal(listing.id)}
             disabled={isBusy}
             style={{ color: COLORS.rust }}
-            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-red-50 disabled:opacity-50 ${
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-hairline hover:bg-rust/10 disabled:opacity-50 ${
               fullWidth ? "flex-1" : ""
             }`}
           >
-            <XCircle size={13} />
+            <XCircle size={14} />
             {t("Kataa", "Reject")}
           </button>
           <ManageImagesBtn listing={listing} fullWidth={fullWidth} />
@@ -992,11 +993,11 @@ export default function ModerationSection() {
             onClick={() => openRejectModal(listing.id)}
             disabled={isBusy}
             style={{ color: COLORS.rust }}
-            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-red-50 disabled:opacity-50 ${
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-hairline hover:bg-rust/10 disabled:opacity-50 ${
               fullWidth ? "flex-1" : ""
             }`}
           >
-            <XCircle size={13} />
+            <XCircle size={14} />
             {t("Kataa", "Reject")}
           </button>
           <ManageImagesBtn listing={listing} fullWidth={fullWidth} />
@@ -1016,14 +1017,14 @@ export default function ModerationSection() {
             onClick={() => openDisapproveModal(listing.id)}
             disabled={isBusy}
             style={{ color: COLORS.rust }}
-            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-red-50 disabled:opacity-50 ${
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-hairline hover:bg-rust/10 disabled:opacity-50 ${
               fullWidth ? "flex-1" : ""
             }`}
           >
             {currentAction === "disapprove" ? (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
             ) : (
-              <RotateCcw size={13} />
+              <RotateCcw size={14} />
             )}
             {t("Disapprove", "Disapprove")}
           </button>
@@ -1031,15 +1032,15 @@ export default function ModerationSection() {
           <button
             onClick={() => openDeleteModal(listing.id)}
             disabled={isBusy}
-            style={{ color: "#DC2626", borderColor: "rgba(220,38,38,0.4)" }}
-                        className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border hover:bg-red-50 disabled:opacity-50 ${
+            style={{ color: COLORS.rust, borderColor: "rgba(193,80,46,0.4)" }}
+                        className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border hover:bg-rust/10 disabled:opacity-50 ${
               fullWidth ? "flex-1" : ""
             }`}
           >
             {currentAction === "delete" ? (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
             ) : (
-              <Trash2 size={13} />
+              <Trash2 size={14} />
             )}
             {t("Futa", "Delete")}
           </button>
@@ -1058,15 +1059,15 @@ export default function ModerationSection() {
           <button
             onClick={() => openRequestEditModal(listing.id)}
             disabled={isBusy}
-            style={{ color: "#B45309" }}
-            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-amber-50 disabled:opacity-50 ${
+            style={{ color: COLORS.goldInk }}
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-hairline hover:bg-gold/10 disabled:opacity-50 ${
               fullWidth ? "flex-1" : ""
             }`}
           >
             {currentAction === "request_edit" ? (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
             ) : (
-              <Pencil size={13} />
+              <Pencil size={14} />
             )}
             {t("Omba Uhariri", "Request Edit")}
           </button>
@@ -1074,14 +1075,14 @@ export default function ModerationSection() {
             onClick={() => openRequestPaymentModal(listing.id, isFree)}
             disabled={isBusy}
             style={{ color: COLORS.green }}
-            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-green-50 disabled:opacity-50 ${
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-hairline hover:bg-green/10 disabled:opacity-50 ${
               fullWidth ? "flex-1" : ""
             }`}
           >
             {currentAction === "request_payment" ? (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
             ) : (
-              <PayIcon size={13} />
+              <PayIcon size={14} />
             )}
             {payLabel}
           </button>
@@ -1089,15 +1090,15 @@ export default function ModerationSection() {
           <button
             onClick={() => openDeleteModal(listing.id)}
             disabled={isBusy}
-            style={{ color: "#DC2626", borderColor: "rgba(220,38,38,0.4)" }}
-            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border hover:bg-red-50 disabled:opacity-50 ${
+            style={{ color: COLORS.rust, borderColor: "rgba(193,80,46,0.4)" }}
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border hover:bg-rust/10 disabled:opacity-50 ${
               fullWidth ? "flex-1" : ""
             }`}
           >
             {currentAction === "delete" ? (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
             ) : (
-              <Trash2 size={13} />
+              <Trash2 size={14} />
             )}
             {t("Futa", "Delete")}
           </button>
@@ -1116,11 +1117,11 @@ export default function ModerationSection() {
           <span
             className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg"
             style={{
-              background: "rgba(37,99,235,0.1)",
-              color: "#2563EB",
+              background: "rgba(0,98,253,0.1)",
+              color: COLORS.royal,
             }}
           >
-            <ShoppingBag size={13} />
+            <ShoppingBag size={14} />
             {t("Imeuzwa", "Sold")}
           </span>
           <ManageImagesBtn listing={listing} fullWidth={fullWidth} />
@@ -1139,26 +1140,26 @@ export default function ModerationSection() {
           <span
             className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg"
             style={{
-              background: "rgba(156,163,175,0.15)",
-              color: "#6B7280",
+              background: "rgba(140,152,182,0.15)",
+              color: CHART.slate,
             }}
           >
-            <Clock size={13} />
+            <Clock size={14} />
             {t("Imeisha Muda", "Expired")}
           </span>
           <ManageImagesBtn listing={listing} fullWidth={fullWidth} />
           <button
             onClick={() => openDeleteModal(listing.id)}
             disabled={isBusy}
-            style={{ color: "#DC2626", borderColor: "rgba(220,38,38,0.4)" }}
-            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border hover:bg-red-50 disabled:opacity-50 ${
+            style={{ color: COLORS.rust, borderColor: "rgba(193,80,46,0.4)" }}
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border hover:bg-rust/10 disabled:opacity-50 ${
               fullWidth ? "flex-1" : ""
             }`}
           >
             {currentAction === "delete" ? (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
             ) : (
-              <Trash2 size={13} />
+              <Trash2 size={14} />
             )}
             {t("Futa", "Delete")}
           </button>
@@ -1176,23 +1177,23 @@ export default function ModerationSection() {
         >
           <span
             className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg"
-            style={{ background: "rgba(254,164,6,0.12)", color: "#B45309" }}
+            style={{ background: "rgba(254,164,6,0.12)", color: COLORS.goldInk }}
           >
-            <Clock size={13} />
+            <Clock size={14} />
             {t("Imehifadhiwa", "Reserved")}
           </span>
           <button
             onClick={() => openReleaseModal(listing.id)}
             disabled={isBusy}
             style={{ color: COLORS.green, borderColor: `${COLORS.green}66` }}
-            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border hover:bg-green-50 disabled:opacity-50 ${
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border hover:bg-green/10 disabled:opacity-50 ${
               fullWidth ? "flex-1" : ""
             }`}
           >
             {currentAction === "release" ? (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
             ) : (
-              <RotateCcw size={13} />
+              <RotateCcw size={14} />
             )}
             {t("Rudisha Hewani", "Put Back Live")}
           </button>
@@ -1211,24 +1212,24 @@ export default function ModerationSection() {
         >
           <span
             className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg"
-            style={{ background: "rgba(156,163,175,0.15)", color: "#6B7280" }}
+            style={{ background: "rgba(140,152,182,0.15)", color: CHART.slate }}
           >
-            <Clock size={13} />
+            <Clock size={14} />
             {t("Haijawasilishwa", "Not submitted")}
           </span>
           <ManageImagesBtn listing={listing} fullWidth={fullWidth} />
           <button
             onClick={() => openDeleteModal(listing.id)}
             disabled={isBusy}
-            style={{ color: "#DC2626", borderColor: "rgba(220,38,38,0.4)" }}
-            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border hover:bg-red-50 disabled:opacity-50 ${
+            style={{ color: COLORS.rust, borderColor: "rgba(193,80,46,0.4)" }}
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border hover:bg-rust/10 disabled:opacity-50 ${
               fullWidth ? "flex-1" : ""
             }`}
           >
             {currentAction === "delete" ? (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
             ) : (
-              <Trash2 size={13} />
+              <Trash2 size={14} />
             )}
             {t("Futa", "Delete")}
           </button>
@@ -1285,7 +1286,7 @@ export default function ModerationSection() {
             key={f.key}
             onClick={() => setStatusFilter(f.key)}
             style={{
-              background: statusFilter === f.key ? COLORS.night : "white",
+              background: statusFilter === f.key ? COLORS.night : "rgb(var(--c-card))",
               color:
                 statusFilter === f.key ? COLORS.sand : "var(--text-primary)",
               borderColor: COLORS.sandLine,
@@ -1295,7 +1296,7 @@ export default function ModerationSection() {
             {f.label[lang]}
             {f.count > 0 ? ` (${f.count})` : ""}
             {URGENT_TABS.includes(f.key) && f.count > 0 && statusFilter !== f.key && (
-              <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-red-500 animate-pulse align-middle" />
+              <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-rust animate-pulse align-middle" />
             )}
           </button>
         ))}
@@ -1309,7 +1310,7 @@ export default function ModerationSection() {
               filtersRef.current.scrollTo({ left: 0, behavior: "smooth" });
             }
           }}
-          className="sm:hidden fixed bottom-20 left-4 z-40 bg-white border border-gray-200 rounded-full p-2 shadow-lg"
+          className="sm:hidden fixed bottom-20 left-4 z-40 bg-card border border-hairline rounded-full p-2 shadow-lg"
           aria-label={t("Rudi kushoto", "Scroll left")}
         >
           <ChevronLeft size={18} />
@@ -1318,7 +1319,7 @@ export default function ModerationSection() {
 
       {/* ── BULK BAR ─────────────────────────────────────── */}
       {selectedIds.length > 0 && (
-        <div className="sticky top-2 z-30 mb-3 rounded-xl border border-gray-200 bg-white p-3 shadow-md">
+        <div className="sticky top-2 z-30 mb-3 rounded-xl border border-hairline bg-card p-3 shadow-md">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-semibold text-primary mr-1">
               {t(`Umechagua ${selectedListings.length}`, `${selectedListings.length} selected`)}
@@ -1336,9 +1337,9 @@ export default function ModerationSection() {
                   onClick={() => openBulkModal("pay")}
                   disabled={bulkBusy}
                   style={{ color: COLORS.green }}
-                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-green-50 disabled:opacity-50"
+                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-hairline hover:bg-green/10 disabled:opacity-50"
                 >
-                  {bulkFreeCount === selectedListings.length ? <CheckCheck size={13} /> : <Wallet size={13} />}
+                  {bulkFreeCount === selectedListings.length ? <CheckCheck size={14} /> : <Wallet size={14} />}
                   {bulkPayLabel}
                 </button>
               )}
@@ -1347,9 +1348,9 @@ export default function ModerationSection() {
                   onClick={() => openBulkModal("finalize")}
                   disabled={bulkBusy}
                   style={{ color: COLORS.green }}
-                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-green-50 disabled:opacity-50"
+                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-hairline hover:bg-green/10 disabled:opacity-50"
                 >
-                  <CheckCheck size={13} />
+                  <CheckCheck size={14} />
                   {t("Idhinisha Mwisho", "Finalize")}
                 </button>
               )}
@@ -1357,10 +1358,10 @@ export default function ModerationSection() {
                 <button
                   onClick={() => openBulkModal("edit")}
                   disabled={bulkBusy}
-                  style={{ color: "#B45309" }}
-                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-amber-50 disabled:opacity-50"
+                  style={{ color: COLORS.goldInk }}
+                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-hairline hover:bg-gold/10 disabled:opacity-50"
                 >
-                  <Pencil size={13} />
+                  <Pencil size={14} />
                   {t("Omba Uhariri", "Request Edit")}
                 </button>
               )}
@@ -1369,9 +1370,9 @@ export default function ModerationSection() {
                   onClick={() => openBulkModal("reject")}
                   disabled={bulkBusy}
                   style={{ color: COLORS.rust }}
-                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-red-50 disabled:opacity-50"
+                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-hairline hover:bg-rust/10 disabled:opacity-50"
                 >
-                  <XCircle size={13} />
+                  <XCircle size={14} />
                   {t("Kataa", "Reject")}
                 </button>
               )}
@@ -1380,9 +1381,9 @@ export default function ModerationSection() {
                   onClick={() => openBulkModal("disapprove")}
                   disabled={bulkBusy}
                   style={{ color: COLORS.rust }}
-                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-red-50 disabled:opacity-50"
+                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-hairline hover:bg-rust/10 disabled:opacity-50"
                 >
-                  <RotateCcw size={13} />
+                  <RotateCcw size={14} />
                   Disapprove
                 </button>
               )}
@@ -1390,19 +1391,19 @@ export default function ModerationSection() {
                 <button
                   onClick={() => openBulkModal("delete")}
                   disabled={bulkBusy}
-                  style={{ color: "#DC2626" }}
-                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-red-50 disabled:opacity-50"
+                  style={{ color: COLORS.rust }}
+                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-hairline hover:bg-rust/10 disabled:opacity-50"
                 >
-                  <Trash2 size={13} />
+                  <Trash2 size={14} />
                   {t("Futa", "Delete")}
                 </button>
               )}
               <button
                 onClick={() => setSelected({})}
                 aria-label={t("Ghairi uchaguzi", "Clear selection")}
-                className="p-1.5 rounded-lg border border-gray-200 text-secondary"
+                className="p-1.5 rounded-lg border border-hairline text-secondary"
               >
-                <X size={13} />
+                <X size={14} />
               </button>
             </div>
           </div>
@@ -1426,10 +1427,10 @@ export default function ModerationSection() {
 
       {!loading && (
         <>
-          <div className="hidden sm:block bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="hidden sm:block bg-card rounded-xl border border-hairline overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-page">
                   <tr>
                     <th className="pl-4 pr-1 py-2.5 w-8">
                       <button
@@ -1461,11 +1462,11 @@ export default function ModerationSection() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-hairline">
                   {filtered.map((l) => (
                     <tr
                       key={l.id}
-                      className="hover:bg-gray-50/50 transition-colors"
+                      className="hover:bg-page/50 transition-colors"
                     >
                       <td className="pl-4 pr-1 py-3 w-8">
                         <input
@@ -1473,7 +1474,7 @@ export default function ModerationSection() {
                           checked={!!selected[String(l.id)]}
                           onChange={() => toggleOne(l.id)}
                           aria-label={t("Chagua", "Select")}
-                          className="h-4 w-4 accent-[#0A1F5C]"
+                          className="h-4 w-4 accent-night"
                         />
                       </td>
                       <td className="px-5 py-3 text-sm font-medium text-primary">
@@ -1489,7 +1490,7 @@ export default function ModerationSection() {
                         {normalizeStatus(l.status) === "needs_edit" && l.rejectionReason && (
                           <p
                             className="text-xs font-normal mt-0.5"
-                            style={{ color: "#B45309" }}
+                            style={{ color: COLORS.goldInk }}
                           >
                             {l.rejectionReason}
                           </p>
@@ -1536,7 +1537,7 @@ export default function ModerationSection() {
             {filtered.map((l) => (
               <div
                 key={l.id}
-                className="bg-white rounded-xl border border-gray-100 p-4"
+                className="bg-card rounded-xl border border-hairline p-4"
               >
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <input
@@ -1544,7 +1545,7 @@ export default function ModerationSection() {
                     checked={!!selected[String(l.id)]}
                     onChange={() => toggleOne(l.id)}
                     aria-label={t("Chagua", "Select")}
-                    className="mt-1 h-4 w-4 shrink-0 accent-[#0A1F5C]"
+                    className="mt-1 h-4 w-4 shrink-0 accent-night"
                   />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-primary line-clamp-2">
@@ -1566,7 +1567,7 @@ export default function ModerationSection() {
                     {normalizeStatus(l.status) === "needs_edit" && l.rejectionReason && (
                       <p
                         className="text-xs mt-1 line-clamp-2"
-                        style={{ color: "#B45309" }}
+                        style={{ color: COLORS.goldInk }}
                       >
                         {l.rejectionReason}
                       </p>
@@ -1592,7 +1593,7 @@ export default function ModerationSection() {
               </div>
             ))}
             {filtered.length === 0 && (
-              <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-sm text-muted">
+              <div className="bg-card rounded-xl border border-hairline p-8 text-center text-sm text-muted">
                 {emptyText}
               </div>
             )}
@@ -1636,7 +1637,7 @@ export default function ModerationSection() {
             : !bulkModal.reason.trim());
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-            <div className="bg-white rounded-2xl max-w-md w-full p-5">
+            <div className="bg-card rounded-2xl max-w-md w-full p-5">
               <h3 className="text-base font-semibold text-primary mb-1">
                 {titles[type]} · {n}
               </h3>
@@ -1647,7 +1648,7 @@ export default function ModerationSection() {
                   onChange={(e) => setBulkModal((p) => ({ ...p, reason: e.target.value }))}
                   rows={3}
                   autoFocus
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none resize-none mb-3"
+                  className="w-full rounded-lg border border-hairline px-3 py-2 text-sm outline-none resize-none mb-3"
                   placeholder={
                     reasonRequired
                       ? t("Sababu (inahitajika)", "Reason (required)")
@@ -1659,7 +1660,7 @@ export default function ModerationSection() {
                 <button
                   onClick={() => setBulkModal(null)}
                   disabled={bulkBusy}
-                  className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary"
+                  className="flex-1 py-2.5 border border-hairline rounded-lg text-sm font-semibold text-secondary"
                 >
                   {t("Ghairi", "Cancel")}
                 </button>
@@ -1685,7 +1686,7 @@ export default function ModerationSection() {
       {/* ── REJECT MODAL ─────────────────────────────────── */}
       {rejectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5">
+          <div className="bg-card rounded-2xl max-w-md w-full p-5">
             <h3 className="text-base font-semibold text-primary mb-2">
               {t("Kataa Listing", "Reject Listing")}
             </h3>
@@ -1702,7 +1703,7 @@ export default function ModerationSection() {
               }
               rows={3}
               autoFocus
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none resize-none focus:border-[#C1502E] mb-3"
+              className="w-full rounded-lg border border-hairline px-3 py-2 text-sm outline-none resize-none focus:border-rust mb-3"
               placeholder={t(
                 "mfano: Picha hazitoshi, bei haijaeleweka",
                 "e.g. Insufficient photos, unclear price"
@@ -1711,7 +1712,7 @@ export default function ModerationSection() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setRejectModal(null)}
-                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary"
+                className="flex-1 py-2.5 border border-hairline rounded-lg text-sm font-semibold text-secondary"
               >
                 {t("Ghairi", "Cancel")}
               </button>
@@ -1731,13 +1732,13 @@ export default function ModerationSection() {
       {/* ── REQUEST EDIT MODAL ───────────────────────────── */}
       {requestEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5">
+          <div className="bg-card rounded-2xl max-w-md w-full p-5">
             <div className="flex items-center gap-3 mb-3">
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                style={{ background: "rgba(180,83,9,0.1)" }}
+                style={{ background: "rgba(163,95,0,0.1)" }}
               >
-                <Pencil size={18} color="#B45309" />
+                <Pencil size={18} color={COLORS.goldInk} />
               </div>
               <div>
                 <h3 className="text-base font-semibold text-primary">
@@ -1758,7 +1759,7 @@ export default function ModerationSection() {
               }
               rows={3}
               autoFocus
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none resize-none focus:border-[#B45309] mb-3"
+              className="w-full rounded-lg border border-hairline px-3 py-2 text-sm outline-none resize-none focus:border-warning mb-3"
               placeholder={t(
                 "mfano: Ongeza picha zaidi, ainisha eneo vizuri",
                 "e.g. Add more photos, clarify location"
@@ -1767,7 +1768,7 @@ export default function ModerationSection() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setRequestEditModal(null)}
-                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary"
+                className="flex-1 py-2.5 border border-hairline rounded-lg text-sm font-semibold text-secondary"
               >
                 {t("Ghairi", "Cancel")}
               </button>
@@ -1775,7 +1776,7 @@ export default function ModerationSection() {
                 onClick={submitRequestEdit}
                 disabled={requestEditModal.reason.trim().length < 5}
                 className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-                style={{ background: "#B45309" }}
+                style={{ background: COLORS.goldInk }}
               >
                 {t("Tuma Ombi", "Send Request")}
               </button>
@@ -1787,7 +1788,7 @@ export default function ModerationSection() {
       {/* ── REQUEST PAYMENT MODAL ────────────────────────── */}
       {requestPaymentModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5">
+          <div className="bg-card rounded-2xl max-w-md w-full p-5">
             <div className="flex items-center gap-3 mb-3">
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
@@ -1827,7 +1828,7 @@ export default function ModerationSection() {
                 }))
               }
               rows={2}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none resize-none focus:border-[#2F6D4F] mb-3"
+              className="w-full rounded-lg border border-hairline px-3 py-2 text-sm outline-none resize-none focus:border-green mb-3"
               placeholder={t(
                 "Maelezo ya ziada (hiari)",
                 "Optional note to seller"
@@ -1836,7 +1837,7 @@ export default function ModerationSection() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setRequestPaymentModal(null)}
-                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary"
+                className="flex-1 py-2.5 border border-hairline rounded-lg text-sm font-semibold text-secondary"
               >
                 {t("Ghairi", "Cancel")}
               </button>
@@ -1857,7 +1858,7 @@ export default function ModerationSection() {
       {/* ── DISAPPROVE MODAL ─────────────────────────────── */}
       {disapproveModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5">
+          <div className="bg-card rounded-2xl max-w-md w-full p-5">
             <div className="flex items-center gap-3 mb-3">
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
@@ -1884,7 +1885,7 @@ export default function ModerationSection() {
               }
               rows={3}
               autoFocus
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none resize-none focus:border-[#C1502E] mb-3"
+              className="w-full rounded-lg border border-hairline px-3 py-2 text-sm outline-none resize-none focus:border-rust mb-3"
               placeholder={t(
                 "mfano: Ilidhinishwa kimakosa, inahitaji mabadiliko",
                 "e.g. Approved by mistake, needs corrections"
@@ -1893,7 +1894,7 @@ export default function ModerationSection() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setDisapproveModal(null)}
-                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary"
+                className="flex-1 py-2.5 border border-hairline rounded-lg text-sm font-semibold text-secondary"
               >
                 {t("Ghairi", "Cancel")}
               </button>
@@ -1913,13 +1914,13 @@ export default function ModerationSection() {
       {/* ── DELETE MODAL ─────────────────────────────────── */}
       {deleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5">
+          <div className="bg-card rounded-2xl max-w-md w-full p-5">
             <div className="flex items-center gap-3 mb-3">
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                style={{ background: "rgba(220,38,38,0.1)" }}
+                style={{ background: "rgba(193,80,46,0.1)" }}
               >
-                <Trash2 size={18} color="#DC2626" />
+                <Trash2 size={18} color={COLORS.rust} />
               </div>
               <div>
                 <h3 className="text-base font-semibold text-primary">
@@ -1937,7 +1938,7 @@ export default function ModerationSection() {
               }
               rows={3}
               autoFocus
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none resize-none focus:border-[#DC2626] mb-3"
+              className="w-full rounded-lg border border-hairline px-3 py-2 text-sm outline-none resize-none focus:border-rust mb-3"
               placeholder={t(
                 "mfano: Listing ya udanganyifu (scam)",
                 "e.g. Scam listing"
@@ -1946,14 +1947,14 @@ export default function ModerationSection() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setDeleteModal(null)}
-                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary"
+                className="flex-1 py-2.5 border border-hairline rounded-lg text-sm font-semibold text-secondary"
               >
                 {t("Ghairi", "Cancel")}
               </button>
               <button
                 onClick={submitDelete}
                 className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white"
-                style={{ background: "#DC2626" }}
+                style={{ background: COLORS.rust }}
               >
                 {t("Futa Kabisa", "Delete Permanently")}
               </button>
@@ -1965,7 +1966,7 @@ export default function ModerationSection() {
       {/* ── RELEASE RESERVATION MODAL ───────────────────── */}
       {releaseModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5">
+          <div className="bg-card rounded-2xl max-w-md w-full p-5">
             <div className="flex items-center gap-3 mb-3">
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
@@ -1992,7 +1993,7 @@ export default function ModerationSection() {
               }
               rows={3}
               autoFocus
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none resize-none focus:border-[#2F6D4F] mb-3"
+              className="w-full rounded-lg border border-hairline px-3 py-2 text-sm outline-none resize-none focus:border-green mb-3"
               placeholder={t(
                 "Sababu (hiari) — mfano: Mnunuzi hakukamilisha malipo",
                 "Reason (optional) — e.g. Buyer did not complete payment"
@@ -2001,7 +2002,7 @@ export default function ModerationSection() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setReleaseModal(null)}
-                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary"
+                className="flex-1 py-2.5 border border-hairline rounded-lg text-sm font-semibold text-secondary"
               >
                 {t("Ghairi", "Cancel")}
               </button>

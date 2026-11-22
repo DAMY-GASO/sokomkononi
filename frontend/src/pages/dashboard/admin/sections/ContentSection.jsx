@@ -58,12 +58,12 @@ function BilingualField({ label, value, onChange, multiline = false, rows = 3, d
 
   return (
     <div className="flex flex-col gap-2 w-full min-w-0">
-      <span className="text-[11px] font-semibold text-secondary break-words">
+      <span className="text-xs font-semibold text-secondary break-words">
         {label}
       </span>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full min-w-0">
         <div className="min-w-0 w-full">
-          <span className="text-[10px] font-semibold text-muted uppercase">Kiswahili</span>
+          <span className="text-xs font-semibold text-muted uppercase">Kiswahili</span>
           {multiline ? (
             <textarea value={swVal} onChange={(e) => onChange({ ...value, sw: e.target.value })} rows={rows} disabled={disabled} className={cls} />
           ) : (
@@ -71,7 +71,7 @@ function BilingualField({ label, value, onChange, multiline = false, rows = 3, d
           )}
         </div>
         <div className="min-w-0 w-full">
-          <span className="text-[10px] font-semibold text-muted uppercase">English</span>
+          <span className="text-xs font-semibold text-muted uppercase">English</span>
           {multiline ? (
             <textarea value={enVal} onChange={(e) => onChange({ ...value, en: e.target.value })} rows={rows} disabled={disabled} className={cls} />
           ) : (
@@ -104,9 +104,9 @@ function FormActions({ onCancel, onSave, lang, saving = false, saveLabel = null 
         className="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {saving ? (
-          <Loader2 size={13} className="animate-spin" />
+          <Loader2 size={14} className="animate-spin" />
         ) : (
-          <Save size={13} />
+          <Save size={14} />
         )}
         {saveLabel || t("Hifadhi", "Save")}
       </button>
@@ -196,7 +196,7 @@ function SectionsEditor({
   return (
     <div className="flex flex-col gap-3 w-full min-w-0">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <span className="text-[11px] font-semibold text-secondary">
+        <span className="text-xs font-semibold text-secondary">
           {sectionLabel || t("Sections", "Sections")} ({sections.length})
         </span>
         <button
@@ -204,7 +204,7 @@ function SectionsEditor({
           onClick={addSection}
           disabled={disabled}
           style={{ background: COLORS.gold, color: "rgb(var(--c-night))" }}
-          className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
+          className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
         >
           <Plus size={12} />
           {t("Ongeza", "Add")}
@@ -218,7 +218,7 @@ function SectionsEditor({
           className="rounded-lg border p-3 flex flex-col gap-2 w-full min-w-0"
         >
           <div className="flex items-center gap-1.5 justify-between">
-            <span className="text-[11px] font-bold text-secondary">
+            <span className="text-xs font-bold text-secondary">
               #{index + 1}
             </span>
             <div className="flex items-center gap-1">
@@ -272,7 +272,7 @@ function SectionsEditor({
           {allowImage && (
             <div className="flex flex-col gap-1.5 w-full min-w-0 mt-1">
               <label className="flex flex-col gap-1 w-full min-w-0">
-                <span className="text-[10px] font-semibold text-muted uppercase">
+                <span className="text-xs font-semibold text-muted uppercase">
                   {t("Picha ya Mwanatimu (URL)", "Member Image (URL)")}
                 </span>
                 <input
@@ -298,7 +298,7 @@ function SectionsEditor({
 
           {/* Content SW */}
           <div className="flex flex-col gap-1.5 w-full min-w-0 mt-1">
-            <span className="text-[10px] font-semibold text-muted uppercase">
+            <span className="text-xs font-semibold text-muted uppercase">
               {t("Maudhui (Kiswahili)", "Content (Swahili)")}
             </span>
             {(section.content?.sw || []).map((p, pIndex) => (
@@ -327,7 +327,7 @@ function SectionsEditor({
               type="button"
               onClick={() => addParagraph(index, "sw")}
               disabled={disabled}
-              className="text-[10px] font-semibold text-[#2F6D4F] hover:underline self-start disabled:opacity-50"
+              className="text-xs font-semibold text-green hover:underline self-start disabled:opacity-50"
             >
               + {t("Ongeza Paragraph", "Add Paragraph")}
             </button>
@@ -335,7 +335,7 @@ function SectionsEditor({
 
           {/* Content EN */}
           <div className="flex flex-col gap-1.5 w-full min-w-0">
-            <span className="text-[10px] font-semibold text-muted uppercase">
+            <span className="text-xs font-semibold text-muted uppercase">
               {t("Maudhui (Kiingereza)", "Content (English)")}
             </span>
             {(section.content?.en || []).map((p, pIndex) => (
@@ -364,7 +364,7 @@ function SectionsEditor({
               type="button"
               onClick={() => addParagraph(index, "en")}
               disabled={disabled}
-              className="text-[10px] font-semibold text-[#2F6D4F] hover:underline self-start disabled:opacity-50"
+              className="text-xs font-semibold text-green hover:underline self-start disabled:opacity-50"
             >
               + {t("Ongeza Paragraph", "Add Paragraph")}
             </button>
@@ -454,7 +454,7 @@ function TestimonialsTab({ lang }) {
       <button onClick={handleAdd} disabled={adding || !!editing || saving}
               style={{ background: COLORS.gold, color: "rgb(var(--c-night))" }}
               className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0 disabled:opacity-50">
-        <Plus size={13} />
+        <Plus size={14} />
         {t("Ushuhuda Mpya", "New Testimonial")}
       </button>
 
@@ -462,14 +462,14 @@ function TestimonialsTab({ lang }) {
         <div style={{ borderColor: "rgb(var(--c-hairline))", background: "rgb(var(--c-card))" }}
              className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full min-w-0">
           <label className="flex flex-col gap-1 w-full min-w-0">
-            <span className="text-[11px] font-semibold text-secondary">{t("Jina", "Name")} *</span>
+            <span className="text-xs font-semibold text-secondary">{t("Jina", "Name")} *</span>
             <input value={form.name || ""}
                    onChange={(e) => setForm({ ...form, name: e.target.value })}
                    placeholder="Mary Mwangi" disabled={saving}
                    className="input w-full" />
           </label>
           <label className="flex flex-col gap-1 w-full min-w-0">
-            <span className="text-[11px] font-semibold text-secondary">{t("Mahali", "Location")}</span>
+            <span className="text-xs font-semibold text-secondary">{t("Mahali", "Location")}</span>
             <input value={form.location || ""}
                    onChange={(e) => setForm({ ...form, location: e.target.value })}
                    placeholder="Dar es Salaam" disabled={saving}
@@ -478,7 +478,7 @@ function TestimonialsTab({ lang }) {
           <BilingualField label={t("Ushuhuda", "Quote")} value={form.quote || { sw: "", en: "" }}
                           onChange={(v) => setForm({ ...form, quote: v })} multiline rows={3} disabled={saving} />
           <label className="flex flex-col gap-1 w-full min-w-0">
-            <span className="text-[11px] font-semibold text-secondary">{t("Rating (1-5)", "Rating (1-5)")}</span>
+            <span className="text-xs font-semibold text-secondary">{t("Rating (1-5)", "Rating (1-5)")}</span>
             <select value={form.rating || 5}
                     onChange={(e) => setForm({ ...form, rating: Number(e.target.value) })}
                     disabled={saving}
@@ -492,7 +492,7 @@ function TestimonialsTab({ lang }) {
           </label>
 
           <label className="flex flex-col gap-1 w-full min-w-0">
-            <span className="text-[11px] font-semibold text-secondary">
+            <span className="text-xs font-semibold text-secondary">
               {t("Picha ya Mtoa Ushuhuda (URL, hiari)", "Testimonial Avatar (URL, optional)")}
             </span>
             <input value={form.avatarUrl || ""}
@@ -514,7 +514,7 @@ function TestimonialsTab({ lang }) {
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={form.active !== false}
                    onChange={(e) => setForm({ ...form, active: e.target.checked })}
-                   disabled={saving} className="w-4 h-4 rounded text-[#FEA406]" />
+                   disabled={saving} className="w-4 h-4 rounded text-gold" />
             <span className="text-xs text-secondary">{t("Inaonekana HomePage", "Show on HomePage")}</span>
           </label>
           <FormActions onCancel={handleCancel} onSave={handleSave} lang={lang} saving={saving} />
@@ -534,7 +534,7 @@ function TestimonialsTab({ lang }) {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   <p className="text-sm font-semibold text-primary truncate">{item.name}</p>
-                  {item.location && <span className="text-[11px] text-muted">• {item.location}</span>}
+                  {item.location && <span className="text-xs text-muted">• {item.location}</span>}
                 </div>
                 <p style={{ color: COLORS.goldText }} className="text-xs mb-1">
                   {"★".repeat(item.rating || 0)}{"☆".repeat(5 - (item.rating || 0))}
@@ -546,7 +546,7 @@ function TestimonialsTab({ lang }) {
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <button onClick={() => handleEdit(item)} disabled={saving}
-                      className="p-1.5 text-muted hover:text-[#FEA406] disabled:opacity-50">
+                      className="p-1.5 text-muted hover:text-gold-ink disabled:opacity-50">
                 <Pencil size={14} />
               </button>
               <button onClick={() => handleRemove(item.id)} disabled={saving}
@@ -659,7 +659,7 @@ function FaqsTab({ lang }) {
       <button onClick={handleAdd} disabled={adding || !!editing || saving}
               style={{ background: COLORS.gold, color: "rgb(var(--c-night))" }}
               className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0 disabled:opacity-50">
-        <Plus size={13} />
+        <Plus size={14} />
         {t("Swali Jipya", "New FAQ")}
       </button>
 
@@ -680,10 +680,10 @@ function FaqsTab({ lang }) {
           <div className="flex items-start justify-between gap-3 w-full min-w-0">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span className="text-[10px] font-bold text-muted">#{index + 1}</span>
+                <span className="text-xs font-bold text-muted">#{index + 1}</span>
                 {faq.active === false && (
                   <span style={{ background: "rgb(var(--c-ink) / 0.08)", color: COLORS.ink }}
-                        className="text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        className="text-xs font-bold px-2 py-0.5 rounded-full">
                     {t("Imezimwa", "Inactive")}
                   </span>
                 )}
@@ -705,7 +705,7 @@ function FaqsTab({ lang }) {
                 ↓
               </button>
               <button onClick={() => handleEdit(faq)} disabled={saving}
-                      className="p-1.5 text-muted hover:text-[#FEA406] disabled:opacity-50">
+                      className="p-1.5 text-muted hover:text-gold-ink disabled:opacity-50">
                 <Pencil size={14} />
               </button>
               <button onClick={() => handleRemove(faq.id)} disabled={saving}
@@ -823,7 +823,7 @@ function SinglePageEditor({ section, lang }) {
       )}
 
       {form.lastUpdated && (
-        <p className="text-[10px] text-muted break-words">
+        <p className="text-xs text-muted break-words">
           {t("Ilisasishwa", "Last updated")}:{" "}
           {new Date(form.lastUpdated).toLocaleString(lang === "sw" ? "sw-TZ" : "en-US")}
         </p>
@@ -833,12 +833,12 @@ function SinglePageEditor({ section, lang }) {
         <button onClick={handleSave} disabled={saving}
                 style={{ background: COLORS.gold, color: "rgb(var(--c-night))" }}
                 className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg shrink-0 disabled:opacity-60">
-          {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
           {saving ? t("Inahifadhi...", "Saving...") : t("Hifadhi", "Save")}
         </button>
         {saved && (
           <span style={{ color: COLORS.successText }} className="flex items-center gap-1 text-xs font-semibold">
-            <Check size={13} />
+            <Check size={14} />
             {t("Imehifadhiwa", "Saved")}
           </span>
         )}
@@ -877,7 +877,7 @@ export default function ContentSection() {
                 isActive ? "chip-active" : "bg-card text-primary"
               }`}
             >
-              <Icon size={13} />
+              <Icon size={14} />
               {label?.[lang] || label?.sw}
             </button>
           );

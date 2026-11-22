@@ -102,7 +102,7 @@ function DeleteAccountModal({ onClose, onConfirm, lang, deleting }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white rounded-2xl max-w-md w-full p-6">
+      <div className="bg-card rounded-2xl max-w-md w-full p-6">
         <div className="text-center mb-5">
           <div className="w-14 h-14 rounded-full bg-rust/20 flex items-center justify-center mx-auto mb-3">
             <Trash2 size={26} className="text-rust" />
@@ -128,7 +128,7 @@ function DeleteAccountModal({ onClose, onConfirm, lang, deleting }) {
             rows={3}
             disabled={deleting}
             placeholder={t("Kwa nini unaondoka?", "Why are you leaving?")}
-            className="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-gold resize-none disabled:opacity-50"
+            className="w-full mt-1 border border-hairline rounded-lg px-3 py-2 text-sm outline-none focus:border-gold resize-none disabled:opacity-50"
           />
         </label>
 
@@ -145,7 +145,7 @@ function DeleteAccountModal({ onClose, onConfirm, lang, deleting }) {
             onChange={(e) => setConfirmText(e.target.value.toUpperCase())}
             disabled={deleting}
             placeholder={requiredText}
-            className="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-rust text-center font-mono disabled:opacity-50"
+            className="w-full mt-1 border border-hairline rounded-lg px-3 py-2 text-sm outline-none focus:border-rust text-center font-mono disabled:opacity-50"
           />
         </label>
 
@@ -157,7 +157,7 @@ function DeleteAccountModal({ onClose, onConfirm, lang, deleting }) {
           <button
             onClick={onClose}
             disabled={deleting}
-            className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
+            className="flex-1 py-2.5 border border-hairline rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
           >
             {t("Ghairi", "Cancel")}
           </button>
@@ -197,7 +197,7 @@ function OverviewTab({ user, lang }) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
+      <div className="bg-card rounded-xl border border-hairline p-5">
         <h3 className="font-semibold text-primary mb-3">
           {lang === "sw" ? "Kuhusu Mimi" : "About Me"}
         </h3>
@@ -206,13 +206,13 @@ function OverviewTab({ user, lang }) {
         </p>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
+      <div className="bg-card rounded-xl border border-hairline p-5">
         <h3 className="font-semibold text-primary mb-4">
           {lang === "sw" ? "Taarifa za Akaunti" : "Account Information"}
         </h3>
         <div className="space-y-3">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-page flex items-center justify-center flex-shrink-0">
               <Mail size={16} className="text-secondary" />
             </div>
             <div className="flex-1 min-w-0">
@@ -223,7 +223,7 @@ function OverviewTab({ user, lang }) {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-page flex items-center justify-center flex-shrink-0">
               <Phone size={16} className="text-secondary" />
             </div>
             <div className="flex-1 min-w-0">
@@ -234,7 +234,7 @@ function OverviewTab({ user, lang }) {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-page flex items-center justify-center flex-shrink-0">
               <MapPin size={16} className="text-secondary" />
             </div>
             <div className="flex-1 min-w-0">
@@ -245,7 +245,7 @@ function OverviewTab({ user, lang }) {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-page flex items-center justify-center flex-shrink-0">
               <Calendar size={16} className="text-secondary" />
             </div>
             <div className="flex-1 min-w-0">
@@ -351,7 +351,7 @@ function EditProfileTab({ user, lang }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
+      <div className="bg-card rounded-xl border border-hairline p-5">
         <h3 className="font-semibold text-primary mb-4 text-center">
           {lang === "sw" ? "Picha ya Wasifu" : "Profile Picture"}
         </h3>
@@ -387,7 +387,7 @@ function EditProfileTab({ user, lang }) {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
+      <div className="bg-card rounded-xl border border-hairline p-5">
         <h3 className="font-semibold text-primary mb-4 text-center">
           {lang === "sw" ? "Taarifa za Kibinafsi" : "Personal Information"}
         </h3>
@@ -405,7 +405,7 @@ function EditProfileTab({ user, lang }) {
                 type="text"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors text-center"
+                className="w-full border border-hairline rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors text-center"
               />
             </div>
           </div>
@@ -423,7 +423,7 @@ function EditProfileTab({ user, lang }) {
                 type="email"
                 value={form.email}
                 readOnly
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm bg-gray-50 text-secondary focus:outline-none cursor-not-allowed text-center"
+                className="w-full border border-hairline rounded-lg pl-10 pr-3 py-2.5 text-sm bg-page text-secondary focus:outline-none cursor-not-allowed text-center"
               />
             </div>
             <p className="text-body-sm text-muted mt-1 text-center">
@@ -446,7 +446,7 @@ function EditProfileTab({ user, lang }) {
                 type="tel"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors text-center"
+                className="w-full border border-hairline rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors text-center"
               />
             </div>
           </div>
@@ -464,7 +464,7 @@ function EditProfileTab({ user, lang }) {
                 type="text"
                 value={form.location}
                 onChange={(e) => setForm({ ...form, location: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors text-center"
+                className="w-full border border-hairline rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors text-center"
               />
             </div>
           </div>
@@ -477,7 +477,7 @@ function EditProfileTab({ user, lang }) {
               rows={4}
               value={form.bio}
               onChange={(e) => setForm({ ...form, bio: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors resize-none text-center"
+              className="w-full border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors resize-none text-center"
               placeholder={
                 lang === "sw"
                   ? "Andika kuhusu wewe mwenyewe..."
@@ -569,7 +569,7 @@ function SessionsCard({ lang, user }) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-5">
+    <div className="bg-card rounded-xl border border-hairline p-5">
       <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
         <h3 className="font-semibold text-primary">
           {t("Vifaa Vilivyoingia", "Active Sessions")}
@@ -615,29 +615,29 @@ function SessionsCard({ lang, user }) {
         <div className="flex flex-col gap-2">
           {sessions.map((s) => (
             <div key={s.id}
-              className="flex items-center justify-between gap-3 py-2 border-b border-gray-100 last:border-0">
+              className="flex items-center justify-between gap-3 py-2 border-b border-hairline last:border-0">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-page flex items-center justify-center shrink-0">
                   <Globe size={14} className="text-secondary" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm text-primary truncate">
                     {s.device_name || s.user_agent || t("Kifaa", "Device")}
                   </p>
-                  <p className="text-[11px] text-muted truncate">
+                  <p className="text-xs text-muted truncate">
                     {s.ip_address || ""}
                     {s.last_seen ? ` · ${new Date(s.last_seen).toLocaleString()}` : ""}
                   </p>
                 </div>
               </div>
               {s.is_current ? (
-                <span className="text-[11px] font-medium px-2 py-1 rounded-full shrink-0"
+                <span className="text-xs font-medium px-2 py-1 rounded-full shrink-0"
                       style={{ background: `${COLORS.green}15`, color: COLORS.green }}>
                   {t("Kifaa hiki", "This device")}
                 </span>
               ) : (
                 <button onClick={() => revoke(s.id)} disabled={busy}
-                  className="text-[11px] font-semibold hover:underline disabled:opacity-50"
+                  className="text-xs font-semibold hover:underline disabled:opacity-50"
                   style={{ color: COLORS.rust }}>
                   {t("Ondoa", "Revoke")}
                 </button>
@@ -680,7 +680,7 @@ function DataExportButton({ lang }) {
     } finally { setBusy(false); }
   };
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-5">
+    <div className="bg-card rounded-xl border border-hairline p-5">
       <h3 className="font-semibold text-primary mb-2">
         {t("Pakua Data Yangu", "Download My Data")}
       </h3>
@@ -696,7 +696,7 @@ function DataExportButton({ lang }) {
                 t("Pakua Data", "Download Data")}
       </button>
       {done && (
-        <p className="text-[11px] mt-2 text-center"
+        <p className="text-xs mt-2 text-center"
            style={{ color: COLORS.green }}>
           {direct
             ? t("Upakuaji umeanza kwenye dirisha jipya.",
@@ -706,7 +706,7 @@ function DataExportButton({ lang }) {
         </p>
       )}
       {error && (
-        <p className="text-[11px] mt-2 text-center"
+        <p className="text-xs mt-2 text-center"
            style={{ color: COLORS.rust }}>{error}</p>
       )}
     </div>
@@ -800,7 +800,7 @@ function SecurityTab({ lang, user }) {
     <div className="space-y-6">
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-xl border border-gray-100 p-5"
+        className="bg-card rounded-xl border border-hairline p-5"
       >
         <h3 className="font-semibold text-primary mb-4 text-center">
           {lang === "sw" ? "Badilisha Nenosiri" : "Change Password"}
@@ -819,7 +819,7 @@ function SecurityTab({ lang, user }) {
                 type={showCurrent ? "text" : "password"}
                 value={form.current}
                 onChange={(e) => setForm({ ...form, current: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors text-center"
+                className="w-full border border-hairline rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors text-center"
               />
               <button
                 type="button"
@@ -844,7 +844,7 @@ function SecurityTab({ lang, user }) {
                 type={showNew ? "text" : "password"}
                 value={form.new}
                 onChange={(e) => setForm({ ...form, new: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors text-center"
+                className="w-full border border-hairline rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors text-center"
               />
               <button
                 type="button"
@@ -869,7 +869,7 @@ function SecurityTab({ lang, user }) {
                 type={showConfirm ? "text" : "password"}
                 value={form.confirm}
                 onChange={(e) => setForm({ ...form, confirm: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors text-center"
+                className="w-full border border-hairline rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors text-center"
               />
               <button
                 type="button"
@@ -938,7 +938,7 @@ function SecurityTab({ lang, user }) {
 
         if (isUserAdmin) {
           return (
-            <div className="bg-white rounded-xl border border-gold/30 p-5">
+            <div className="bg-card rounded-xl border border-gold/30 p-5">
               <h3 className="font-semibold text-gold-ink mb-4 flex items-center justify-center gap-2 text-center">
                 <Shield size={18} />
                 {lang === "sw" ? "Akaunti ya Admin" : "Admin Account"}
@@ -955,7 +955,7 @@ function SecurityTab({ lang, user }) {
         }
 
         return (
-          <div className="bg-white rounded-xl border border-rust/30 p-5">
+          <div className="bg-card rounded-xl border border-rust/30 p-5">
             <h3 className="font-semibold text-rust mb-4 flex items-center justify-center gap-2 text-center">
               <AlertTriangle size={18} />
               {lang === "sw" ? "Eneo la Hatari" : "Danger Zone"}
@@ -1059,7 +1059,7 @@ function NotificationsTab({ lang }) {
     <button
       onClick={onChange}
       className={`relative w-11 h-6 rounded-full transition-colors ${
-        checked ? "bg-gold" : "bg-gray-200"
+        checked ? "bg-gold" : "bg-hairline"
       }`}
       role="switch"
       aria-checked={checked}
@@ -1108,7 +1108,7 @@ function NotificationsTab({ lang }) {
       {sections.map((section) => (
         <div
           key={section.title}
-          className="bg-white rounded-xl border border-gray-100 p-5"
+          className="bg-card rounded-xl border border-hairline p-5"
         >
           <h3 className="font-semibold text-primary mb-4 text-center">
             {section.title}
@@ -1221,7 +1221,7 @@ function PreferencesTab({ lang, setLang }) {
 
   return (
     <div className="space-y-5">
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
+      <div className="bg-card rounded-xl border border-hairline p-5">
         <h3 className="font-semibold text-primary mb-4 text-center">
           {lang === "sw" ? "Mapendeleo ya Jumla" : "General Preferences"}
         </h3>
@@ -1233,7 +1233,7 @@ function PreferencesTab({ lang, setLang }) {
             <select
               value={prefs.language}
               onChange={(e) => handleLanguageChange(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-gold text-center"
+              className="w-full border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-gold text-center"
             >
               <option value="sw">Kiswahili</option>
               <option value="en">English</option>
@@ -1247,7 +1247,7 @@ function PreferencesTab({ lang, setLang }) {
             <select
               value={prefs.currency}
               onChange={(e) => setPrefs({ ...prefs, currency: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-gold text-center"
+              className="w-full border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-gold text-center"
             >
               <option value="TZS">TZS - Tanzania Shilling</option>
               <option value="USD">USD - US Dollar</option>
@@ -1261,7 +1261,7 @@ function PreferencesTab({ lang, setLang }) {
             <select
               value={prefs.region}
               onChange={(e) => setPrefs({ ...prefs, region: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-gold text-center"
+              className="w-full border border-hairline rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-gold text-center"
             >
               {REGIONS.map((r) => (
                 <option key={r} value={r}>
@@ -1273,7 +1273,7 @@ function PreferencesTab({ lang, setLang }) {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
+      <div className="bg-card rounded-xl border border-hairline p-5">
         <h3 className="font-semibold text-primary mb-4 text-center">
           {lang === "sw" ? "Faragha" : "Privacy"}
         </h3>
@@ -1292,7 +1292,7 @@ function PreferencesTab({ lang, setLang }) {
             <button
               onClick={() => setPrefs({ ...prefs, showPhone: !prefs.showPhone })}
               className={`relative w-11 h-6 rounded-full transition-colors ${
-                prefs.showPhone ? "bg-gold" : "bg-gray-200"
+                prefs.showPhone ? "bg-gold" : "bg-hairline"
               }`}
             >
               <span
@@ -1317,7 +1317,7 @@ function PreferencesTab({ lang, setLang }) {
             <button
               onClick={() => setPrefs({ ...prefs, showEmail: !prefs.showEmail })}
               className={`relative w-11 h-6 rounded-full transition-colors ${
-                prefs.showEmail ? "bg-gold" : "bg-gray-200"
+                prefs.showEmail ? "bg-gold" : "bg-hairline"
               }`}
             >
               <span
@@ -1459,7 +1459,7 @@ export default function ProfilePage() {
   })();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-page">
       <Navbar />
 
       <section className="dark-surface bg-night text-white py-12 px-4">
@@ -1548,7 +1548,7 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      <div className="bg-white border-b border-gray-100 sticky top-16 z-40">
+      <div className="bg-card border-b border-hairline sticky top-16 z-40">
         <div className="max-w-5xl mx-auto px-4 relative">
           <div
             ref={tabsRef}
@@ -1587,7 +1587,7 @@ export default function ProfilePage() {
                   tabsRef.current.scrollTo({ left: 0, behavior: "smooth" });
                 }
               }}
-              className="sm:hidden fixed bottom-20 left-4 z-40 bg-white border border-gray-200 rounded-full p-2 shadow-lg"
+              className="sm:hidden fixed bottom-20 left-4 z-40 bg-card border border-hairline rounded-full p-2 shadow-lg"
               aria-label={lang === "sw" ? "Rudi kushoto" : "Scroll left"}
             >
               <ChevronLeft size={18} />

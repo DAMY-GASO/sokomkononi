@@ -97,15 +97,15 @@ export default function ContactDrawer({
         {/* Header */}
         <div
           className="sticky top-0 z-10 p-4 flex items-center justify-between border-b"
-          style={{ borderColor: COLORS.sandLine, background: "white" }}
+          style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
         >
-          <h3 className="font-semibold text-gray-800 text-sm sm:text-base flex items-center gap-2">
+          <h3 className="font-semibold text-primary text-sm sm:text-base flex items-center gap-2">
             <UserIcon size={16} color={COLORS.green} />
             {t("Wasifu wa Mtumiaji", "User Profile")}
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 p-1 -mr-1"
+            className="text-muted hover:text-secondary p-1 -mr-1"
             aria-label={t("Funga", "Close")}
           >
             <X size={20} />
@@ -127,18 +127,18 @@ export default function ContactDrawer({
             ) : (
               <div
                 className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold shrink-0"
-                style={{ background: `${COLORS.gold}25`, color: "#8A5A16" }}
+                style={{ background: `${COLORS.gold}25`, color: COLORS.goldText }}
               >
                 {initial}
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <p className="font-semibold text-gray-800 truncate">
+              <p className="font-semibold text-primary truncate">
                 {contact?.name || "—"}
               </p>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <ShieldCheck size={12} color={COLORS.green} />
-                <span className="text-xs text-gray-500">{roleLabel}</span>
+                <span className="text-xs text-secondary">{roleLabel}</span>
               </div>
             </div>
           </div>
@@ -162,7 +162,7 @@ export default function ContactDrawer({
           {contact?.phone ? (
             <a
               href={`tel:${contact.phone}`}
-              className="flex items-center gap-3 p-3 rounded-xl border hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-3 p-3 rounded-xl border hover:bg-page transition-colors"
               style={{ borderColor: COLORS.sandLine }}
             >
               <div
@@ -172,7 +172,7 @@ export default function ContactDrawer({
                 <Phone size={16} color={COLORS.green} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] text-muted uppercase font-semibold">
+                <p className="text-xs text-muted uppercase font-semibold">
                   {t("Simu", "Phone")}
                 </p>
                 <p className="text-sm font-semibold text-primary font-mono truncate">
@@ -187,12 +187,12 @@ export default function ContactDrawer({
             >
               <div
                 className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                style={{ background: "rgba(16,26,46,0.05)" }}
+                style={{ background: "rgba(1,25,87,0.05)" }}
               >
                 <Phone size={16} color={COLORS.night} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] text-muted uppercase font-semibold">
+                <p className="text-xs text-muted uppercase font-semibold">
                   {t("Simu", "Phone")}
                 </p>
                 <p className="text-xs text-muted italic">
@@ -205,17 +205,17 @@ export default function ContactDrawer({
           {contact?.email ? (
             <a
               href={`mailto:${contact.email}`}
-              className="flex items-center gap-3 p-3 rounded-xl border hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-3 p-3 rounded-xl border hover:bg-page transition-colors"
               style={{ borderColor: COLORS.sandLine }}
             >
               <div
                 className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                style={{ background: "rgba(232,163,61,0.15)" }}
+                style={{ background: "rgba(254,164,6,0.15)" }}
               >
-                <Mail size={16} color="#8A5A16" />
+                <Mail size={16} color={COLORS.goldText} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] text-muted uppercase font-semibold">
+                <p className="text-xs text-muted uppercase font-semibold">
                   {t("Barua Pepe", "Email")}
                 </p>
                 <p className="text-sm font-semibold text-primary truncate">
@@ -230,12 +230,12 @@ export default function ContactDrawer({
             >
               <div
                 className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                style={{ background: "rgba(16,26,46,0.05)" }}
+                style={{ background: "rgba(1,25,87,0.05)" }}
               >
                 <Mail size={16} color={COLORS.night} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] text-muted uppercase font-semibold">
+                <p className="text-xs text-muted uppercase font-semibold">
                   {t("Barua Pepe", "Email")}
                 </p>
                 <p className="text-xs text-muted italic">
@@ -251,7 +251,7 @@ export default function ContactDrawer({
               href={`https://wa.me/${whatsappNumber}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 rounded-xl border hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-3 p-3 rounded-xl border hover:bg-page transition-colors"
               style={{ borderColor: COLORS.sandLine }}
             >
               <div
@@ -260,7 +260,7 @@ export default function ContactDrawer({
                 <WhatsAppIcon size={16} className="text-white" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] text-muted uppercase font-semibold">
+                <p className="text-xs text-muted uppercase font-semibold">
                   WhatsApp
                 </p>
                 <p className="text-sm font-semibold text-primary truncate">
@@ -276,8 +276,8 @@ export default function ContactDrawer({
           className="p-4 border-t"
           style={{ borderColor: COLORS.sandLine }}
         >
-          <p className="text-[10px] text-muted uppercase font-semibold mb-2 flex items-center gap-1.5">
-            <Download size={11} />
+          <p className="text-xs text-muted uppercase font-semibold mb-2 flex items-center gap-1.5">
+            <Download size={12} />
             {t("Pakua Mazungumzo", "Download Transcript")}
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -290,7 +290,7 @@ export default function ContactDrawer({
                   borderColor: COLORS.sandLine,
                   color: COLORS.night,
                 }}
-                className="text-xs font-semibold px-2 py-2 rounded-lg border bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
+                className="text-xs font-semibold px-2 py-2 rounded-lg border bg-card hover:bg-page transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
               >
                 {downloading === fmt ? (
                   <Loader2 size={12} className="animate-spin" />
@@ -303,7 +303,7 @@ export default function ContactDrawer({
           </div>
           {downloadError && (
             <p
-              className="text-[11px] mt-2"
+              className="text-xs mt-2"
               style={{ color: COLORS.rust }}
             >
               {downloadError}
@@ -341,7 +341,7 @@ export default function ContactDrawer({
               <a
                 href={`mailto:${contact.email}`}
                 style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
-                className="flex-1 flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-lg border bg-white min-w-[100px]"
+                className="flex-1 flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-lg border bg-card min-w-[100px]"
               >
                 <Mail size={14} /> {t("Tuma Email", "Email")}
               </a>

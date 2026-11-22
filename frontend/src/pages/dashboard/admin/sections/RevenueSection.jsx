@@ -91,6 +91,7 @@ import {
 import {
   useActiveCategories, getCategory, getCategoryIcon,
 } from "../../../../config/categoriesStore.js";
+import { CHART } from "../shared/chartColors.js";
 
 // ── SAFE HELPERS — hakuna object inayoweza kufika kwenye JSX ──
 function safeStr(v, lang) {
@@ -128,10 +129,10 @@ function EditHint({ lang, accentColor = COLORS.gold }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   return (
     <p
-      className="text-[11px] font-medium mb-3 flex items-center gap-1.5"
+      className="text-xs font-medium mb-3 flex items-center gap-1.5"
       style={{ color: accentColor }}
     >
-      <Pencil size={11} />
+      <Pencil size={12} />
       {t("Bofya kiasi au jina kuhariri", "Click any amount or name to edit")}
     </p>
   );
@@ -162,10 +163,10 @@ function ToggleSwitch({
     <div className="flex items-center gap-2 shrink-0">
       {!compact && (
         <span
-          className="text-[10px] font-bold uppercase tracking-wide"
+          className="text-xs font-bold uppercase tracking-wide"
           style={{
             color: isUnknown
-              ? COLORS.muted ?? "#9CA3AF"
+              ? COLORS.muted ?? CHART.slateLight
               : isOn
               ? COLORS.successText
               : COLORS.dangerText,
@@ -186,10 +187,10 @@ function ToggleSwitch({
         onClick={onToggle}
         disabled={isDisabled}
         className={`relative inline-flex items-center ${h} ${w} rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0`}
-        style={{ background: isOn ? COLORS.green : "#D1D5DB" }}
+        style={{ background: isOn ? COLORS.green : COLORS.sandLine }}
       >
         <span
-          className={`inline-block ${knob} rounded-full bg-white keep-light shadow transform transition-transform`}
+          className={`inline-block ${knob} rounded-full bg-card keep-light shadow transform transition-transform`}
           style={{ transform: isOn ? travel : rest }}
         />
       </button>
@@ -271,7 +272,7 @@ function FeePreviewCard({
   const FreeBadge = ({ children }) => (
     <span
       style={{ background: `${COLORS.green}15`, color: COLORS.successText }}
-      className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+      className="text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
     >
       {children || t("BURE", "FREE")}
     </span>
@@ -302,7 +303,7 @@ function FeePreviewCard({
 
   const Section = ({ title, children }) => (
     <div className="min-w-0">
-      <p className="text-[10px] font-semibold text-secondary uppercase tracking-wide mb-1">
+      <p className="text-xs font-semibold text-secondary uppercase tracking-wide mb-1">
         {title}
       </p>
       <div className="divide-y divide-hairline">{children}</div>
@@ -336,7 +337,7 @@ function FeePreviewCard({
           style={{ background: `${COLORS.gold}15` }}
           className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
         >
-          <Eye size={18} style={{ color: COLORS.goldTextText }} />
+          <Eye size={18} style={{ color: COLORS.goldText }} />
         </div>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-primary">
@@ -353,7 +354,7 @@ function FeePreviewCard({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
         <label className="flex flex-col gap-1 min-w-0">
-          <span className="text-[10px] text-muted uppercase tracking-wide font-semibold">
+          <span className="text-xs text-muted uppercase tracking-wide font-semibold">
             {t("Bei ya mali (TZS)", "Listing price (TZS)")}
           </span>
           <input
@@ -361,18 +362,18 @@ function FeePreviewCard({
             min={0}
             value={price}
             onChange={(e) => setPrice(Math.max(0, Number(e.target.value) || 0))}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] bg-card"
+            className="w-full border border-hairline rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold bg-card"
           />
         </label>
         <label className="flex flex-col gap-1 min-w-0">
-          <span className="text-[10px] text-muted uppercase tracking-wide font-semibold">
+          <span className="text-xs text-muted uppercase tracking-wide font-semibold">
             {t("Category", "Category")}
           </span>
           <select
             value={selected ? String(selected.key) : ""}
             onChange={(e) => setCatKey(e.target.value)}
             disabled={listingFeeConfigs.length === 0}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none bg-card disabled:opacity-50"
+            className="w-full border border-hairline rounded-lg px-2.5 py-1.5 text-xs outline-none bg-card disabled:opacity-50"
           >
             {listingFeeConfigs.map((c) => (
               <option key={c.id ?? c.key} value={String(c.key)}>
@@ -395,7 +396,7 @@ function FeePreviewCard({
             )}
           </Row>
           {selected && selected.feeMode !== "FLAT" && (
-            <p className="text-[10px] text-muted py-1.5">
+            <p className="text-xs text-muted py-1.5">
               {t(
                 "Chini/Juu zinatumika kama kikomo cha ada.",
                 "Min/Max are applied as fee limits."
@@ -419,7 +420,7 @@ function FeePreviewCard({
           {reservationRows.length ? (
             reservationRows
           ) : (
-            <p className="text-[11px] text-muted py-1.5">—</p>
+            <p className="text-xs text-muted py-1.5">—</p>
           )}
         </Section>
 
@@ -479,7 +480,7 @@ function FeeHistoryCard({ lang }) {
           style={{ background: `${COLORS.gold}15` }}
           className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
         >
-          <History size={18} style={{ color: COLORS.goldTextText }} />
+          <History size={18} style={{ color: COLORS.goldText }} />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-primary">
@@ -492,7 +493,7 @@ function FeeHistoryCard({ lang }) {
             )}
           </p>
         </div>
-        <span className="text-[11px] font-semibold text-muted shrink-0">
+        <span className="text-xs font-semibold text-muted shrink-0">
           {open ? t("Funga", "Hide") : t("Onyesha", "Show")}
         </span>
       </button>
@@ -511,16 +512,16 @@ function FeeHistoryCard({ lang }) {
                   <div key={l.id} className="py-2.5 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span
-                        style={{ background: `${COLORS.gold}20`, color: "#8A5A16" }}
-                        className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+                        style={{ background: `${COLORS.gold}20`, color: COLORS.goldText }}
+                        className="text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
                       >
                         {action?.label?.[lang] || action?.label?.sw || l.action}
                       </span>
-                      <span className="text-[10px] text-muted whitespace-nowrap">
+                      <span className="text-xs text-muted whitespace-nowrap">
                         {timeAgo(l.at, lang)}
                       </span>
                       {l.adminName && (
-                        <span className="text-[10px] text-muted truncate">
+                        <span className="text-xs text-muted truncate">
                           · {l.adminName}
                         </span>
                       )}
@@ -531,7 +532,7 @@ function FeeHistoryCard({ lang }) {
                       </p>
                     )}
                     {detailsOf(l) && (
-                      <p className="text-[11px] text-secondary mt-0.5 break-words line-clamp-3">
+                      <p className="text-xs text-secondary mt-0.5 break-words line-clamp-3">
                         {detailsOf(l)}
                       </p>
                     )}
@@ -541,7 +542,7 @@ function FeeHistoryCard({ lang }) {
             </div>
           )}
           {feeLogs.length > 15 && (
-            <p className="text-[10px] text-muted mt-2">
+            <p className="text-xs text-muted mt-2">
               {t(
                 "Inaonyesha 15 za hivi karibuni. Tazama Audit Logs kwa zote.",
                 "Showing the latest 15. See Audit Logs for all."
@@ -1104,13 +1105,13 @@ export default function RevenueSection() {
             background: "rgb(var(--c-card))",
           }}
         >
-          <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />
+          <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
           {refreshing
             ? t("Inasasisha...", "Refreshing...")
             : t("Sasisha kutoka Backend", "Refresh from Backend")}
         </button>
         {lastSync && (
-          <span className="text-[11px] text-muted">
+          <span className="text-xs text-muted">
             {t("Mwisho", "Last")}:{" "}
             {lastSync.toLocaleTimeString(lang === "sw" ? "sw-TZ" : "en-US")}
           </span>
@@ -1207,7 +1208,7 @@ export default function RevenueSection() {
                       <p className="text-sm font-semibold text-primary truncate">
                         {catLabel}
                       </p>
-                      <p className="text-[11px] text-muted font-mono truncate">
+                      <p className="text-xs text-muted font-mono truncate">
                         {cat.key}
                       </p>
                     </div>
@@ -1218,7 +1219,7 @@ export default function RevenueSection() {
                         background: COLORS.rust,
                         color: "rgb(var(--c-card))",
                       }}
-                      className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold px-2 sm:px-3 py-1.5 rounded-lg shrink-0 disabled:opacity-50"
+                      className="flex items-center gap-1 text-xs font-semibold px-2 sm:px-3 py-1.5 rounded-lg shrink-0 disabled:opacity-50"
                     >
                       {isBusy ? (
                         <Loader2 size={12} className="animate-spin" />
@@ -1244,7 +1245,7 @@ export default function RevenueSection() {
               style={{ background: `${COLORS.gold}15` }}
               className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
             >
-              <Home size={18} style={{ color: COLORS.goldTextText }} />
+              <Home size={18} style={{ color: COLORS.goldText }} />
             </div>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-primary">
@@ -1281,7 +1282,7 @@ export default function RevenueSection() {
                       {catLabel}
                     </p>
                     {backendKey && backendKey !== c.key && (
-                      <span className="text-[10px] text-muted font-mono">
+                      <span className="text-xs text-muted font-mono">
                         ({backendKey})
                       </span>
                     )}
@@ -1313,7 +1314,7 @@ export default function RevenueSection() {
                         updateListingFeeMode(c.key, "PERCENTAGE")
                       }
                       disabled={isModeBusy || isFlat === false}
-                      className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-50"
+                      className="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-50"
                       style={{
                         background: !isFlat
                           ? COLORS.gold
@@ -1330,7 +1331,7 @@ export default function RevenueSection() {
                       type="button"
                       onClick={() => updateListingFeeMode(c.key, "FLAT")}
                       disabled={isModeBusy || isFlat === true}
-                      className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-50"
+                      className="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-50"
                       style={{
                         background: isFlat
                           ? COLORS.gold
@@ -1347,7 +1348,7 @@ export default function RevenueSection() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
                     {isFlat ? (
                       <div className="flex flex-col items-start min-w-0 sm:col-span-3">
-                        <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
+                        <span className="text-xs text-muted uppercase tracking-wide font-semibold mb-1">
                           {t("Flat Fee (TZS)", "Flat Fee (TZS)")}
                         </span>
                         <div className="w-full min-w-0">
@@ -1360,7 +1361,7 @@ export default function RevenueSection() {
                     ) : (
                       <>
                         <div className="flex flex-col items-start min-w-0">
-                          <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
+                          <span className="text-xs text-muted uppercase tracking-wide font-semibold mb-1">
                             {t("Kiwango", "Rate")}
                           </span>
                           <div className="w-full min-w-0">
@@ -1373,7 +1374,7 @@ export default function RevenueSection() {
                           </div>
                         </div>
                         <div className="flex flex-col items-start min-w-0">
-                          <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
+                          <span className="text-xs text-muted uppercase tracking-wide font-semibold mb-1">
                             {t("Chini", "Min")}
                           </span>
                           <div className="w-full min-w-0">
@@ -1384,7 +1385,7 @@ export default function RevenueSection() {
                           </div>
                         </div>
                         <div className="flex flex-col items-start min-w-0">
-                          <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
+                          <span className="text-xs text-muted uppercase tracking-wide font-semibold mb-1">
                             {t("Juu", "Max")}
                           </span>
                           <div className="w-full min-w-0">
@@ -1448,7 +1449,7 @@ export default function RevenueSection() {
             )}
           <EditHint lang={lang} accentColor={COLORS.green} />
           <div className="flex items-center justify-between gap-2 mb-3">
-            <span className="text-[11px] font-semibold text-secondary">
+            <span className="text-xs font-semibold text-secondary">
               {t("Tiers", "Tiers")} ({reservationTiers.length})
             </span>
             <button
@@ -1459,7 +1460,7 @@ export default function RevenueSection() {
                 background: COLORS.gold,
                 color: "rgb(var(--c-night))",
               }}
-              className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
+              className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
             >
               {busy["res-add-tier"] ? (
                 <Loader2 size={12} className="animate-spin" />
@@ -1498,7 +1499,7 @@ export default function RevenueSection() {
                             background: "rgb(var(--c-ink) / 0.08)",
                             color: COLORS.ink,
                           }}
-                          className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                          className="text-xs font-bold px-1.5 py-0.5 rounded-full"
                         >
                           {t("IMEZIMWA", "INACTIVE")}
                         </span>
@@ -1527,7 +1528,7 @@ export default function RevenueSection() {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="flex flex-col items-start min-w-0">
-                        <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
+                        <span className="text-xs text-muted uppercase tracking-wide font-semibold mb-1">
                           {t("Muda (Saa)", "Duration (Hours)")}
                         </span>
                         <div className="w-full min-w-0">
@@ -1541,7 +1542,7 @@ export default function RevenueSection() {
                         </div>
                       </div>
                       <div className="flex flex-col items-start min-w-0">
-                        <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
+                        <span className="text-xs text-muted uppercase tracking-wide font-semibold mb-1">
                           {t("Bei (TZS)", "Fee (TZS)")}
                         </span>
                         <div className="w-full min-w-0">
@@ -1593,7 +1594,7 @@ export default function RevenueSection() {
           <EditHint lang={lang} accentColor={COLORS.green} />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="flex flex-col items-start min-w-0">
-              <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
+              <span className="text-xs text-muted uppercase tracking-wide font-semibold mb-1">
                 {t("Asilimia (%)", "Percentage (%)")}
               </span>
               <div className="w-full min-w-0">
@@ -1604,7 +1605,7 @@ export default function RevenueSection() {
               </div>
             </div>
             <div className="flex flex-col items-start min-w-0">
-              <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
+              <span className="text-xs text-muted uppercase tracking-wide font-semibold mb-1">
                 {t("Chini (TZS)", "Min (TZS)")}
               </span>
               <div className="w-full min-w-0">
@@ -1615,7 +1616,7 @@ export default function RevenueSection() {
               </div>
             </div>
             <div className="flex flex-col items-start min-w-0">
-              <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
+              <span className="text-xs text-muted uppercase tracking-wide font-semibold mb-1">
                 {t("Juu (TZS)", "Max (TZS)")}
               </span>
               <div className="w-full min-w-0">
@@ -1635,7 +1636,7 @@ export default function RevenueSection() {
               style={{ background: `${COLORS.gold}15` }}
               className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
             >
-              <Rocket size={18} style={{ color: COLORS.goldTextText }} />
+              <Rocket size={18} style={{ color: COLORS.goldText }} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-primary">
@@ -1666,7 +1667,7 @@ export default function RevenueSection() {
           )}
           <EditHint lang={lang} accentColor={COLORS.gold} />
           <div className="flex items-center justify-between gap-2 mb-3">
-            <span className="text-[11px] font-semibold text-secondary">
+            <span className="text-xs font-semibold text-secondary">
               {t("Packages", "Packages")} ({boostPackages.length})
             </span>
             <button
@@ -1677,7 +1678,7 @@ export default function RevenueSection() {
                 background: COLORS.gold,
                 color: "rgb(var(--c-night))",
               }}
-              className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
+              className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
             >
               {busy["boost-add-pkg"] ? (
                 <Loader2 size={12} className="animate-spin" />
@@ -1759,7 +1760,7 @@ export default function RevenueSection() {
           )}
           <EditHint lang={lang} accentColor={COLORS.rust} />
           <div className="flex items-center justify-between gap-2 mb-3">
-            <span className="text-[11px] font-semibold text-secondary">
+            <span className="text-xs font-semibold text-secondary">
               {t("Packages", "Packages")} ({leadingPackages.length})
             </span>
             <button
@@ -1770,7 +1771,7 @@ export default function RevenueSection() {
                 background: COLORS.gold,
                 color: "rgb(var(--c-night))",
               }}
-              className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
+              className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
             >
               {busy["leading-add-pkg"] ? (
                 <Loader2 size={12} className="animate-spin" />
@@ -1851,7 +1852,7 @@ export default function RevenueSection() {
           )}
           <EditHint lang={lang} accentColor={COLORS.rust} />
           <div className="flex items-center justify-between gap-2 mb-3">
-            <span className="text-[11px] font-semibold text-secondary">
+            <span className="text-xs font-semibold text-secondary">
               {t("Packages", "Packages")} ({advertisementPackages.length})
             </span>
             <button
@@ -1862,7 +1863,7 @@ export default function RevenueSection() {
                 background: COLORS.gold,
                 color: "rgb(var(--c-night))",
               }}
-              className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
+              className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
             >
               {busy["ad-add-pkg"] ? (
                 <Loader2 size={12} className="animate-spin" />
@@ -1927,7 +1928,7 @@ export default function RevenueSection() {
         >
           <Info
             size={16}
-            style={{ color: COLORS.goldTextText }}
+            style={{ color: COLORS.goldText }}
             className="shrink-0 mt-0.5"
           />
           <p className="text-xs text-secondary leading-relaxed">

@@ -47,6 +47,7 @@ import {
   cancelPromotionAsync,
 } from "../../../../config/promotionsStore.js";
 import { useRefunds } from "../../../../config/refundsStore.js";
+import { CHART } from "../shared/chartColors.js";
 
 // ============================================================
 // PROMOTION TYPE CONFIG — REVENUE TYPES ZOTE 6
@@ -57,7 +58,7 @@ const PROMO_TYPES = {
     label: { sw: "Boost", en: "Boost" },
     icon: Rocket,
     color: COLORS.gold,
-    bg: "rgba(232,163,61,0.16)",
+    bg: "rgba(254,164,6,0.16)",
   },
   leading: {
     key: "leading",
@@ -77,22 +78,22 @@ const PROMO_TYPES = {
     key: "reservation",
     label: { sw: "Uhifadhi", en: "Reservation" },
     icon: HandCoins,
-    color: "#2563EB",
-    bg: "rgba(37,99,235,0.14)",
+    color: COLORS.royal,
+    bg: "rgba(0,98,253,0.14)",
   },
   success: {
     key: "success",
     label: { sw: "Ada ya Mafanikio", en: "Success Fee" },
     icon: Wallet,
-    color: "#7C3AED",
-    bg: "rgba(124,58,237,0.14)",
+    color: COLORS.royalLight,
+    bg: "rgba(61,139,255,0.14)",
   },
   listing: {
     key: "listing",
     label: { sw: "Ada ya Kuchapisha", en: "Listing Fee" },
     icon: CreditCard,
-    color: "#0891B2",
-    bg: "rgba(8,145,178,0.14)",
+    color: CHART.slate,
+    bg: "rgba(98,108,128,0.14)",
   },
 };
 
@@ -125,8 +126,8 @@ function refundKey(type, id) {
 }
 
 const REFUND_STATUS_META = {
-  PENDING: { sw: "Refund: Haijalipwa", en: "Refund: Not Paid", bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
-  PROCESSING: { sw: "Refund: Inaendelea", en: "Refund: Processing", bg: "rgba(37,99,235,0.12)", fg: "#2563EB" },
+  PENDING: { sw: "Refund: Haijalipwa", en: "Refund: Not Paid", bg: "rgba(254,164,6,0.16)", fg: COLORS.goldText },
+  PROCESSING: { sw: "Refund: Inaendelea", en: "Refund: Processing", bg: "rgba(0,98,253,0.12)", fg: COLORS.royal },
   COMPLETED: { sw: "Refund: Imelipwa", en: "Refund: Paid", bg: "rgba(47,109,79,0.14)", fg: COLORS.green },
   FAILED: { sw: "Refund: Imeshindwa", en: "Refund: Failed", bg: "rgba(193,80,46,0.14)", fg: COLORS.rust },
 };
@@ -163,26 +164,26 @@ function PromotionCard({
     <div
       style={{
         borderColor: isPaused ? COLORS.rust : COLORS.sandLine,
-        background: isPaused ? "rgba(193,80,46,0.03)" : "white",
+        background: isPaused ? "rgba(193,80,46,0.03)" : "rgb(var(--c-card))",
       }}
       className="rounded-xl border p-3 sm:p-4 w-full max-w-full min-w-0 overflow-hidden"
     >
       <div className="flex items-start gap-2 sm:gap-3 w-full min-w-0">
         <div
-          style={{ background: type?.bg || "#F5F3EC" }}
+          style={{ background: type?.bg || COLORS.sand }}
           className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
         >
-          <Icon size={15} color={type.color} />
+          <Icon size={16} color={type.color} />
         </div>
 
         <div className="flex-1 min-w-0 overflow-hidden">
           <div className="flex items-center gap-1.5 flex-wrap mb-1">
             <span
               style={{
-                background: type?.bg || "#F5F3EC",
-                color: type?.color || "#101A2E",
+                background: type?.bg || COLORS.sand,
+                color: type?.color || COLORS.night,
               }}
-              className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+              className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
             >
               {type.label?.[lang] || type.label?.sw}
             </span>
@@ -192,7 +193,7 @@ function PromotionCard({
                   background: "rgba(193,80,46,0.14)",
                   color: COLORS.rust,
                 }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+                className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
               >
                 {t("IMESIMAMISHWA", "PAUSED")}
               </span>
@@ -203,7 +204,7 @@ function PromotionCard({
                   background: REFUND_STATUS_META[refund.status].bg,
                   color: REFUND_STATUS_META[refund.status].fg,
                 }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+                className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
                 title={refund.amountPaid != null ? formatTZS(refund.amountPaid) : undefined}
               >
                 {lang === "sw"
@@ -218,7 +219,7 @@ function PromotionCard({
                   background: "rgba(193,80,46,0.14)",
                   color: COLORS.rust,
                 }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+                className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
               >
                 {t("Inaisha Hivi Karibuni", "Expiring Soon")}
               </span>
@@ -233,7 +234,7 @@ function PromotionCard({
             {category && (
               <>
                 <span className="flex items-center gap-1 min-w-0">
-                  <CatIcon size={11} className="shrink-0" />
+                  <CatIcon size={12} className="shrink-0" />
                   <span className="truncate">{catLabel}</span>
                 </span>
                 <span className="text-muted shrink-0">•</span>
@@ -247,7 +248,7 @@ function PromotionCard({
             )}
           </div>
 
-          <p className="text-[11px] text-muted mt-1 truncate w-full">
+          <p className="text-xs text-muted mt-1 truncate w-full">
             {t("Muuzaji", "Seller")}:{" "}
             {listing.seller_name || listing.seller || listing.user_name || "—"}
           </p>
@@ -261,7 +262,7 @@ function PromotionCard({
             >
               {listing.daysRemaining}d
             </p>
-            <p className="text-[10px] text-muted whitespace-nowrap">
+            <p className="text-xs text-muted whitespace-nowrap">
               {t("zimebaki", "remaining")}
             </p>
           </div>
@@ -269,7 +270,7 @@ function PromotionCard({
 
         {listing.date && (
           <div className="text-right shrink-0">
-            <p className="text-[11px] text-muted whitespace-nowrap">
+            <p className="text-xs text-muted whitespace-nowrap">
               {timeAgo(listing.date, lang)}
             </p>
           </div>
@@ -287,12 +288,12 @@ function PromotionCard({
               onClick={() => onResume?.(listing)}
               disabled={isBusy}
               style={{ color: COLORS.green, borderColor: COLORS.sandLine }}
-              className="flex-1 flex items-center justify-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-md border disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-md border disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isBusy ? (
-                <Loader2 size={11} className="animate-spin" />
+                <Loader2 size={12} className="animate-spin" />
               ) : (
-                <Play size={11} />
+                <Play size={12} />
               )}
               {t("Washa", "Resume")}
             </button>
@@ -301,12 +302,12 @@ function PromotionCard({
               onClick={() => onPause?.(listing)}
               disabled={isBusy}
               style={{ color: COLORS.rust, borderColor: COLORS.sandLine }}
-              className="flex-1 flex items-center justify-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-md border disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-md border disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isBusy ? (
-                <Loader2 size={11} className="animate-spin" />
+                <Loader2 size={12} className="animate-spin" />
               ) : (
-                <Pause size={11} />
+                <Pause size={12} />
               )}
               {t("Simamisha", "Pause")}
             </button>
@@ -315,13 +316,13 @@ function PromotionCard({
             onClick={() => onCancel?.(listing)}
             disabled={isBusy}
             style={{ color: COLORS.rust, borderColor: COLORS.sandLine }}
-            className="flex items-center justify-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-md border disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-md border disabled:opacity-50 disabled:cursor-not-allowed"
             title={t("Futa (na refund)", "Cancel (with refund)")}
           >
             {isBusy ? (
-              <Loader2 size={11} className="animate-spin" />
+              <Loader2 size={12} className="animate-spin" />
             ) : (
-              <Trash2 size={11} />
+              <Trash2 size={12} />
             )}
             {t("Futa", "Cancel")}
           </button>
@@ -353,16 +354,16 @@ function CampaignCard({ campaign, lang, onEdit, onRemove, isBusy }) {
 
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
       className="rounded-xl border p-3 sm:p-4 w-full max-w-full min-w-0 overflow-hidden"
     >
       <div className="flex items-start justify-between gap-3 w-full min-w-0">
         <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
           <div
-            style={{ background: "rgba(232,163,61,0.16)" }}
+            style={{ background: "rgba(254,164,6,0.16)" }}
             className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
           >
-            <Sparkles size={15} color="#8A5A16" />
+            <Sparkles size={16} color={COLORS.goldText} />
           </div>
           <div className="flex-1 min-w-0 overflow-hidden">
             <div className="flex items-center gap-1.5 flex-wrap mb-1">
@@ -371,7 +372,7 @@ function CampaignCard({ campaign, lang, onEdit, onRemove, isBusy }) {
                   background: `${status.color}15`,
                   color: status.color,
                 }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+                className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
               >
                 {status.label}
               </span>
@@ -381,7 +382,7 @@ function CampaignCard({ campaign, lang, onEdit, onRemove, isBusy }) {
                     background: "rgba(193,80,46,0.14)",
                     color: COLORS.rust,
                   }}
-                  className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+                  className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
                 >
                   -{campaign.discountPercent}%
                 </span>
@@ -395,7 +396,7 @@ function CampaignCard({ campaign, lang, onEdit, onRemove, isBusy }) {
                 {campaign.description[lang]}
               </p>
             )}
-            <p className="text-[11px] text-muted mt-1 flex items-center gap-1 flex-wrap w-full">
+            <p className="text-xs text-muted mt-1 flex items-center gap-1 flex-wrap w-full">
               <Calendar size={10} className="shrink-0" />
               <span className="truncate">
                 {new Date(campaign.startDate).toLocaleDateString(
@@ -414,7 +415,7 @@ function CampaignCard({ campaign, lang, onEdit, onRemove, isBusy }) {
           <button
             onClick={() => onEdit(campaign)}
             disabled={isBusy}
-            className="p-1.5 text-muted hover:text-[#FEA406] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-1.5 text-muted hover:text-gold-ink transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label={t("Hariri", "Edit")}
           >
             <Pencil size={14} />
@@ -422,7 +423,7 @@ function CampaignCard({ campaign, lang, onEdit, onRemove, isBusy }) {
           <button
             onClick={() => onRemove(campaign)}
             disabled={isBusy}
-            className="p-1.5 text-muted hover:text-[#C1502E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-1.5 text-muted hover:text-rust transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label={t("Ondoa", "Remove")}
           >
             {isBusy ? (
@@ -462,12 +463,12 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
 
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
       className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full max-w-full min-w-0 overflow-hidden"
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full min-w-0">
         <label className="flex flex-col gap-1 min-w-0 w-full">
-          <span className="text-[11px] font-semibold text-secondary">
+          <span className="text-xs font-semibold text-secondary">
             {t("Jina (SW)", "Name (SW)")}
           </span>
           <input
@@ -476,11 +477,11 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
               setForm({ ...form, name: { ...form.name, sw: e.target.value } })
             }
             disabled={saving}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
+            className="w-full max-w-full border border-hairline rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1 min-w-0 w-full">
-          <span className="text-[11px] font-semibold text-secondary">
+          <span className="text-xs font-semibold text-secondary">
             {t("Jina (EN)", "Name (EN)")}
           </span>
           <input
@@ -489,14 +490,14 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
               setForm({ ...form, name: { ...form.name, en: e.target.value } })
             }
             disabled={saving}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
+            className="w-full max-w-full border border-hairline rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold disabled:opacity-50"
           />
         </label>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full min-w-0">
         <label className="flex flex-col gap-1 min-w-0 w-full">
-          <span className="text-[11px] font-semibold text-secondary">
+          <span className="text-xs font-semibold text-secondary">
             {t("Maelezo (SW)", "Description (SW)")}
           </span>
           <textarea
@@ -509,11 +510,11 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
             }
             rows={2}
             disabled={saving}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] resize-none disabled:opacity-50"
+            className="w-full max-w-full border border-hairline rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold resize-none disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1 min-w-0 w-full">
-          <span className="text-[11px] font-semibold text-secondary">
+          <span className="text-xs font-semibold text-secondary">
             {t("Maelezo (EN)", "Description (EN)")}
           </span>
           <textarea
@@ -526,14 +527,14 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
             }
             rows={2}
             disabled={saving}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] resize-none disabled:opacity-50"
+            className="w-full max-w-full border border-hairline rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold resize-none disabled:opacity-50"
           />
         </label>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full min-w-0">
         <label className="flex flex-col gap-1 min-w-0 w-full">
-          <span className="text-[11px] font-semibold text-secondary">
+          <span className="text-xs font-semibold text-secondary">
             {t("Punguzo (%)", "Discount (%)")}
           </span>
           <input
@@ -551,18 +552,18 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
               })
             }
             disabled={saving}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
+            className="w-full max-w-full border border-hairline rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1 min-w-0 w-full">
-          <span className="text-[11px] font-semibold text-secondary">
+          <span className="text-xs font-semibold text-secondary">
             {t("Inatumika Kwa", "Applies To")}
           </span>
           <select
             value={form.appliesTo || "ALL"}
             onChange={(e) => setForm({ ...form, appliesTo: e.target.value })}
             disabled={saving}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
+            className="w-full max-w-full border border-hairline rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold disabled:opacity-50"
           >
             {APPLIES_TO_OPTIONS.map((o) => (
               <option key={o.key} value={o.key}>
@@ -575,7 +576,7 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full min-w-0">
         <label className="flex flex-col gap-1 min-w-0 w-full">
-          <span className="text-[11px] font-semibold text-secondary">
+          <span className="text-xs font-semibold text-secondary">
             {t("Tarehe ya Kuanza", "Start Date")}
           </span>
           <input
@@ -583,11 +584,11 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
             value={form.startDate?.slice(0, 10) || ""}
             onChange={(e) => setForm({ ...form, startDate: e.target.value })}
             disabled={saving}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
+            className="w-full max-w-full border border-hairline rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1 min-w-0 w-full">
-          <span className="text-[11px] font-semibold text-secondary">
+          <span className="text-xs font-semibold text-secondary">
             {t("Tarehe ya Mwisho", "End Date")}
           </span>
           <input
@@ -595,7 +596,7 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
             value={form.endDate?.slice(0, 10) || ""}
             onChange={(e) => setForm({ ...form, endDate: e.target.value })}
             disabled={saving}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
+            className="w-full max-w-full border border-hairline rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold disabled:opacity-50"
           />
         </label>
       </div>
@@ -606,7 +607,7 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
           checked={form.active !== false}
           onChange={(e) => setForm({ ...form, active: e.target.checked })}
           disabled={saving}
-          className="w-4 h-4 rounded text-[#FEA406] shrink-0"
+          className="w-4 h-4 rounded text-gold shrink-0"
         />
         <span className="text-xs text-secondary">
           {t("Kampeni hai", "Active campaign")}
@@ -617,7 +618,7 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
         <button
           onClick={onCancel}
           disabled={saving}
-          className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-secondary shrink-0 disabled:opacity-50"
+          className="text-xs font-semibold px-3 py-2 rounded-lg border border-hairline text-secondary shrink-0 disabled:opacity-50"
         >
           {t("Ghairi", "Cancel")}
         </button>
@@ -628,9 +629,9 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
           className="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {saving ? (
-            <Loader2 size={13} className="animate-spin" />
+            <Loader2 size={14} className="animate-spin" />
           ) : (
-            <Save size={13} />
+            <Save size={14} />
           )}
           {t("Hifadhi", "Save")}
         </button>
@@ -659,7 +660,7 @@ function ConfirmActionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white rounded-2xl max-w-sm w-full p-6">
+      <div className="bg-card rounded-2xl max-w-sm w-full p-6">
         <div className="text-center mb-5">
           <div
             style={{
@@ -735,7 +736,7 @@ function ConfirmActionModal({
           <button
             onClick={onClose}
             disabled={busy}
-            className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
+            className="flex-1 py-2.5 border border-hairline rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
           >
             {t("Ghairi", "Cancel")}
           </button>
@@ -971,21 +972,21 @@ export default function PromotionsSection() {
       label: t("Uhifadhi", "Reservation"),
       icon: HandCoins,
       count: promotions.counts.reserved,
-      color: "#2563EB",
+      color: COLORS.royal,
     },
     {
       key: "success",
       label: t("Ada ya Mafanikio", "Success Fee"),
       icon: Wallet,
       count: promotions.counts.successFee,
-      color: "#7C3AED",
+      color: COLORS.royalLight,
     },
     {
       key: "listing",
       label: t("Ada ya Kuchapisha", "Listing Fee"),
       icon: CreditCard,
       count: promotions.counts.listingFee,
-      color: "#0891B2",
+      color: CHART.slate,
     },
     {
       key: "campaigns",
@@ -1176,7 +1177,7 @@ export default function PromotionsSection() {
             style={{ background: COLORS.gold, color: COLORS.night }}
             className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Plus size={13} />
+            <Plus size={14} />
             {t("Kampeni Mpya", "New Campaign")}
           </button>
 
@@ -1284,19 +1285,19 @@ export default function PromotionsSection() {
           label={t("Uhifadhi", "Reservations")}
           value={promotions.counts.reserved}
           icon={HandCoins}
-          color="#2563EB"
+          color={COLORS.royal}
         />
         <StatBox
           label={t("Success Fee", "Success Fee")}
           value={promotions.counts.successFee}
           icon={Wallet}
-          color="#7C3AED"
+          color={COLORS.royalLight}
         />
         <StatBox
           label={t("Listing Fee", "Listing Fee")}
           value={promotions.counts.listingFee}
           icon={CreditCard}
-          color="#0891B2"
+          color={CHART.slate}
         />
       </div>
 
@@ -1309,22 +1310,22 @@ export default function PromotionsSection() {
               key={key}
               onClick={() => setActiveTab(key)}
               style={{
-                background: isActive ? COLORS.night : "white",
+                background: isActive ? COLORS.night : "rgb(var(--c-card))",
                 color: isActive ? COLORS.sand : "var(--text-primary)",
                 borderColor: COLORS.sandLine,
               }}
               className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full border whitespace-nowrap shrink-0"
             >
-              <Icon size={13} color={isActive ? COLORS.gold : color} />
+              <Icon size={14} color={isActive ? COLORS.gold : color} />
               <span>{label}</span>
               <span
                 style={{
                   background: isActive
-                    ? "rgba(245,243,236,0.18)"
+                    ? "rgba(244,247,252,0.18)"
                     : COLORS.sandLine,
                   color: isActive ? COLORS.sand : "var(--text-primary)",
                 }}
-                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                className="text-xs font-bold px-1.5 py-0.5 rounded-full"
               >
                 {count}
               </span>
@@ -1360,19 +1361,19 @@ export default function PromotionsSection() {
 function StatBox({ label, value, icon: Icon, color }) {
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
       className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full overflow-hidden"
     >
       <div
         style={{ background: `${color}15` }}
         className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center mb-1.5 shrink-0"
       >
-        <Icon size={13} color={color} />
+        <Icon size={14} color={color} />
       </div>
       <p className="text-sm sm:text-base lg:text-lg font-bold text-primary break-words leading-tight">
         {value}
       </p>
-      <p className="text-[10px] text-secondary leading-tight mt-0.5 break-words">
+      <p className="text-xs text-secondary leading-tight mt-0.5 break-words">
         {label}
       </p>
     </div>
@@ -1382,7 +1383,7 @@ function StatBox({ label, value, icon: Icon, color }) {
 function EmptyState({ icon: Icon, title, subtitle }) {
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
       className="rounded-2xl border-2 border-dashed p-8 sm:p-10 text-center w-full"
     >
       <Icon size={40} className="mx-auto text-muted mb-3" />

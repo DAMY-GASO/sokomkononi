@@ -80,7 +80,7 @@ function ConfirmModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white rounded-2xl max-w-sm w-full p-6">
+      <div className="bg-card rounded-2xl max-w-sm w-full p-6">
         <div className="text-center mb-5">
           <div
             style={{
@@ -103,9 +103,9 @@ function ConfirmModal({
                 color: COLORS.rust,
                 border: `1px solid ${COLORS.rust}30`,
               }}
-              className="mt-3 text-[11px] font-semibold px-3 py-2 rounded-lg text-left flex items-start gap-1.5"
+              className="mt-3 text-xs font-semibold px-3 py-2 rounded-lg text-left flex items-start gap-1.5"
             >
-              <ShieldAlert size={13} className="shrink-0 mt-0.5" />
+              <ShieldAlert size={14} className="shrink-0 mt-0.5" />
               <span>{extraWarning}</span>
             </div>
           )}
@@ -115,7 +115,7 @@ function ConfirmModal({
           <button
             onClick={onClose}
             disabled={busy}
-            className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
+            className="flex-1 py-2.5 border border-hairline rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
           >
             {t("Ghairi", "Cancel")}
           </button>
@@ -166,7 +166,7 @@ function TrashItemCard({
 
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
       className="rounded-xl border p-3 sm:p-4 w-full max-w-full min-w-0 overflow-hidden"
     >
       <div className="flex items-start gap-3 w-full min-w-0">
@@ -197,12 +197,12 @@ function TrashItemCard({
             </p>
           )}
           {item.details && (
-            <p className="text-[11px] text-muted mt-1 line-clamp-2 break-words">
+            <p className="text-xs text-muted mt-1 line-clamp-2 break-words">
               {item.details}
             </p>
           )}
 
-          <div className="flex items-center gap-3 mt-2 text-[11px] text-muted flex-wrap">
+          <div className="flex items-center gap-3 mt-2 text-xs text-muted flex-wrap">
             <span className="flex items-center gap-1">
               <Clock size={10} />
               {item.deletedAt ? timeAgo(item.deletedAt, lang) : "—"}
@@ -223,11 +223,11 @@ function TrashItemCard({
             <div
               style={{
                 background: `${COLORS.gold}15`,
-                color: "#8A5A16",
+                color: COLORS.goldText,
               }}
-              className="mt-2 text-[10px] font-semibold px-2 py-1 rounded-lg flex items-center gap-1 w-fit"
+              className="mt-2 text-xs font-semibold px-2 py-1 rounded-lg flex items-center gap-1 w-fit"
             >
-              <ShieldAlert size={11} />
+              <ShieldAlert size={12} />
               {t(
                 "Inalindwa — futa kwa tahadhari",
                 "Protected — delete with caution"
@@ -241,7 +241,7 @@ function TrashItemCard({
             onClick={onRestore}
             disabled={isBusy}
             style={{ color: COLORS.green }}
-            className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-green/10 disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label={t("Rudisha", "Restore")}
           >
             {isRestoring ? (
@@ -263,7 +263,7 @@ function TrashItemCard({
               borderColor: isProtected ? `${COLORS.rust}60` : undefined,
               background: isProtected ? `${COLORS.rust}08` : undefined,
             }}
-            className="p-2 rounded-lg border transition-colors hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 rounded-lg border transition-colors hover:bg-rust/10 disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label={t("Futa Kabisa", "Delete Permanently")}
             title={
               isProtected
@@ -275,9 +275,9 @@ function TrashItemCard({
             }
           >
             {isDeleting ? (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
             ) : (
-              <Trash2 size={13} />
+              <Trash2 size={14} />
             )}
           </button>
         </div>
@@ -414,7 +414,7 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
   if (loading && items.length === 0) {
     return (
       <div
-        style={{ borderColor: COLORS.sandLine, background: "white" }}
+        style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
         className="rounded-2xl border p-8 text-center w-full"
       >
         <Loader2 size={28} className="mx-auto text-muted mb-2 animate-spin" />
@@ -428,7 +428,7 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
   if (loadError && items.length === 0) {
     return (
       <div
-        style={{ borderColor: COLORS.rust, background: "white" }}
+        style={{ borderColor: COLORS.rust, background: "rgb(var(--c-card))" }}
         className="rounded-2xl border p-6 text-center w-full"
       >
         <AlertTriangle
@@ -456,7 +456,7 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
   if (items.length === 0) {
     return (
       <div
-        style={{ borderColor: COLORS.sandLine, background: "white" }}
+        style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
         className="rounded-2xl border-2 border-dashed p-8 sm:p-10 text-center w-full"
       >
         <Trash2 size={40} className="mx-auto text-muted mb-3" />
@@ -488,7 +488,7 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
       )}
 
       {/* Search ndani ya aina */}
-      <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 w-full min-w-0">
+      <div className="flex items-center gap-2 bg-card border border-hairline rounded-lg px-3 py-2 w-full min-w-0">
         <Search size={14} className="text-muted shrink-0" />
         <input
           value={itemQuery}
@@ -499,7 +499,7 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
         {itemQuery && (
           <button
             onClick={() => setItemQuery("")}
-            className="text-[11px] text-muted hover:text-secondary shrink-0"
+            className="text-xs text-muted hover:text-secondary shrink-0"
           >
             {t("Futa", "Clear")}
           </button>
@@ -531,7 +531,7 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
               onClick={handleBulkRestore}
               disabled={bulkBusy}
               style={{ color: COLORS.green }}
-              className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border disabled:opacity-50"
+              className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border disabled:opacity-50"
             >
               {bulkBusy ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
               {t("Rudisha", "Restore")}
@@ -540,7 +540,7 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
               onClick={() => setConfirmBulkDelete(true)}
               disabled={bulkBusy}
               style={{ color: COLORS.rust }}
-              className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border disabled:opacity-50"
+              className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border disabled:opacity-50"
             >
               <Trash2 size={12} />
               {t("Futa Kabisa", "Delete")}
@@ -743,7 +743,7 @@ export default function TrashSection() {
       )}
 
       <div
-        style={{ borderColor: COLORS.sandLine, background: "white" }}
+        style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
         className="rounded-xl border p-3 sm:p-4 mb-5 flex items-start gap-3 flex-wrap w-full min-w-0"
       >
         <div
@@ -769,8 +769,8 @@ export default function TrashSection() {
             )}
           </p>
           {hasProtectedTypes && (
-            <p className="text-[10px] text-muted mt-1 flex items-center gap-1">
-              <ShieldAlert size={9} />
+            <p className="text-xs text-muted mt-1 flex items-center gap-1">
+              <ShieldAlert size={10} />
               {t(
                 "Baadhi ya items zinalindwa — unaweza kuzifuta kwa tahadhari.",
                 "Some items are protected — you can delete them with caution."
@@ -797,7 +797,7 @@ export default function TrashSection() {
 
       {!hasTrash && (
         <div
-          style={{ borderColor: COLORS.sandLine, background: "white" }}
+          style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
           className="rounded-2xl border-2 border-dashed p-10 text-center w-full"
         >
           <Trash2 size={48} className="mx-auto text-muted mb-3" />
@@ -815,7 +815,7 @@ export default function TrashSection() {
 
       {hasTrash && (
         <>
-          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 mb-4 w-full min-w-0">
+          <div className="flex items-center gap-2 bg-card border border-hairline rounded-lg px-3 py-2 mb-4 w-full min-w-0">
             <Search size={14} className="text-muted shrink-0" />
             <input
               value={query}
@@ -829,7 +829,7 @@ export default function TrashSection() {
             <button
               onClick={() => setActiveType(null)}
               style={{
-                background: activeType === null ? COLORS.night : "white",
+                background: activeType === null ? COLORS.night : "rgb(var(--c-card))",
                 color:
                   activeType === null ? COLORS.sand : "var(--text-primary)",
                 borderColor: COLORS.sandLine,
@@ -846,7 +846,7 @@ export default function TrashSection() {
                   key={ty.key}
                   onClick={() => setActiveType(ty.key)}
                   style={{
-                    background: isActive ? COLORS.night : "white",
+                    background: isActive ? COLORS.night : "rgb(var(--c-card))",
                     color: isActive ? COLORS.sand : "var(--text-primary)",
                     borderColor: COLORS.sandLine,
                   }}
@@ -858,11 +858,11 @@ export default function TrashSection() {
                   <span
                     style={{
                       background: isActive
-                        ? "rgba(245,243,236,0.18)"
+                        ? "rgba(244,247,252,0.18)"
                         : COLORS.sandLine,
                       color: isActive ? COLORS.sand : "var(--text-primary)",
                     }}
-                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                    className="text-xs font-bold px-1.5 py-0.5 rounded-full"
                   >
                     {ty.count}
                   </span>
@@ -881,7 +881,7 @@ export default function TrashSection() {
                     onClick={() => setActiveType(ty.key)}
                     style={{
                       borderColor: COLORS.sandLine,
-                      background: "white",
+                      background: "rgb(var(--c-card))",
                     }}
                     className="rounded-xl border p-3 sm:p-4 min-w-0 w-full text-left hover:shadow-md transition-all"
                   >
@@ -897,12 +897,12 @@ export default function TrashSection() {
                     >
                       {ty.count}
                     </p>
-                    <p className="text-[11px] text-secondary mt-0.5 truncate">
+                    <p className="text-xs text-secondary mt-0.5 truncate">
                       {ty.label[lang] || ty.label.sw}
                     </p>
                     {ty.isProtected && (
-                      <p className="text-[9px] text-muted mt-1 flex items-center gap-1">
-                        <ShieldAlert size={9} />
+                      <p className="text-xs text-muted mt-1 flex items-center gap-1">
+                        <ShieldAlert size={10} />
                         {t("Inalindwa", "Protected")}
                       </p>
                     )}

@@ -132,7 +132,7 @@ function SchemaField({ f, value, onChange, lang }) {
     <Field label={label}>
       {control}
       {f.hint && (
-        <span className="text-[11px] text-secondary">
+        <span className="text-xs text-secondary">
           {f.hint[lang] || f.hint.sw}
         </span>
       )}
@@ -1365,7 +1365,7 @@ export default function PostPropertyForm({
                     </div>
 
                     {feeAmount === 0 && (
-                      <p className="mt-2 text-[11px] leading-snug" style={{ color: COLORS.rust }}>
+                      <p className="mt-2 text-xs leading-snug" style={{ color: COLORS.rust }}>
                         {t(
                           "Ada ya kuchapisha haijawekwa kwa kategoria hii. Wasiliana na Admin ili kuweka kiasi kabla ya kuendelea.",
                           "No listing fee is configured for this category. Contact Admin to set an amount before continuing."
@@ -1375,10 +1375,10 @@ export default function PostPropertyForm({
                   </div>
 
                   {hasCredit && (
-                    <div className="rounded-xl bg-[#2F6D4F]/10 border border-[#2F6D4F]/25 px-4 py-3 mb-4 flex flex-col items-center gap-2 text-center">
+                    <div className="rounded-xl bg-green/10 border border-green/25 px-4 py-3 mb-4 flex flex-col items-center gap-2 text-center">
                       <div className="flex items-center gap-2">
                         <Wallet size={16} color={COLORS.green} />
-                        <span className="text-body-sm text-[#2F6D4F] font-medium">
+                        <span className="text-body-sm text-green font-medium">
                           {t(
                             `Una Listing Credits ${listingCreditRemaining}`,
                             `You have ${listingCreditRemaining} Listing Credits`
@@ -1387,7 +1387,7 @@ export default function PostPropertyForm({
                       </div>
                       <button
                         onClick={handleUseCredit}
-                        className="w-full py-2.5 rounded-xl font-semibold text-body-sm bg-[#2F6D4F] text-white"
+                        className="w-full py-2.5 rounded-xl font-semibold text-body-sm bg-green text-white"
                       >
                         {t("Tumia Credit", "Use Credit")}
                       </button>
@@ -1433,7 +1433,7 @@ export default function PostPropertyForm({
                             onClick={() => setBundleId(b.id)}
                             style={{
                               borderColor: selected ? COLORS.gold : COLORS.sandLine,
-                              background: selected ? "rgba(232,163,61,0.08)" : "transparent",
+                              background: selected ? "rgba(254,164,6,0.08)" : "transparent",
                             }}
                             className="flex items-center justify-between gap-2 p-3 rounded-xl border border-hairline text-left"
                           >
@@ -1578,9 +1578,9 @@ export default function PostPropertyForm({
           <div
             className="mx-auto mb-4 max-w-xl rounded-2xl border px-4 py-3 text-xs leading-relaxed"
             style={{
-              background: "rgba(37,99,235,0.08)",
-              borderColor: "rgba(37,99,235,0.3)",
-              color: "#1D4ED8",
+              background: "rgba(0,98,253,0.08)",
+              borderColor: "rgba(0,98,253,0.3)",
+              color: COLORS.royalDark,
             }}
           >
             <p className="font-semibold">
@@ -1598,9 +1598,9 @@ export default function PostPropertyForm({
           <div
             className="mx-auto mb-4 max-w-xl rounded-2xl border px-4 py-3 flex flex-col gap-3 text-sm"
             style={{
-              background: "rgba(232,163,61,0.10)",
-              borderColor: "rgba(232,163,61,0.4)",
-              color: "#8A5A16",
+              background: "rgba(254,164,6,0.10)",
+              borderColor: "rgba(254,164,6,0.4)",
+              color: COLORS.goldText,
             }}
           >
             <div className="flex items-start gap-2.5">
@@ -1730,12 +1730,12 @@ export default function PostPropertyForm({
               <div
                 className="mt-4 inline-flex items-center gap-2.5 rounded-xl border px-4 py-2.5 text-sm"
                 style={{
-                  background: noFee ? "rgba(47,109,79,0.10)" : "rgba(232,163,61,0.10)",
-                  borderColor: noFee ? "rgba(47,109,79,0.35)" : "rgba(232,163,61,0.4)",
-                  color: noFee ? COLORS.green : "#8A5A16",
+                  background: noFee ? "rgba(47,109,79,0.10)" : "rgba(254,164,6,0.10)",
+                  borderColor: noFee ? "rgba(47,109,79,0.35)" : "rgba(254,164,6,0.4)",
+                  color: noFee ? COLORS.green : COLORS.goldText,
                 }}
               >
-                {noFee ? <Check size={15} /> : <Receipt size={15} />}
+                {noFee ? <Check size={16} /> : <Receipt size={16} />}
                 <span>
                   {t("Ada ya Kuchapisha:", "Listing Fee:")}{" "}
                   <b className="ml-0.5">
@@ -1745,7 +1745,7 @@ export default function PostPropertyForm({
                         ? formatTZS(amount)
                         : t("Itakokotolewa ukiweka bei", "Calculated after you enter a price")}
                   </b>
-                  {basis && <span className="ml-1.5 text-[11px] opacity-70">({basis})</span>}
+                  {basis && <span className="ml-1.5 text-xs opacity-70">({basis})</span>}
                 </span>
               </div>
             );
@@ -1850,7 +1850,7 @@ export default function PostPropertyForm({
                     {!isEdit && i === 0 && (
                       <span
                         style={{ background: COLORS.night, color: COLORS.sand }}
-                        className="absolute top-1 left-1 px-1.5 py-0.5 rounded-md text-[9px] font-semibold leading-none"
+                        className="absolute top-1 left-1 px-1.5 py-0.5 rounded-md text-xs font-semibold leading-none"
                       >
                         {t("Kuu", "Cover")}
                       </span>
@@ -1898,7 +1898,7 @@ export default function PostPropertyForm({
                 )}
               </div>
               {canReorder && (
-                <span className="text-[11px] text-secondary">
+                <span className="text-xs text-secondary">
                   {t(
                     "Buruta au tumia mishale kupanga — picha ya kwanza ndiyo ya Kuu.",
                     "Drag or use the arrows to reorder — the first photo is the cover."
@@ -1919,7 +1919,7 @@ export default function PostPropertyForm({
                 onChange={(e) => setBase({ ...base, title: e.target.value })}
               />
               {suggestedTitle && !base.title.trim() && (
-                <span className="text-[11px] text-secondary">
+                <span className="text-xs text-secondary">
                   {t("Kidokezo", "Hint")}: <b>{suggestedTitle}</b> —{" "}
                   {t("unaweza kuandika jina lako mwenyewe", "you can write your own title")}
                 </span>
@@ -1988,7 +1988,7 @@ export default function PostPropertyForm({
               </div>
 
               <div className="mt-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-secondary block mb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-secondary block mb-2">
                   {t("Mahali halisi kwenye ramani (hiari, lakini inashauriwa)", "Exact location on the map (optional, but recommended)")}
                 </span>
                 <LocationPicker
@@ -2001,12 +2001,12 @@ export default function PostPropertyForm({
                   compact
                 />
                 {geoSearching && (
-                  <p className="mt-1 text-[11px] text-secondary">
+                  <p className="mt-1 text-xs text-secondary">
                     {t("Inatafuta eneo kwenye ramani...", "Locating on the map...")}
                   </p>
                 )}
                 {addressText && (
-                  <p className="mt-2 text-[11px] text-secondary leading-snug">
+                  <p className="mt-2 text-xs text-secondary leading-snug">
                     <span className="font-semibold">{t("Anwani:", "Address:")}</span> {addressText}
                   </p>
                 )}
@@ -2023,7 +2023,7 @@ export default function PostPropertyForm({
                 onChange={(e) => setBase({ ...base, price: cleanPriceInput(e.target.value) })}
               />
               {priceMeta.optional && (
-                <span className="text-[11px] text-secondary">
+                <span className="text-xs text-secondary">
                   {t("Hiari — acha wazi kama inajadiliwa.", "Optional — leave empty if negotiable.")}
                 </span>
               )}
@@ -2042,9 +2042,9 @@ export default function PostPropertyForm({
             {!isEdit && duplicateWarning && (
               <div
                 style={{
-                  background: "rgba(232,163,61,0.15)",
-                  color: "#8A5A16",
-                  borderColor: "rgba(232,163,61,0.4)",
+                  background: "rgba(254,164,6,0.15)",
+                  color: COLORS.goldText,
+                  borderColor: "rgba(254,164,6,0.4)",
                 }}
                 className="rounded-xl border px-4 py-3 flex items-start gap-2.5 text-sm"
               >
@@ -2089,7 +2089,7 @@ export default function PostPropertyForm({
                 aria-valuemax={100}
                 aria-valuenow={uploadProgress}
               >
-                <div className="flex justify-between items-center text-[11px] text-secondary">
+                <div className="flex justify-between items-center text-xs text-secondary">
                   <span>
                     {uploadProgress >= 100
                       ? t("Inachakata picha...", "Processing photos...")
@@ -2114,7 +2114,7 @@ export default function PostPropertyForm({
                         setUploadProgress(null);
                         setError(t("Umeghairi upload.", "Upload cancelled."));
                       }}
-                      className="text-[10px] font-semibold text-red-600 hover:underline"
+                      className="text-xs font-semibold text-red-600 hover:underline"
                     >
                       {t("Ghairi", "Cancel")}
                     </button>
@@ -2154,7 +2154,7 @@ export default function PostPropertyForm({
             </button>
 
             {!isEdit && draftSavedAt && !submitting && (
-              <p className="text-center text-[11px] text-secondary -mt-2">
+              <p className="text-center text-xs text-secondary -mt-2">
                 {t("Rasimu imehifadhiwa", "Draft saved")}{" "}
                 {new Date(draftSavedAt).toLocaleTimeString(lang === "sw" ? "sw-TZ" : "en-GB", {
                   hour: "2-digit",

@@ -149,7 +149,7 @@ function Avatar({ user, size = "md" }) {
   }
   return (
     <div
-      className={`${sizeClass} rounded-full bg-[#FEA406] flex items-center justify-center text-[#101A2E] font-bold`}
+      className={`${sizeClass} rounded-full bg-gold flex items-center justify-center text-night font-bold`}
     >
       {initial}
     </div>
@@ -200,7 +200,7 @@ function LanguageSwitcher({ lang, setLang }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 mt-2 w-56 sm:w-64 bg-[#182541] border border-white/10 rounded-lg shadow-xl py-2 z-50">
+          <div className="absolute right-0 mt-2 w-56 sm:w-64 bg-night-soft border border-white/10 rounded-lg shadow-xl py-2 z-50">
             <div className="px-4 py-2 border-b border-white/10">
               <p className="text-white/50 text-xs font-semibold">
                 {lang === "sw"
@@ -224,7 +224,7 @@ function LanguageSwitcher({ lang, setLang }) {
                 </span>
                 {lang === l.code && (
                   <svg
-                    className="w-4 h-4 text-[#FEA406]"
+                    className="w-4 h-4 text-gold"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -531,7 +531,7 @@ export default function AdminDashboard() {
     >
       {/* HEADER */}
       <header
-        style={{ background: "#011957" }}
+        style={{ background: COLORS.night }}
         className="sticky top-0 z-50 w-full border-b border-white/[0.08] text-white"
       >
         <div className="flex h-16 w-full items-center justify-between gap-3 px-4 sm:px-6">
@@ -544,7 +544,7 @@ export default function AdminDashboard() {
             >
               <Menu size={22} />
               {pendingModerationCount > 0 && (
-                <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-red-500" />
+                <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-rust" />
               )}
             </button>
             <a href="/" className="flex shrink-0 select-none items-center gap-2.5">
@@ -555,15 +555,15 @@ export default function AdminDashboard() {
                 height={32}
                 className="h-8 w-8 shrink-0 rounded-full"
               />
-              <span className="text-[16px] font-bold tracking-tight">
-                Soko<span className="text-[#FEA406]">Mkononi</span>
+              <span className="text-base font-bold tracking-tight">
+                Soko<span className="text-gold">Mkononi</span>
               </span>
             </a>
           </div>
 
           {/* CENTER: Administrator Title */}
           <div className="flex flex-1 items-center justify-center min-w-0 px-2 hidden sm:flex">
-            <span className="text-[13px] sm:text-[15px] font-black uppercase tracking-[0.28em] text-[#FEA406] whitespace-nowrap">
+            <span className="text-sm sm:text-base font-black uppercase tracking-[0.28em] text-gold whitespace-nowrap">
               {lang === "sw" ? "MSIMAMIZI" : "ADMINISTRATOR"}
             </span>
           </div>
@@ -590,7 +590,7 @@ export default function AdminDashboard() {
                 {unreadCount > 0 && (
                   <span
                     style={{ background: COLORS.rust }}
-                    className="absolute right-1 top-1 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
+                    className="absolute right-1 top-1 min-w-[16px] h-4 px-1 rounded-full text-xs font-bold text-white flex items-center justify-center"
                   >
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
@@ -606,9 +606,9 @@ export default function AdminDashboard() {
                   />
                   <div
                     style={{ borderColor: COLORS.sandLine }}
-                    className="absolute right-0 mt-3 w-80 max-w-[85vw] bg-white rounded-xl border shadow-xl z-50 overflow-hidden"
+                    className="absolute right-0 mt-3 w-80 max-w-[85vw] bg-card rounded-xl border shadow-xl z-50 overflow-hidden"
                   >
-                    <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                    <div className="px-4 py-3 border-b border-hairline flex items-center justify-between">
                       <span className="text-sm font-semibold text-primary">
                         {lang === "sw" ? "Taarifa Zangu" : "My Notifications"}
                       </span>
@@ -621,7 +621,7 @@ export default function AdminDashboard() {
                         </span>
                       )}
                     </div>
-                    <div className="max-h-80 overflow-y-auto divide-y divide-gray-100">
+                    <div className="max-h-80 overflow-y-auto divide-y divide-hairline">
                       {notifications.map((n) => {
                         const Icon = ADMIN_NOTIFICATION_ICONS[n.type] || Bell;
                         return (
@@ -631,7 +631,7 @@ export default function AdminDashboard() {
                             style={{
                               background: n.read ? "white" : `${COLORS.gold}0D`,
                             }}
-                            className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+                            className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-page transition-colors"
                           >
                             <div
                               style={{ background: `${COLORS.night}0D` }}
@@ -643,7 +643,7 @@ export default function AdminDashboard() {
                               <p className="text-xs text-primary leading-snug">
                                 {getLocalizedField(n.title, lang)}
                               </p>
-                              <p className="text-[11px] text-muted mt-1">
+                              <p className="text-xs text-muted mt-1">
                                 {timeAgo(n.at, lang)}
                               </p>
                             </div>
@@ -663,14 +663,14 @@ export default function AdminDashboard() {
                       )}
                     </div>
 
-                    <div className="border-t border-gray-100 px-4 py-2 flex items-center justify-between gap-2">
+                    <div className="border-t border-hairline px-4 py-2 flex items-center justify-between gap-2">
                       <button
                         type="button"
                         onClick={async () => {
                           const res = await markAllNotificationsReadAsync("admin");
                           if (!res?.ok) console.warn("markAllRead failed:", res?.error);
                         }}
-                        className="text-[11px] font-semibold hover:underline"
+                        className="text-xs font-semibold hover:underline"
                         style={{ color: COLORS.green }}
                       >
                         {lang === "sw" ? "Soma Zote" : "Mark All Read"}
@@ -684,7 +684,7 @@ export default function AdminDashboard() {
                           const res = await clearNotificationsAsync("admin");
                           if (!res?.ok) console.warn("clearAll failed:", res?.error);
                         }}
-                        className="text-[11px] font-semibold hover:underline"
+                        className="text-xs font-semibold hover:underline"
                         style={{ color: COLORS.rust }}
                       >
                         {lang === "sw" ? "Futa Zote" : "Delete All"}
@@ -697,7 +697,7 @@ export default function AdminDashboard() {
             <div className="relative ml-1">
               <button
                 onClick={() => setProfileMenuOpen((v) => !v)}
-                className="rounded-full focus:outline-none focus:ring-2 focus:ring-[#FEA406]/40"
+                className="rounded-full focus:outline-none focus:ring-2 focus:ring-gold/40"
                 aria-label={lang === "sw" ? "Menyu ya wasifu" : "Profile menu"}
               >
                 <Avatar user={user} />
@@ -708,8 +708,8 @@ export default function AdminDashboard() {
                     className="fixed inset-0 z-40"
                     onClick={() => setProfileMenuOpen(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-64 max-w-[85vw] bg-white rounded-xl border border-gray-200 shadow-xl z-50 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
+                  <div className="absolute right-0 mt-2 w-64 max-w-[85vw] bg-card rounded-xl border border-hairline shadow-xl z-50 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-hairline flex items-center gap-3">
                       <Avatar user={user} size="lg" />
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-primary truncate">
@@ -726,7 +726,7 @@ export default function AdminDashboard() {
                         navigate(STATE_TO_URL.profile);
                         setProfileMenuOpen(false);
                       }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-primary hover:bg-gray-50 transition-colors text-left"
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-primary hover:bg-page transition-colors text-left"
                     >
                       <UserIcon size={16} className="text-secondary" />
                       {lang === "sw" ? "Wasifu" : "Profile"}
@@ -737,20 +737,20 @@ export default function AdminDashboard() {
                         navigate(STATE_TO_URL.system);
                         setProfileMenuOpen(false);
                       }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-primary hover:bg-gray-50 transition-colors text-left"
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-primary hover:bg-page transition-colors text-left"
                     >
                       <Settings size={16} className="text-secondary" />
                       {lang === "sw" ? "Mipangilio" : "Settings"}
                     </button>
 
-                    <div className="border-t border-gray-100" />
+                    <div className="border-t border-hairline" />
 
                     <button
                       onClick={() => {
                         setProfileMenuOpen(false);
                         handleLogout();
                       }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#C1502E] hover:bg-[#C1502E]/5 transition-colors text-left"
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-rust hover:bg-rust/5 transition-colors text-left"
                     >
                       <LogOut size={16} />
                       {lang === "sw" ? "Toka" : "Logout"}
@@ -794,11 +794,11 @@ export default function AdminDashboard() {
                   <span
                     style={{
                       background: isActive
-                        ? "rgba(245,243,236,0.18)"
+                        ? "rgba(244,247,252,0.18)"
                         : COLORS.rust,
                       color: isActive ? COLORS.sand : "white",
                     }}
-                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                    className="text-xs font-bold px-1.5 py-0.5 rounded-full shrink-0"
                   >
                     {badge}
                   </span>
@@ -849,11 +849,11 @@ export default function AdminDashboard() {
                       <span
                         style={{
                           background: isActive
-                            ? "rgba(245,243,236,0.18)"
+                            ? "rgba(244,247,252,0.18)"
                             : COLORS.rust,
                           color: isActive ? COLORS.sand : "white",
                         }}
-                        className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                        className="text-xs font-bold px-1.5 py-0.5 rounded-full shrink-0"
                       >
                         {badge}
                       </span>

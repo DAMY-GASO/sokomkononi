@@ -120,17 +120,17 @@ function BundleCard({ bundle, lang, onBuy, owned }) {
 
   return (
     <div
-      className={`relative bg-white rounded-2xl border-2 p-4 sm:p-5 flex flex-col items-center text-center gap-3 transition-all ${
-        bundle.featured ? "border-[#FEA406] shadow-lg" : "border-gray-100"
+      className={`relative bg-card rounded-2xl border-2 p-4 sm:p-5 flex flex-col items-center text-center gap-3 transition-all ${
+        bundle.featured ? "border-gold shadow-lg" : "border-hairline"
       }`}
     >
       {bundle.featured && (
-        <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-[#FEA406] text-[#101A2E] text-[10px] font-bold px-3 py-1 rounded-full whitespace-nowrap">
+        <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-gold text-night text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
           {t("Maarufu Zaidi", "Most Popular")}
         </span>
       )}
 
-      <div className="w-12 h-12 rounded-xl bg-[#FEA406]/10 flex items-center justify-center">
+      <div className="w-12 h-12 rounded-xl bg-gold/10 flex items-center justify-center">
         <Icon size={22} color={COLORS.gold} />
       </div>
 
@@ -138,7 +138,7 @@ function BundleCard({ bundle, lang, onBuy, owned }) {
         <h3 className="font-bold text-primary text-sm sm:text-base">
           {name}
         </h3>
-        <p className="text-[11px] sm:text-xs text-secondary mt-1 line-clamp-2">
+        <p className="text-xs text-secondary mt-1 line-clamp-2">
           {description}
         </p>
       </div>
@@ -148,7 +148,7 @@ function BundleCard({ bundle, lang, onBuy, owned }) {
           {creditsList.map((c, i) => (
             <span
               key={i}
-              className="text-[10px] font-medium bg-[#F5F3EC] text-secondary px-2 py-0.5 rounded-full"
+              className="text-xs font-medium bg-sand text-secondary px-2 py-0.5 rounded-full"
             >
               {c}
             </span>
@@ -157,11 +157,11 @@ function BundleCard({ bundle, lang, onBuy, owned }) {
       )}
 
       <div className="flex items-baseline justify-center gap-1 flex-wrap">
-        <span className="text-xl sm:text-2xl font-bold text-[#C1502E]">
+        <span className="text-xl sm:text-2xl font-bold text-rust">
           {formatTZS(bundle.price)}
         </span>
         {bundle.validityDays && (
-          <span className="text-[10px] sm:text-xs text-secondary">
+          <span className="text-xs text-secondary">
             /{" "}
             {t(
               `siku ${bundle.validityDays}`,
@@ -172,7 +172,7 @@ function BundleCard({ bundle, lang, onBuy, owned }) {
       </div>
 
       {bundle.discountPercent > 0 && (
-        <span className="text-[10px] sm:text-xs font-semibold text-[#2F6D4F] bg-[#2F6D4F]/10 px-2.5 py-1 rounded-full">
+        <span className="text-xs font-semibold text-green bg-green/10 px-2.5 py-1 rounded-full">
           {t(
             `Okoa ${bundle.discountPercent}%`,
             `Save ${bundle.discountPercent}%`
@@ -185,8 +185,8 @@ function BundleCard({ bundle, lang, onBuy, owned }) {
         disabled={owned}
         className={`w-full py-2.5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm transition-colors ${
           owned
-            ? "bg-gray-100 text-muted cursor-not-allowed"
-            : "bg-[#FEA406] hover:bg-[#D98706] text-[#101A2E]"
+            ? "bg-page text-muted cursor-not-allowed"
+            : "bg-gold hover:bg-flame text-night"
         }`}
       >
         {owned ? t("Tayari Unayo", "Already Owned") : t("Nunua Sasa", "Buy Now")}
@@ -241,7 +241,7 @@ function CreditsHistory({ lang }) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 mb-5 sm:mb-6 max-w-lg mx-auto">
+    <div className="bg-card rounded-xl border border-hairline mb-5 sm:mb-6 max-w-lg mx-auto">
       <button
         type="button"
         onClick={toggle}
@@ -266,7 +266,7 @@ function CreditsHistory({ lang }) {
             </div>
           )}
           {state === "unavailable" && (
-            <p className="text-[11px] text-secondary text-center py-2">
+            <p className="text-xs text-secondary text-center py-2">
               {t(
                 "Historia ya matumizi bado haipatikani. Itaonekana hapa itakapowashwa.",
                 "Usage history isn't available yet. It will show here once enabled."
@@ -275,32 +275,32 @@ function CreditsHistory({ lang }) {
           )}
           {state === "error" && (
             <div className="text-center py-2">
-              <p className="text-[11px] mb-2" style={{ color: COLORS.rust }}>
+              <p className="text-xs mb-2" style={{ color: COLORS.rust }}>
                 {t("Imeshindwa kupakia historia.", "Failed to load history.")}
               </p>
               <button
                 type="button"
                 onClick={load}
-                className="text-[11px] font-semibold underline text-secondary"
+                className="text-xs font-semibold underline text-secondary"
               >
                 {t("Jaribu tena", "Try again")}
               </button>
             </div>
           )}
           {state === "ready" && rows.length === 0 && (
-            <p className="text-[11px] text-secondary text-center py-2">
+            <p className="text-xs text-secondary text-center py-2">
               {t("Bado hujatumia salio lolote.", "You haven't used any credits yet.")}
             </p>
           )}
           {state === "ready" && rows.length > 0 && (
-            <ul className="flex flex-col divide-y divide-gray-100 max-h-60 overflow-y-auto">
+            <ul className="flex flex-col divide-y divide-hairline max-h-60 overflow-y-auto">
               {rows.map((r, i) => (
                 <li key={r.id || i} className="flex items-center justify-between gap-2 py-2 text-left">
                   <div className="min-w-0">
                     <p className="text-xs font-semibold text-primary truncate">
                       {rowLabel(r)}
                     </p>
-                    <p className="text-[10px] text-muted truncate">
+                    <p className="text-xs text-muted truncate">
                       {[
                         r.reference || r.description,
                         rowDate(r),
@@ -453,7 +453,7 @@ export default function BundlesPage({ role = "seller" }) {
 
         {/* CREDITS BALANCE */}
         {activeCredits.length > 0 && (
-          <div className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 mb-5 sm:mb-6 max-w-lg mx-auto">
+          <div className="bg-card rounded-xl border border-hairline p-3 sm:p-4 mb-5 sm:mb-6 max-w-lg mx-auto">
             <div className="flex items-center justify-center gap-2 mb-3">
               <Wallet size={14} color={COLORS.green} />
               <h3 className="text-xs font-semibold text-secondary">
@@ -464,12 +464,12 @@ export default function BundlesPage({ role = "seller" }) {
               {activeCredits.map((c) => (
                 <div
                   key={c.key}
-                  className="bg-[#F5F3EC] rounded-lg p-2 min-w-0"
+                  className="bg-sand rounded-lg p-2 min-w-0"
                 >
                   <p className="text-base sm:text-lg font-bold text-primary">
                     {c.remaining}
                   </p>
-                  <p className="text-[10px] sm:text-[11px] text-secondary truncate">
+                  <p className="text-xs text-secondary truncate">
                     {c.label}
                   </p>
                 </div>
@@ -497,7 +497,7 @@ export default function BundlesPage({ role = "seller" }) {
             <button
               type="button"
               onClick={() => setNotice(null)}
-              className="text-[11px] font-semibold text-secondary shrink-0"
+              className="text-xs font-semibold text-secondary shrink-0"
             >
               {t("Funga", "Dismiss")}
             </button>
@@ -513,10 +513,10 @@ export default function BundlesPage({ role = "seller" }) {
             <button
               key={ty.key}
               onClick={() => setSelectedType(ty.key)}
-              className={`text-[11px] sm:text-xs font-semibold px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full border whitespace-nowrap shrink-0 transition-colors ${
+              className={`text-xs font-semibold px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full border whitespace-nowrap shrink-0 transition-colors ${
                 selectedType === ty.key
-                  ? "bg-[#101A2E] text-[#F5F3EC] border-[#101A2E]"
-                  : "bg-white text-[#101A2E] border-gray-200"
+                  ? "bg-night text-sand border-night"
+                  : "bg-card text-primary border-hairline"
               }`}
             >
               {ty.label}
@@ -526,7 +526,7 @@ export default function BundlesPage({ role = "seller" }) {
 
         {/* BUNDLES GRID */}
         {filtered.length === 0 ? (
-          <div className="rounded-2xl border-2 border-dashed border-gray-200 p-8 sm:p-12 text-center bg-white">
+          <div className="rounded-2xl border-2 border-dashed border-hairline p-8 sm:p-12 text-center bg-card">
             <Package
               size={40}
               className="mx-auto text-muted mb-3 sm:w-12 sm:h-12"
@@ -556,7 +556,7 @@ export default function BundlesPage({ role = "seller" }) {
       {/* PAYMENT MODAL */}
       {payingBundle && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50">
-          <div className="bg-white rounded-2xl max-w-md w-full p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
+          <div className="bg-card rounded-2xl max-w-md w-full p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
             <PaymentGateway
               amount={payingBundle.price}
               title={

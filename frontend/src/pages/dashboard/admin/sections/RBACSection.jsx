@@ -68,7 +68,7 @@ function RoleCard({ role, lang, onEdit, onDelete, isBusy }) {
 
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
       className="rounded-xl border p-3 sm:p-4 w-full min-w-0"
     >
       <div className="flex items-start justify-between gap-3 mb-3">
@@ -80,14 +80,14 @@ function RoleCard({ role, lang, onEdit, onDelete, isBusy }) {
             {role.isSystem && (
               <span
                 style={{ background: `${COLORS.night}0D`, color: COLORS.night }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0"
+                className="text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0"
               >
-                <Lock size={9} /> {t("Mfumo", "System")}
+                <Lock size={10} /> {t("Mfumo", "System")}
               </span>
             )}
             <span
               style={{ background: `${COLORS.night}0D`, color: COLORS.night }}
-              className="text-[10px] font-mono px-2 py-0.5 rounded-full shrink-0"
+              className="text-xs font-mono px-2 py-0.5 rounded-full shrink-0"
             >
               {role.key}
             </span>
@@ -101,7 +101,7 @@ function RoleCard({ role, lang, onEdit, onDelete, isBusy }) {
           <button
             onClick={() => onEdit(role)}
             disabled={isBusy}
-            className="p-1.5 text-muted hover:text-[#FEA406] transition-colors disabled:opacity-50"
+            className="p-1.5 text-muted hover:text-gold-ink transition-colors disabled:opacity-50"
             aria-label={t("Hariri", "Edit")}
           >
             <Pencil size={14} />
@@ -110,7 +110,7 @@ function RoleCard({ role, lang, onEdit, onDelete, isBusy }) {
             <button
               onClick={() => onDelete(role)}
               disabled={isBusy}
-              className="p-1.5 text-muted hover:text-[#C1502E] transition-colors disabled:opacity-50"
+              className="p-1.5 text-muted hover:text-rust transition-colors disabled:opacity-50"
               aria-label={t("Futa", "Delete")}
             >
               {isBusy ? (
@@ -124,11 +124,11 @@ function RoleCard({ role, lang, onEdit, onDelete, isBusy }) {
       </div>
 
       <div>
-        <p className="text-[10px] font-semibold text-muted uppercase mb-1.5">
+        <p className="text-xs font-semibold text-muted uppercase mb-1.5">
           {t(`Ruhusa (${count})`, `Permissions (${count})`)}
         </p>
         {count === 0 ? (
-          <p className="text-[11px] text-muted italic">
+          <p className="text-xs text-muted italic">
             {t("Hakuna ruhusa.", "No permissions.")}
           </p>
         ) : (
@@ -142,7 +142,7 @@ function RoleCard({ role, lang, onEdit, onDelete, isBusy }) {
                     background: `${COLORS.green}15`,
                     color: COLORS.green,
                   }}
-                  className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
+                  className="text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
                 >
                   {permission?.label?.[lang] || permission?.label?.sw || perm}
                 </span>
@@ -200,12 +200,12 @@ function RoleForm({ initial, lang, onSave, onCancel, saving }) {
 
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
       className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full min-w-0"
     >
       {/* Key (slug) */}
       <label className="flex flex-col gap-1 min-w-0">
-        <span className="text-[11px] font-semibold text-secondary">
+        <span className="text-xs font-semibold text-secondary">
           {t("Key (slug)", "Key (slug)")} *
         </span>
         <input
@@ -215,9 +215,9 @@ function RoleForm({ initial, lang, onSave, onCancel, saving }) {
           }
           placeholder="moderator"
           disabled={saving || isEditing}
-          className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs font-mono outline-none focus:border-[#FEA406] disabled:opacity-50 disabled:bg-gray-50"
+          className="w-full border border-hairline rounded-lg px-2.5 py-1.5 text-xs font-mono outline-none focus:border-gold disabled:opacity-50 disabled:bg-page"
         />
-        <span className="text-[10px] text-muted">
+        <span className="text-xs text-muted">
           {isEditing
             ? t(
                 "Funguo haiwezi kubadilishwa baada ya kuunda.",
@@ -233,7 +233,7 @@ function RoleForm({ initial, lang, onSave, onCancel, saving }) {
       {/* Labels */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <label className="flex flex-col gap-1 min-w-0">
-          <span className="text-[11px] font-semibold text-secondary">
+          <span className="text-xs font-semibold text-secondary">
             {t("Jina (SW)", "Name (SW)")} *
           </span>
           <input
@@ -246,11 +246,11 @@ function RoleForm({ initial, lang, onSave, onCancel, saving }) {
             }
             placeholder="Msimamizi wa Mali"
             disabled={saving}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
+            className="w-full border border-hairline rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1 min-w-0">
-          <span className="text-[11px] font-semibold text-secondary">
+          <span className="text-xs font-semibold text-secondary">
             {t("Jina (EN)", "Name (EN)")} *
           </span>
           <input
@@ -258,7 +258,7 @@ function RoleForm({ initial, lang, onSave, onCancel, saving }) {
             onChange={(e) => handleLabelEnChange(e.target.value)}
             placeholder="Moderator"
             disabled={saving}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
+            className="w-full border border-hairline rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold disabled:opacity-50"
           />
         </label>
       </div>
@@ -266,7 +266,7 @@ function RoleForm({ initial, lang, onSave, onCancel, saving }) {
       {/* Descriptions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <label className="flex flex-col gap-1 min-w-0">
-          <span className="text-[11px] font-semibold text-secondary">
+          <span className="text-xs font-semibold text-secondary">
             {t("Maelezo (SW)", "Description (SW)")}
           </span>
           <textarea
@@ -279,11 +279,11 @@ function RoleForm({ initial, lang, onSave, onCancel, saving }) {
             }
             rows={2}
             disabled={saving}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] resize-none disabled:opacity-50"
+            className="w-full border border-hairline rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold resize-none disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1 min-w-0">
-          <span className="text-[11px] font-semibold text-secondary">
+          <span className="text-xs font-semibold text-secondary">
             {t("Maelezo (EN)", "Description (EN)")}
           </span>
           <textarea
@@ -296,14 +296,14 @@ function RoleForm({ initial, lang, onSave, onCancel, saving }) {
             }
             rows={2}
             disabled={saving}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] resize-none disabled:opacity-50"
+            className="w-full border border-hairline rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold resize-none disabled:opacity-50"
           />
         </label>
       </div>
 
       {/* Permissions */}
       <div className="min-w-0">
-        <p className="text-[11px] font-semibold text-secondary mb-2">
+        <p className="text-xs font-semibold text-secondary mb-2">
           {t("Ruhusa", "Permissions")} *{" "}
           <span className="text-muted font-normal">
             ({form.permissions.length}/{PERMISSIONS.length})
@@ -318,7 +318,7 @@ function RoleForm({ initial, lang, onSave, onCancel, saving }) {
                 className="flex items-center gap-2 px-2.5 py-2 rounded-lg border cursor-pointer transition-colors min-w-0"
                 style={{
                   borderColor: isChecked ? COLORS.green : COLORS.sandLine,
-                  background: isChecked ? "rgba(47,109,79,0.05)" : "white",
+                  background: isChecked ? "rgba(47,109,79,0.05)" : "rgb(var(--c-card))",
                 }}
               >
                 <input
@@ -326,7 +326,7 @@ function RoleForm({ initial, lang, onSave, onCancel, saving }) {
                   checked={isChecked}
                   onChange={() => togglePermission(perm.key)}
                   disabled={saving}
-                  className="w-4 h-4 rounded text-[#2F6D4F] focus:ring-[#2F6D4F] shrink-0"
+                  className="w-4 h-4 rounded text-green focus:ring-green shrink-0"
                 />
                 <span className="text-xs text-primary truncate">
                   {perm.label?.[lang] || perm.label?.sw}
@@ -342,7 +342,7 @@ function RoleForm({ initial, lang, onSave, onCancel, saving }) {
         <button
           onClick={onCancel}
           disabled={saving}
-          className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-secondary disabled:opacity-50"
+          className="text-xs font-semibold px-3 py-2 rounded-lg border border-hairline text-secondary disabled:opacity-50"
         >
           {t("Ghairi", "Cancel")}
         </button>
@@ -356,9 +356,9 @@ function RoleForm({ initial, lang, onSave, onCancel, saving }) {
           className="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg disabled:cursor-not-allowed"
         >
           {saving ? (
-            <Loader2 size={13} className="animate-spin" />
+            <Loader2 size={14} className="animate-spin" />
           ) : (
-            <Save size={13} />
+            <Save size={14} />
           )}
           {t("Hifadhi", "Save")}
         </button>
@@ -394,10 +394,10 @@ function PermissionMatrix({ roles, lang, busy, onToggle }) {
 
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
       className="rounded-xl border w-full min-w-0 overflow-hidden"
     >
-      <p className="text-[11px] text-secondary px-3 sm:px-4 pt-3">
+      <p className="text-xs text-secondary px-3 sm:px-4 pt-3">
         {t(
           "Bofya kisanduku kuwasha/kuzima ruhusa kwa role. Mabadiliko yanahifadhiwa mara moja.",
           "Click a cell to grant/revoke a permission for a role. Changes save immediately."
@@ -409,7 +409,7 @@ function PermissionMatrix({ roles, lang, busy, onToggle }) {
             <tr>
               <th
                 className="text-left font-semibold text-secondary pr-4 pb-2 sticky left-0 z-10"
-                style={{ background: "white", minWidth: 160 }}
+                style={{ background: "rgb(var(--c-card))", minWidth: 160 }}
               >
                 {t("Ruhusa", "Permission")}
               </th>
@@ -423,7 +423,7 @@ function PermissionMatrix({ roles, lang, busy, onToggle }) {
                     {role.label?.[lang] || role.label?.sw || role.key}
                   </span>
                   {role.isSystem && (
-                    <Lock size={9} className="inline text-muted" />
+                    <Lock size={10} className="inline text-muted" />
                   )}
                 </th>
               ))}
@@ -434,7 +434,7 @@ function PermissionMatrix({ roles, lang, busy, onToggle }) {
               <tr key={perm.key} style={{ borderTop: `1px solid ${COLORS.sandLine}` }}>
                 <td
                   className="py-2 pr-4 text-primary sticky left-0 z-10"
-                  style={{ background: "white" }}
+                  style={{ background: "rgb(var(--c-card))" }}
                 >
                   {perm.label?.[lang] || perm.label?.sw || perm.key}
                 </td>
@@ -445,7 +445,7 @@ function PermissionMatrix({ roles, lang, busy, onToggle }) {
                   return (
                     <td key={role.key} className="text-center py-2">
                       {isBusy ? (
-                        <Loader2 size={13} className="animate-spin inline text-muted" />
+                        <Loader2 size={14} className="animate-spin inline text-muted" />
                       ) : (
                         <input
                           type="checkbox"
@@ -453,7 +453,7 @@ function PermissionMatrix({ roles, lang, busy, onToggle }) {
                           onChange={() => onToggle(role, perm.key, !checked)}
                           disabled={Object.keys(busy).some((k) => k.startsWith(`cell-${role.key}-`))}
                           aria-label={`${role.key} · ${perm.key}`}
-                          className="w-4 h-4 rounded text-[#2F6D4F] focus:ring-[#2F6D4F] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="w-4 h-4 rounded text-green focus:ring-green cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                         />
                       )}
                     </td>
@@ -462,7 +462,7 @@ function PermissionMatrix({ roles, lang, busy, onToggle }) {
               </tr>
             ))}
             <tr style={{ borderTop: `2px solid ${COLORS.sandLine}` }}>
-              <td className="py-2 pr-4 font-semibold text-secondary sticky left-0 z-10" style={{ background: "white" }}>
+              <td className="py-2 pr-4 font-semibold text-secondary sticky left-0 z-10" style={{ background: "rgb(var(--c-card))" }}>
                 {t("Jumla", "Total")}
               </td>
               {roles.map((role) => (
@@ -498,7 +498,7 @@ function StaffCard({
 
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
       className="rounded-xl border p-3 sm:p-4 w-full min-w-0"
     >
       <div className="flex items-start gap-3">
@@ -506,7 +506,7 @@ function StaffCard({
           style={{ background: `${COLORS.night}0D` }}
           className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0"
         >
-          <span className="text-sm font-bold text-[#101A2E]">
+          <span className="text-sm font-bold text-primary">
             {staff.name?.charAt(0)?.toUpperCase() || "?"}
           </span>
         </div>
@@ -519,8 +519,8 @@ function StaffCard({
 
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             <span
-              style={{ background: `${COLORS.gold}20`, color: "#8A5A16" }}
-              className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0"
+              style={{ background: `${COLORS.gold}20`, color: COLORS.goldText }}
+              className="text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0"
             >
               {roleLabel}
             </span>
@@ -528,17 +528,17 @@ function StaffCard({
               style={{
                 background: staff.active
                   ? "rgba(47,109,79,0.12)"
-                  : "rgba(16,26,46,0.08)",
+                  : "rgba(1,25,87,0.08)",
                 color: staff.active ? COLORS.green : COLORS.night,
               }}
-              className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0"
+              className="text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0"
             >
               {staff.active ? t("Hai", "Active") : t("Imezimwa", "Inactive")}
             </span>
           </div>
 
           {staff.addedAt && (
-            <p className="text-[10px] text-muted mt-1.5">
+            <p className="text-xs text-muted mt-1.5">
               {t("Aliongezwa", "Added")} {timeAgo(staff.addedAt, lang)}
             </p>
           )}
@@ -546,11 +546,11 @@ function StaffCard({
           <button
             type="button"
             onClick={() => setShowActivity((v) => !v)}
-            className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-secondary hover:text-primary"
+            className="mt-2 flex items-center gap-1 text-xs font-semibold text-secondary hover:text-primary"
           >
-            <History size={11} />
+            <History size={12} />
             {t("Shughuli", "Activity")} ({activity.length})
-            {showActivity ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+            {showActivity ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
           </button>
         </div>
 
@@ -558,7 +558,7 @@ function StaffCard({
           <button
             onClick={() => onEdit(staff)}
             disabled={isBusy}
-            className="p-1.5 text-muted hover:text-[#FEA406] transition-colors disabled:opacity-50"
+            className="p-1.5 text-muted hover:text-gold-ink transition-colors disabled:opacity-50"
             aria-label={t("Hariri", "Edit")}
           >
             <Pencil size={14} />
@@ -566,7 +566,7 @@ function StaffCard({
           <button
             onClick={() => onRemove(staff)}
             disabled={isBusy}
-            className="p-1.5 text-muted hover:text-[#C1502E] transition-colors disabled:opacity-50"
+            className="p-1.5 text-muted hover:text-rust transition-colors disabled:opacity-50"
             aria-label={t("Ondoa", "Remove")}
           >
             {isBusy ? (
@@ -584,7 +584,7 @@ function StaffCard({
           style={{ borderColor: COLORS.sandLine }}
         >
           {activity.length === 0 ? (
-            <p className="text-[11px] text-muted italic">
+            <p className="text-xs text-muted italic">
               {t(
                 "Hakuna shughuli zilizorekodiwa kwa mfanyakazi huyu.",
                 "No recorded activity for this staff member."
@@ -600,16 +600,16 @@ function StaffCard({
                     <div className="flex items-center gap-2 flex-wrap">
                       <span
                         style={{ background: `${COLORS.night}0D`, color: COLORS.night }}
-                        className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+                        className="text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
                       >
                         {action?.label?.[lang] || action?.label?.sw || log.action}
                       </span>
-                      <span className="text-[10px] text-muted whitespace-nowrap">
+                      <span className="text-xs text-muted whitespace-nowrap">
                         {timeAgo(log.at, lang)}
                       </span>
                     </div>
                     {details && (
-                      <p className="text-[11px] text-secondary mt-0.5 line-clamp-2 break-words">
+                      <p className="text-xs text-secondary mt-0.5 line-clamp-2 break-words">
                         {details}
                       </p>
                     )}
@@ -619,7 +619,7 @@ function StaffCard({
             </ul>
           )}
           {activity.length > 8 && (
-            <p className="text-[10px] text-muted mt-2">
+            <p className="text-xs text-muted mt-2">
               {t(
                 `Inaonyesha 8 za hivi karibuni kati ya ${activity.length}. Tazama Audit Logs kwa zote.`,
                 `Showing latest 8 of ${activity.length}. See Audit Logs for all.`
@@ -666,19 +666,19 @@ function StaffForm({ initial, roles, lang, onSave, onCancel, saving }) {
 
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
       className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full min-w-0"
     >
       {/* User picker */}
       <label className="flex flex-col gap-1 min-w-0 w-full">
-        <span className="text-[11px] font-semibold text-secondary">
+        <span className="text-xs font-semibold text-secondary">
           {t("Chagua Mtumiaji", "Pick User")} *
         </span>
         <select
           value={form.userId ?? ""}
           onChange={(e) => handleUserChange(e.target.value)}
           disabled={saving}
-          className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
+          className="w-full border border-hairline rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold disabled:opacity-50"
         >
           <option value="">
             {t("-- Chagua mtumiaji --", "-- Pick a user --")}
@@ -690,12 +690,12 @@ function StaffForm({ initial, roles, lang, onSave, onCancel, saving }) {
           ))}
         </select>
         {!form.userId && allUsers.length > 0 && (
-          <span className="text-[10px] text-[#C1502E] mt-1">
+          <span className="text-xs text-rust mt-1">
             {t("User ID inahitajika.", "User ID is required.")}
           </span>
         )}
         {allUsers.length === 0 && (
-          <span className="text-[10px] text-muted mt-1">
+          <span className="text-xs text-muted mt-1">
             {t("Inapakia watumiaji...", "Loading users...")}
           </span>
         )}
@@ -704,7 +704,7 @@ function StaffForm({ initial, roles, lang, onSave, onCancel, saving }) {
       {/* Name + Email (read-only if user picked) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <label className="flex flex-col gap-1 min-w-0">
-          <span className="text-[11px] font-semibold text-secondary">
+          <span className="text-xs font-semibold text-secondary">
             {t("Jina", "Name")}
           </span>
           <input
@@ -712,11 +712,11 @@ function StaffForm({ initial, roles, lang, onSave, onCancel, saving }) {
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder="Amina Rashid"
             disabled={saving}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
+            className="w-full border border-hairline rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1 min-w-0">
-          <span className="text-[11px] font-semibold text-secondary">
+          <span className="text-xs font-semibold text-secondary">
             {t("Barua Pepe", "Email")}
           </span>
           <input
@@ -725,21 +725,21 @@ function StaffForm({ initial, roles, lang, onSave, onCancel, saving }) {
             onChange={(e) => setForm({ ...form, email: e.target.value })}
             placeholder="amina@sokomkononi.co.tz"
             disabled={saving}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
+            className="w-full border border-hairline rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold disabled:opacity-50"
           />
         </label>
       </div>
 
       {/* Role */}
       <label className="flex flex-col gap-1 min-w-0">
-        <span className="text-[11px] font-semibold text-secondary">
+        <span className="text-xs font-semibold text-secondary">
           {t("Role", "Role")} *
         </span>
         <select
           value={form.roleKey}
           onChange={(e) => setForm({ ...form, roleKey: e.target.value })}
           disabled={saving}
-          className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
+          className="w-full border border-hairline rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold disabled:opacity-50"
         >
           {roles.length === 0 && (
             <option value="">
@@ -761,7 +761,7 @@ function StaffForm({ initial, roles, lang, onSave, onCancel, saving }) {
           checked={form.active}
           onChange={(e) => setForm({ ...form, active: e.target.checked })}
           disabled={saving}
-          className="w-4 h-4 rounded text-[#FEA406] shrink-0"
+          className="w-4 h-4 rounded text-gold shrink-0"
         />
         <span className="text-xs text-secondary">
           {t("Hai (anaweza kuingia)", "Active (can log in)")}
@@ -773,7 +773,7 @@ function StaffForm({ initial, roles, lang, onSave, onCancel, saving }) {
         <button
           onClick={onCancel}
           disabled={saving}
-          className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-secondary disabled:opacity-50"
+          className="text-xs font-semibold px-3 py-2 rounded-lg border border-hairline text-secondary disabled:opacity-50"
         >
           {t("Ghairi", "Cancel")}
         </button>
@@ -787,9 +787,9 @@ function StaffForm({ initial, roles, lang, onSave, onCancel, saving }) {
           className="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg disabled:cursor-not-allowed"
         >
           {saving ? (
-            <Loader2 size={13} className="animate-spin" />
+            <Loader2 size={14} className="animate-spin" />
           ) : (
-            <Save size={13} />
+            <Save size={14} />
           )}
           {t("Hifadhi", "Save")}
         </button>
@@ -1089,13 +1089,13 @@ export default function RBACSection() {
                 setError("");
               }}
               style={{
-                background: isActive ? COLORS.night : "white",
+                background: isActive ? COLORS.night : "rgb(var(--c-card))",
                 color: isActive ? COLORS.sand : "var(--text-primary)",
                 borderColor: COLORS.sandLine,
               }}
               className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-full border whitespace-nowrap shrink-0"
             >
-              <Icon size={13} /> {label?.[lang] || label?.sw}
+              <Icon size={14} /> {label?.[lang] || label?.sw}
             </button>
           );
         })}
@@ -1114,7 +1114,7 @@ export default function RBACSection() {
             style={{ background: COLORS.gold, color: COLORS.night }}
             className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Plus size={13} /> {t("Role Mpya", "New Role")}
+            <Plus size={14} /> {t("Role Mpya", "New Role")}
           </button>
 
           {addingRole && (
@@ -1144,7 +1144,7 @@ export default function RBACSection() {
 
           {roles.length === 0 && !addingRole ? (
             <div
-              style={{ borderColor: COLORS.sandLine, background: "white" }}
+              style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
               className="rounded-2xl border-2 border-dashed p-8 sm:p-10 text-center w-full"
             >
               <ShieldCheck size={40} className="mx-auto text-muted mb-3" />
@@ -1190,7 +1190,7 @@ export default function RBACSection() {
             style={{ background: COLORS.gold, color: COLORS.night }}
             className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Plus size={13} /> {t("Mfanyakazi Mpya", "New Staff")}
+            <Plus size={14} /> {t("Mfanyakazi Mpya", "New Staff")}
           </button>
 
           {addingStaff && (
@@ -1222,7 +1222,7 @@ export default function RBACSection() {
 
           {staff.length === 0 && !addingStaff ? (
             <div
-              style={{ borderColor: COLORS.sandLine, background: "white" }}
+              style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
               className="rounded-2xl border-2 border-dashed p-8 sm:p-10 text-center w-full"
             >
               <UserCog size={40} className="mx-auto text-muted mb-3" />

@@ -183,11 +183,11 @@ function buildPrintableHTML(transcript) {
     const isOffer = !!m.offerAmount;
     return `
       <tr>
-        <td style="padding:8px;border:1px solid #ddd;vertical-align:top;font-size:11px;color:#666;">${i + 1}</td>
-        <td style="padding:8px;border:1px solid #ddd;vertical-align:top;font-size:11px;white-space:nowrap;">${fmtDate(m.at || m.createdAt)}</td>
-        <td style="padding:8px;border:1px solid #ddd;vertical-align:top;font-size:11px;font-weight:600;color:${isOffer ? "#8A5A16" : "#101A2E"};">${who}</td>
-        <td style="padding:8px;border:1px solid #ddd;vertical-align:top;font-size:12px;">
-          ${isOffer ? `<div style="font-weight:700;color:#8A5A16;margin-bottom:4px;">${L.offer || "Offer"}: ${fmtTZS(m.offerAmount)}</div>` : ""}
+        <td style="padding:8px;border:1px solid #DCE4F2;vertical-align:top;font-size:11px;color:#455068;">${i + 1}</td>
+        <td style="padding:8px;border:1px solid #DCE4F2;vertical-align:top;font-size:11px;white-space:nowrap;">${fmtDate(m.at || m.createdAt)}</td>
+        <td style="padding:8px;border:1px solid #DCE4F2;vertical-align:top;font-size:11px;font-weight:600;color:${isOffer ? "#A35F00" : "#0D1630"};">${who}</td>
+        <td style="padding:8px;border:1px solid #DCE4F2;vertical-align:top;font-size:12px;">
+          ${isOffer ? `<div style="font-weight:700;color:#A35F00;margin-bottom:4px;">${L.offer || "Offer"}: ${fmtTZS(m.offerAmount)}</div>` : ""}
           <div>${(m.text || "").replace(/</g, "&lt;")}</div>
         </td>
       </tr>
@@ -199,36 +199,37 @@ function buildPrintableHTML(transcript) {
     <html>
     <head>
       <meta charset="utf-8"/>
+      <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet"/>
       <title>${L.title || "Deal Room Transcript"}</title>
     </head>
-    <body style="font-family:Arial,sans-serif;padding:24px;color:#101A2E;">
+    <body style="font-family:'Open Sans',Arial,sans-serif;padding:24px;color:#0D1630;">
       <h1 style="font-size:20px;margin:0 0 4px;">${L.title || "Deal Room Transcript"}</h1>
-      <p style="font-size:12px;color:#666;margin:0 0 20px;">Deal Room #${meta.dealRoomId} — ${meta.listingTitle}</p>
+      <p style="font-size:12px;color:#455068;margin:0 0 20px;">Deal Room #${meta.dealRoomId} — ${meta.listingTitle}</p>
 
       <h2 style="font-size:14px;margin:16px 0 8px;">${L.dealInfo || "Deal Info"}</h2>
       <table style="border-collapse:collapse;font-size:12px;width:100%;">
-        <tr><td style="padding:4px 8px;color:#666;">Status</td><td style="padding:4px 8px;font-weight:600;">${meta.status}</td></tr>
-        <tr><td style="padding:4px 8px;color:#666;">${L.listing || "Listing"}</td><td style="padding:4px 8px;">${meta.listingTitle}</td></tr>
-        <tr><td style="padding:4px 8px;color:#666;">Location</td><td style="padding:4px 8px;">${meta.location}</td></tr>
-        <tr><td style="padding:4px 8px;color:#666;">Agreed Price</td><td style="padding:4px 8px;font-weight:600;color:#C1502E;">${fmtTZS(meta.agreedPrice || meta.currentOffer)}</td></tr>
-        <tr><td style="padding:4px 8px;color:#666;">${L.participants || "Participants"}</td><td style="padding:4px 8px;">${deal.buyerName} ↔ ${deal.sellerName}</td></tr>
-        <tr><td style="padding:4px 8px;color:#666;">Created</td><td style="padding:4px 8px;">${fmtDate(meta.createdAt)}</td></tr>
+        <tr><td style="padding:4px 8px;color:#455068;">Status</td><td style="padding:4px 8px;font-weight:600;">${meta.status}</td></tr>
+        <tr><td style="padding:4px 8px;color:#455068;">${L.listing || "Listing"}</td><td style="padding:4px 8px;">${meta.listingTitle}</td></tr>
+        <tr><td style="padding:4px 8px;color:#455068;">Location</td><td style="padding:4px 8px;">${meta.location}</td></tr>
+        <tr><td style="padding:4px 8px;color:#455068;">Agreed Price</td><td style="padding:4px 8px;font-weight:600;color:#C1502E;">${fmtTZS(meta.agreedPrice || meta.currentOffer)}</td></tr>
+        <tr><td style="padding:4px 8px;color:#455068;">${L.participants || "Participants"}</td><td style="padding:4px 8px;">${deal.buyerName} ↔ ${deal.sellerName}</td></tr>
+        <tr><td style="padding:4px 8px;color:#455068;">Created</td><td style="padding:4px 8px;">${fmtDate(meta.createdAt)}</td></tr>
       </table>
 
       <h2 style="font-size:14px;margin:24px 0 8px;">${L.conversation || "Conversation"} (${messages.length})</h2>
       <table style="border-collapse:collapse;width:100%;">
         <thead>
-          <tr style="background:#F5F3EC;">
-            <th style="padding:6px 8px;border:1px solid #ddd;text-align:left;font-size:11px;">#</th>
-            <th style="padding:6px 8px;border:1px solid #ddd;text-align:left;font-size:11px;">${L.date || "Date"}</th>
-            <th style="padding:6px 8px;border:1px solid #ddd;text-align:left;font-size:11px;">${L.from || "From"}</th>
-            <th style="padding:6px 8px;border:1px solid #ddd;text-align:left;font-size:11px;">${L.message || "Message"}</th>
+          <tr style="background:#F4F7FC;">
+            <th style="padding:6px 8px;border:1px solid #DCE4F2;text-align:left;font-size:11px;">#</th>
+            <th style="padding:6px 8px;border:1px solid #DCE4F2;text-align:left;font-size:11px;">${L.date || "Date"}</th>
+            <th style="padding:6px 8px;border:1px solid #DCE4F2;text-align:left;font-size:11px;">${L.from || "From"}</th>
+            <th style="padding:6px 8px;border:1px solid #DCE4F2;text-align:left;font-size:11px;">${L.message || "Message"}</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
 
-      <p style="font-size:10px;color:#999;margin-top:24px;">
+      <p style="font-size:10px;color:#626C80;margin-top:24px;">
         Exported: ${fmtDate(meta.exportedAt)} — ${meta.exportedBy}
       </p>
     </body>

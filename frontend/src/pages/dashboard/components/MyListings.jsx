@@ -165,7 +165,7 @@ function MarkSoldConfirmModal({ listing, lang, busy, onConfirm, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white rounded-2xl max-w-sm w-full p-6">
+      <div className="bg-card rounded-2xl max-w-sm w-full p-6">
         <div className="text-center mb-5">
           <div
             style={{ background: "rgba(47,109,79,0.12)" }}
@@ -191,7 +191,7 @@ function MarkSoldConfirmModal({ listing, lang, busy, onConfirm, onClose }) {
           <button
             onClick={onClose}
             disabled={busy}
-            className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
+            className="flex-1 py-2.5 border border-hairline rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
           >
             {t("Ghairi", "Cancel")}
           </button>
@@ -231,8 +231,8 @@ function ActionBtn({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex items-center gap-1.5 rounded-lg border bg-white px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
-        danger ? "hover:bg-red-50" : "hover:bg-sand"
+      className={`inline-flex items-center gap-1.5 rounded-lg border bg-card px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+        danger ? "hover:bg-rust/10" : "hover:bg-sand"
       } ${className}`}
       style={{
         borderColor: danger ? "rgba(193,80,46,0.3)" : COLORS.sandLine,
@@ -303,7 +303,7 @@ function ListingCard({
                   ) : null
                 }
               />
-              <span className="pointer-events-none absolute bottom-1 right-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+              <span className="pointer-events-none absolute bottom-1 right-1 rounded-full bg-black/60 px-1.5 py-0.5 text-xs font-semibold text-white">
                 {idx + 1}/{photos.length}
               </span>
             </div>
@@ -329,7 +329,7 @@ function ListingCard({
 
   return (
     <div
-      className={`relative w-full min-w-0 max-w-full overflow-hidden rounded-2xl border-[1.5px] bg-white p-2 shadow-[0_1px_2px_rgba(1,25,87,0.04)] transition-all duration-200 hover:border-gold sm:p-2.5 ${
+      className={`relative w-full min-w-0 max-w-full overflow-hidden rounded-2xl border-[1.5px] bg-card p-2 shadow-[0_1px_2px_rgba(1,25,87,0.04)] transition-all duration-200 hover:border-gold sm:p-2.5 ${
         featured ? "border-gold" : "border-sandline"
       } ${status === "sold" ? "opacity-80" : ""} ${selected ? "ring-2 ring-night" : ""}`}
     >
@@ -386,7 +386,7 @@ function ListingCard({
                 style={{ background: "rgba(193,80,46,0.10)", color: COLORS.rust }}
               >
                 <AlertCircle size={12} className="shrink-0" />
-                <span className="text-[11px] font-semibold leading-tight">
+                <span className="text-xs font-semibold leading-tight">
                   {t("Haijalipwa", "Unpaid")} · {formatTZS(listing.feeAmount)}
                 </span>
               </div>
@@ -394,18 +394,18 @@ function ListingCard({
 
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-secondary">
             <span className="flex min-w-0 items-center gap-1">
-              <CategoryIcon size={11} className="shrink-0" />
+              <CategoryIcon size={12} className="shrink-0" />
               <span className="truncate">{catLabel}</span>
             </span>
             {listing.location && (
               <span className="flex min-w-0 items-center gap-1">
-                <MapPin size={11} className="shrink-0" />
+                <MapPin size={12} className="shrink-0" />
                 <span className="truncate">{listing.location}</span>
               </span>
             )}
           </div>
 
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted">
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
             <span className="flex items-center gap-1">
               <Eye size={10} />
               {listing.views || 0}
@@ -430,12 +430,12 @@ function ListingCard({
               </>
             )}
             {featured && (
-              <span className="rounded-full bg-gold px-2 py-0.5 text-[10px] font-semibold text-night">
+              <span className="rounded-full bg-gold px-2 py-0.5 text-xs font-semibold text-night">
                 {t("Imeangaziwa", "Featured")}
               </span>
             )}
             {leading && (
-              <span className="rounded-full bg-green px-2 py-0.5 text-[10px] font-semibold text-white">
+              <span className="rounded-full bg-green px-2 py-0.5 text-xs font-semibold text-white">
                 {t("Kipaumbele", "Priority")}
               </span>
             )}
@@ -444,11 +444,11 @@ function ListingCard({
           {status === "needs_edit" && (
             <div
               className="mt-1.5 rounded-lg px-2.5 py-1.5"
-              style={{ background: "rgba(180,83,9,0.08)" }}
+              style={{ background: "rgba(163,95,0,0.08)" }}
             >
               <p
-                className="text-[11px] font-semibold leading-tight"
-                style={{ color: "#B45309" }}
+                className="text-xs font-semibold leading-tight"
+                style={{ color: COLORS.goldInk }}
               >
                 {t("Admin ameomba uhariri:", "Admin requested edit:")}{" "}
                 {listing.rejectionReason}
@@ -459,11 +459,11 @@ function ListingCard({
           {status === "pending_approval" && (
             <div
               className="mt-1.5 rounded-lg px-2.5 py-1.5"
-              style={{ background: "rgba(37,99,235,0.08)" }}
+              style={{ background: "rgba(0,98,253,0.08)" }}
             >
               <p
-                className="text-[11px] font-semibold leading-tight"
-                style={{ color: "#2563EB" }}
+                className="text-xs font-semibold leading-tight"
+                style={{ color: COLORS.royal }}
               >
                 {t(
                   "Imewasilishwa — inasubiri admin akague",
@@ -479,7 +479,7 @@ function ListingCard({
               style={{ background: "rgba(47,109,79,0.08)" }}
             >
               <p
-                className="text-[11px] font-semibold leading-tight"
+                className="text-xs font-semibold leading-tight"
                 style={{ color: COLORS.green }}
               >
                 {isFreeListing(listing)
@@ -498,11 +498,11 @@ function ListingCard({
           {status === "paid_pending_approval" && (
             <div
               className="mt-1.5 rounded-lg px-2.5 py-1.5"
-              style={{ background: "rgba(37,99,235,0.08)" }}
+              style={{ background: "rgba(0,98,253,0.08)" }}
             >
               <p
-                className="text-[11px] font-semibold leading-tight"
-                style={{ color: "#2563EB" }}
+                className="text-xs font-semibold leading-tight"
+                style={{ color: COLORS.royal }}
               >
                 {t(
                   "Umelipa — inasubiri idhini ya mwisho",
@@ -515,7 +515,7 @@ function ListingCard({
           {status === "rejected" && listing.rejectionReason && (
             <p
               style={{ color: COLORS.rust }}
-              className="mt-1.5 line-clamp-2 rounded-lg bg-red-50 px-2 py-1 text-[11px]"
+              className="mt-1.5 line-clamp-2 rounded-lg bg-rust/10 px-2 py-1 text-xs"
             >
               {listing.rejectionReason}
             </p>
@@ -543,7 +543,7 @@ function ListingCard({
             onClick={() => onEdit?.(listing.id)}
             disabled={isBusy}
             className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50"
-            style={{ background: "#B45309", color: "white" }}
+            style={{ background: COLORS.goldInk, color: "white" }}
           >
             <Pencil size={12} />
             {t("Hariri Sasa", "Edit Now")}
@@ -1115,15 +1115,15 @@ export default function MyListings({
           </p>
           {/* Refresh strip */}
           <div className="mt-1 flex items-center gap-2">
-            <span className="text-[11px] text-muted">
+            <span className="text-xs text-muted">
               {t("Imesasishwa", "Updated")} {timeAgoShort(lastRefreshedAt, lang)}
             </span>
             <button
               onClick={refresh}
               disabled={isRefreshing}
               aria-label={t("Sasisha", "Refresh")}
-              className="flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md border disabled:opacity-50"
-              style={{ borderColor: COLORS.sandLine, color: COLORS.night, background: "white" }}
+              className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md border disabled:opacity-50"
+              style={{ borderColor: COLORS.sandLine, color: COLORS.night, background: "rgb(var(--c-card))" }}
             >
               <RefreshCw size={10} className={isRefreshing ? "animate-spin" : ""} />
               {isRefreshing ? t("Inasasisha...", "Refreshing...") : t("Sasisha", "Refresh")}
@@ -1138,7 +1138,7 @@ export default function MyListings({
               style={{
                 borderColor: COLORS.sandLine,
                 color: COLORS.night,
-                background: selectMode ? COLORS.sand : "white",
+                background: selectMode ? COLORS.sand : "rgb(var(--c-card))",
               }}
               className="flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold"
             >
@@ -1160,7 +1160,7 @@ export default function MyListings({
       {listings.length > 0 && (
         <>
           <div
-            className="flex items-center gap-2 bg-white border rounded-lg px-3 py-2 mb-3 w-full"
+            className="flex items-center gap-2 bg-card border rounded-lg px-3 py-2 mb-3 w-full"
             style={{ borderColor: COLORS.sandLine }}
           >
             <Search size={14} className="text-muted shrink-0" />
@@ -1187,7 +1187,7 @@ export default function MyListings({
                   key={f.key}
                   onClick={() => setFilter(f.key)}
                   style={{
-                    background: filter === f.key ? COLORS.night : "white",
+                    background: filter === f.key ? COLORS.night : "rgb(var(--c-card))",
                     color: filter === f.key ? COLORS.sand : "var(--text-primary)",
                     borderColor: COLORS.sandLine,
                   }}
@@ -1202,7 +1202,7 @@ export default function MyListings({
           {/* Bulk selection bar */}
           {selectMode && (
             <div
-              className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border bg-white px-3 py-2"
+              className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border bg-card px-3 py-2"
               style={{ borderColor: COLORS.sandLine }}
             >
               <span className="text-xs font-semibold text-primary">
@@ -1261,7 +1261,7 @@ export default function MyListings({
       {/* Listings grid */}
       {filtered.length === 0 ? (
         <div
-          style={{ borderColor: COLORS.sandLine, background: "white" }}
+          style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
           className="rounded-2xl border-2 border-dashed p-8 sm:p-10 text-center"
         >
           <Tag size={40} className="mx-auto text-muted mb-3" />

@@ -48,6 +48,7 @@ import {
   hydrateSuccessFeeStatusFromApi,
   getSuccessFeeStatus,
 } from "../config/successFeeStore.js";
+import { CHART } from "./dashboard/admin/shared/chartColors.js";
 
 // ============================================================
 // CONSTANTS
@@ -57,7 +58,7 @@ const TYPE_META = {
     label: { sw: "Ada ya Kuchapisha", en: "Listing Fee" },
     color: COLORS.gold,
   },
-  boost: { label: { sw: "Kukuza", en: "Boost" }, color: "#2563EB" },
+  boost: { label: { sw: "Kukuza", en: "Boost" }, color: COLORS.royal },
   leading: { label: { sw: "Kuongoza", en: "Leading" }, color: COLORS.green },
   advertisement: {
     label: { sw: "Matangazo", en: "Ads" },
@@ -65,20 +66,20 @@ const TYPE_META = {
   },
   reservation: {
     label: { sw: "Uhifadhi", en: "Reservation" },
-    color: "#2563EB",
+    color: COLORS.royal,
   },
   sale: { label: { sw: "Mauzo", en: "Sales" }, color: COLORS.green },
   purchase: {
     label: { sw: "Ununuzi", en: "Purchase" },
-    color: "#7C3AED",
+    color: COLORS.royalLight,
   },
   bundle_purchase: {
     label: { sw: "Vifurushi", en: "Bundles" },
-    color: "#0891B2",
+    color: CHART.slate,
   },
   success_fee: {
     label: { sw: "Ada ya Mafanikio", en: "Success Fee" },
-    color: "#7C3AED",
+    color: COLORS.royalLight,
   },
 };
 
@@ -90,7 +91,7 @@ const STATUS_META = {
   },
   pending: {
     label: { sw: "Inasubiri", en: "Pending" },
-    color: "#D97706",
+    color: COLORS.flame,
     Icon: Clock,
   },
   failed: {
@@ -674,10 +675,10 @@ export default function MyTransactionsPage() {
       {/* Stats grid — 3 cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
         <div
-          style={{ borderColor: COLORS.sandLine, background: "white" }}
+          style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
           className="rounded-xl border p-3 sm:p-4"
         >
-          <p className="text-[10px] font-semibold text-secondary uppercase">
+          <p className="text-xs font-semibold text-secondary uppercase">
             {t("Jumla ya Miamala", "Total Transactions")}
           </p>
           <p
@@ -689,10 +690,10 @@ export default function MyTransactionsPage() {
         </div>
 
         <div
-          style={{ borderColor: COLORS.sandLine, background: "white" }}
+          style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
           className="rounded-xl border p-3 sm:p-4"
         >
-          <p className="text-[10px] font-semibold text-secondary uppercase flex items-center gap-1">
+          <p className="text-xs font-semibold text-secondary uppercase flex items-center gap-1">
             <TrendingDown size={10} color={COLORS.rust} />
             {t("Umetumia", "Spent")}
           </p>
@@ -705,10 +706,10 @@ export default function MyTransactionsPage() {
         </div>
 
         <div
-          style={{ borderColor: COLORS.sandLine, background: "white" }}
+          style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
           className="rounded-xl border p-3 sm:p-4"
         >
-          <p className="text-[10px] font-semibold text-secondary uppercase flex items-center gap-1">
+          <p className="text-xs font-semibold text-secondary uppercase flex items-center gap-1">
             <TrendingUp size={10} color={COLORS.green} />
             {t("Umepata", "Earned")}
           </p>
@@ -729,7 +730,7 @@ export default function MyTransactionsPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t("Tafuta...", "Search...")}
-            className="smk-inline-search w-full rounded-lg border bg-white pl-3 pr-10 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
+            className="smk-inline-search w-full rounded-lg border bg-card pl-3 pr-10 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
             style={{ borderColor: COLORS.sandLine, WebkitAppearance: "none" }}
           />
           <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" />
@@ -746,13 +747,13 @@ export default function MyTransactionsPage() {
               key={key}
               onClick={() => setPeriodFilter(key)}
               style={{
-                background: isActive ? COLORS.gold : "white",
+                background: isActive ? COLORS.gold : "rgb(var(--c-card))",
                 color: isActive ? COLORS.night : "var(--text-primary)",
                 borderColor: COLORS.sandLine,
               }}
               className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full border whitespace-nowrap shrink-0"
             >
-              <Calendar size={11} />
+              <Calendar size={12} />
               {p.label[lang]}
             </button>
           );
@@ -766,7 +767,7 @@ export default function MyTransactionsPage() {
             key={f.key}
             onClick={() => setTypeFilter(f.key)}
             style={{
-              background: typeFilter === f.key ? COLORS.night : "white",
+              background: typeFilter === f.key ? COLORS.night : "rgb(var(--c-card))",
               color: typeFilter === f.key ? COLORS.sand : "var(--text-primary)",
               borderColor: COLORS.sandLine,
             }}
@@ -781,11 +782,11 @@ export default function MyTransactionsPage() {
       {downloadHistory.length > 0 && (
         <div
           className="rounded-xl border p-3 mb-4"
-          style={{ borderColor: COLORS.sandLine, background: "white" }}
+          style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
         >
           <div className="flex items-center justify-between gap-2 mb-2">
-            <p className="text-[10px] font-semibold text-secondary uppercase flex items-center gap-1">
-              <History size={11} />
+            <p className="text-xs font-semibold text-secondary uppercase flex items-center gap-1">
+              <History size={12} />
               {t("Historia ya Downloads", "Download History")}
             </p>
             <button
@@ -802,7 +803,7 @@ export default function MyTransactionsPage() {
                   downloadHistory.forEach((h) => removeDownloadEntry(h.id));
                 }
               }}
-              className="text-[10px] font-semibold text-muted hover:text-rust"
+              className="text-xs font-semibold text-muted hover:text-rust"
             >
               {t("Futa Zote", "Clear All")}
             </button>
@@ -816,12 +817,12 @@ export default function MyTransactionsPage() {
               >
                 <FileText size={12} className="text-muted shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-primary text-[11px] truncate">
+                  <p className="font-medium text-primary text-xs truncate">
                     {h.format?.toUpperCase()} ·{" "}
                     {PERIOD_OPTIONS.find((p) => p.key === h.period)?.label[lang] ||
                       h.period}
                   </p>
-                  <p className="text-[10px] text-muted">
+                  <p className="text-xs text-muted">
                     {timeAgo(h.createdAt, lang)}
                     {h.status === "failed" && (
                       <span style={{ color: COLORS.rust }}>
@@ -835,8 +836,8 @@ export default function MyTransactionsPage() {
                     onClick={() =>
                       performDownload(h.id, { format: h.format, period: h.period })
                     }
-                    className="text-[10px] font-semibold shrink-0"
-                    style={{ color: "#8A5A16" }}
+                    className="text-xs font-semibold shrink-0"
+                    style={{ color: COLORS.goldText }}
                   >
                     {t("Pakua Tena", "Re-download")}
                   </button>
@@ -850,7 +851,7 @@ export default function MyTransactionsPage() {
       {/* Transactions list */}
       {filtered.length === 0 ? (
         <div
-          style={{ borderColor: COLORS.sandLine, background: "white" }}
+          style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
           className="rounded-xl border-2 border-dashed p-10 text-center"
         >
           <Receipt size={40} className="mx-auto text-muted mb-3" />
@@ -880,7 +881,7 @@ export default function MyTransactionsPage() {
                 key={tr.id}
                 style={{
                   borderColor: COLORS.sandLine,
-                  background: "white",
+                  background: "rgb(var(--c-card))",
                 }}
                 className="rounded-xl border p-3 sm:p-4 flex items-start gap-3"
               >
@@ -898,13 +899,13 @@ export default function MyTransactionsPage() {
                         background: `${meta.color}15`,
                         color: meta.color,
                       }}
-                      className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      className="text-xs font-bold px-2 py-0.5 rounded-full"
                     >
                       {meta.label[lang]}
                     </span>
                     <span
                       style={{ color: stMeta.color }}
-                      className="text-[10px] font-semibold flex items-center gap-0.5"
+                      className="text-xs font-semibold flex items-center gap-0.5"
                     >
                       <StatusIcon size={10} />
                       {stMeta.label[lang]}
@@ -919,7 +920,7 @@ export default function MyTransactionsPage() {
                       {tr.property}
                     </p>
                   )}
-                  <p className="text-[11px] text-muted mt-1">
+                  <p className="text-xs text-muted mt-1">
                     {tr.ref} · {formatDateTZ(tr.at)} {/* ✅ Tumia formatDateTZ */}
                   </p>
                 </div>
@@ -938,7 +939,7 @@ export default function MyTransactionsPage() {
                   <button
                     onClick={() => setDetailTx(tr)}
                     style={{ borderColor: COLORS.sandLine, color: "var(--text-secondary)" }}
-                    className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg border hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg border hover:bg-page transition-colors"
                     title={t("Angalia Maelezo", "View Details")}
                   >
                     <Info size={10} />
@@ -950,9 +951,9 @@ export default function MyTransactionsPage() {
                     disabled={isReceiptBusy}
                     style={{
                       borderColor: COLORS.sandLine,
-                      color: "#8A5A16",
+                      color: COLORS.goldText,
                     }}
-                    className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg border hover:bg-amber-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg border hover:bg-gold/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     title={t("Pakua Risiti", "Download Receipt")}
                   >
                     {isReceiptBusy ? (
@@ -995,7 +996,7 @@ export default function MyTransactionsPage() {
             <div
               role="dialog"
               aria-modal="true"
-              className="bg-white rounded-2xl max-w-md w-full p-5 max-h-[90vh] overflow-y-auto"
+              className="bg-card rounded-2xl max-w-md w-full p-5 max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-start justify-between gap-3 mb-4">
@@ -1033,7 +1034,7 @@ export default function MyTransactionsPage() {
               <div className="flex items-center gap-2 mt-5">
                 <button
                   onClick={() => setDetailTx(null)}
-                  className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary"
+                  className="flex-1 py-2.5 border border-hairline rounded-lg text-sm font-semibold text-secondary"
                 >
                   {t("Funga", "Close")}
                 </button>
@@ -1061,7 +1062,7 @@ export default function MyTransactionsPage() {
       {/* ============================================================ */}
       {showDownloadModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5 max-h-[90vh] overflow-y-auto">
+          <div className="bg-card rounded-2xl max-w-md w-full p-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between gap-3 mb-4">
               <div className="min-w-0">
                 <h3 className="text-base font-bold text-primary">
@@ -1089,7 +1090,7 @@ export default function MyTransactionsPage() {
 
             {/* Format */}
             <div className="mb-4">
-              <p className="text-[10px] font-semibold text-secondary uppercase mb-2">
+              <p className="text-xs font-semibold text-secondary uppercase mb-2">
                 {t("Format", "Format")}
               </p>
               <div className="grid grid-cols-3 gap-2">
@@ -1107,10 +1108,10 @@ export default function MyTransactionsPage() {
                           ? COLORS.gold
                           : COLORS.sandLine,
                       background:
-                        downloadFormat === key ? `${COLORS.gold}15` : "white",
+                        downloadFormat === key ? `${COLORS.gold}15` : "rgb(var(--c-card))",
                       color:
                         downloadFormat === key
-                          ? "#8A5A16"
+                          ? COLORS.goldText
                           : "var(--text-primary)",
                     }}
                     className="flex flex-col items-center gap-1 py-3 rounded-xl border-2 transition-colors"
@@ -1124,7 +1125,7 @@ export default function MyTransactionsPage() {
 
             {/* Period */}
             <div className="mb-4">
-              <p className="text-[10px] font-semibold text-secondary uppercase mb-2">
+              <p className="text-xs font-semibold text-secondary uppercase mb-2">
                 {t("Kipindi", "Period")}
               </p>
               <div className="grid grid-cols-2 gap-2">
@@ -1136,8 +1137,8 @@ export default function MyTransactionsPage() {
                       onClick={() => setDownloadPeriod(p.key)}
                       style={{
                         borderColor: isActive ? COLORS.gold : COLORS.sandLine,
-                        background: isActive ? `${COLORS.gold}15` : "white",
-                        color: isActive ? "#8A5A16" : "var(--text-primary)",
+                        background: isActive ? `${COLORS.gold}15` : "rgb(var(--c-card))",
+                        color: isActive ? COLORS.goldText : "var(--text-primary)",
                       }}
                       className="text-xs font-semibold py-2 rounded-lg border-2 transition-colors"
                     >
@@ -1162,7 +1163,7 @@ export default function MyTransactionsPage() {
                     {t("Ada ya Mafanikio", "Success Fee")}
                   </span>
                   <span
-                    style={{ color: "#8A5A16" }}
+                    style={{ color: COLORS.goldText }}
                     className="text-sm font-bold"
                   >
                     {formatTZS(feeAmount)}
@@ -1171,9 +1172,9 @@ export default function MyTransactionsPage() {
                 {hasCredit && (
                   <p
                     style={{ color: COLORS.green }}
-                    className="text-[11px] mt-1 flex items-center gap-1"
+                    className="text-xs mt-1 flex items-center gap-1"
                   >
-                    <CheckCircle size={11} />
+                    <CheckCircle size={12} />
                     {t(
                       `Una credit ${creditRemaining} — unaweza kutumia`,
                       `You have ${creditRemaining} credit(s) — can use`
@@ -1200,7 +1201,7 @@ export default function MyTransactionsPage() {
                 <button
                   onClick={() => setShowDownloadModal(false)}
                   disabled={downloading}
-                  className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
+                  className="flex-1 py-2.5 border border-hairline rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
                 >
                   {t("Ghairi", "Cancel")}
                 </button>
@@ -1250,7 +1251,7 @@ export default function MyTransactionsPage() {
                   style={{
                     borderColor: COLORS.sandLine,
                     color: COLORS.green,
-                    background: "white",
+                    background: "rgb(var(--c-card))",
                   }}
                   className="w-full text-xs font-semibold py-2 rounded-lg border transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
                 >
@@ -1271,7 +1272,7 @@ export default function MyTransactionsPage() {
       {/* ============================================================ */}
       {showFeePayModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-5 max-h-[90vh] overflow-y-auto">
+          <div className="bg-card rounded-2xl max-w-lg w-full p-5 max-h-[90vh] overflow-y-auto">
             {feePayStage === "paying" ? (
               <PaymentGateway
                 amount={feeAmount}
@@ -1320,7 +1321,7 @@ export default function MyTransactionsPage() {
                       {t("Ada", "Fee")}
                     </span>
                     <span
-                      style={{ color: "#8A5A16" }}
+                      style={{ color: COLORS.goldText }}
                       className="text-sm font-bold"
                     >
                       {formatTZS(feeAmount)}
@@ -1360,7 +1361,7 @@ export default function MyTransactionsPage() {
       {/* ============================================================ */}
       {showBundleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-5 max-h-[90vh] overflow-y-auto">
+          <div className="bg-card rounded-2xl max-w-lg w-full p-5 max-h-[90vh] overflow-y-auto">
             {bundleStage === "pay" && pendingBundlePurchase ? (
               <PaymentGateway
                 amount={pendingBundlePurchase.price}
@@ -1413,7 +1414,7 @@ export default function MyTransactionsPage() {
                             : COLORS.sandLine,
                           background: isSelected
                             ? `${COLORS.gold}10`
-                            : "white",
+                            : "rgb(var(--c-card))",
                         }}
                         className="flex items-center gap-3 border-2 rounded-xl p-3 text-left transition-colors disabled:opacity-50"
                       >
@@ -1421,13 +1422,13 @@ export default function MyTransactionsPage() {
                           style={{ background: `${COLORS.gold}15` }}
                           className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
                         >
-                          <Package size={18} color="#8A5A16" />
+                          <Package size={18} color={COLORS.goldText} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-primary truncate">
                             {bundleName}
                           </p>
-                          <p className="text-[11px] text-secondary">
+                          <p className="text-xs text-secondary">
                             {b.credits?.success || 1} {t("credits", "credits")}
                           </p>
                         </div>
@@ -1460,7 +1461,7 @@ export default function MyTransactionsPage() {
                   <button
                     onClick={() => setShowBundleModal(false)}
                     disabled={bundleLoading}
-                    className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
+                    className="flex-1 py-2.5 border border-hairline rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
                   >
                     {t("Ghairi", "Cancel")}
                   </button>

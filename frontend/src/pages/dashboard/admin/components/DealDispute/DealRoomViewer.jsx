@@ -216,17 +216,17 @@ function DownloadBar({ dealId, deal, messages, lang }) {
 
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
       className="border rounded-lg px-3 py-2.5"
     >
       <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
         <div className="flex items-center gap-1.5">
           <Download size={12} color={COLORS.night} />
-          <p className="text-[11px] font-semibold text-secondary uppercase">
+          <p className="text-xs font-semibold text-secondary uppercase">
             {t("Pakua Mazungumzo", "Download Transcript")}
           </p>
         </div>
-        <p className="text-[10px] text-muted">
+        <p className="text-xs text-muted">
           Admin view
         </p>
       </div>
@@ -241,7 +241,7 @@ function DownloadBar({ dealId, deal, messages, lang }) {
               borderColor: COLORS.sandLine,
               color: COLORS.night,
             }}
-            className="text-xs font-semibold px-2 py-2 rounded-lg border bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
+            className="text-xs font-semibold px-2 py-2 rounded-lg border bg-card hover:bg-page transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
           >
             {downloading === fmt ? (
               <Loader2 size={12} className="animate-spin" />
@@ -254,7 +254,7 @@ function DownloadBar({ dealId, deal, messages, lang }) {
       </div>
 
       {error && (
-        <p className="text-[11px] mt-2" style={{ color: COLORS.rust }}>
+        <p className="text-xs mt-2" style={{ color: COLORS.rust }}>
           {error}
         </p>
       )}
@@ -293,7 +293,7 @@ function ReasonModal({
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60">
       <div
-        style={{ background: "white", borderColor: COLORS.sandLine }}
+        style={{ background: "rgb(var(--c-card))", borderColor: COLORS.sandLine }}
         className="rounded-2xl border w-full max-w-md p-5 shadow-2xl"
       >
         <div className="flex items-start justify-between gap-3 mb-3">
@@ -348,7 +348,7 @@ function ReasonModal({
           >
             {busy ? (
               <span className="inline-flex items-center justify-center gap-2">
-                <Loader2 size={13} className="animate-spin" />
+                <Loader2 size={14} className="animate-spin" />
                 {t("Inatuma...", "Sending...")}
               </span>
             ) : (
@@ -408,7 +408,7 @@ function ResolveDisputeModal({
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60">
       <div
-        style={{ background: "white", borderColor: COLORS.sandLine }}
+        style={{ background: "rgb(var(--c-card))", borderColor: COLORS.sandLine }}
         className="rounded-2xl border w-full max-w-md p-5 shadow-2xl"
       >
         <div className="flex items-start justify-between gap-3 mb-3">
@@ -445,7 +445,7 @@ function ResolveDisputeModal({
                 className="text-left rounded-lg border px-3 py-2 disabled:opacity-50"
               >
                 <p className="text-xs font-semibold text-primary">{o.title}</p>
-                <p className="text-[11px] text-secondary mt-0.5">{o.desc}</p>
+                <p className="text-xs text-secondary mt-0.5">{o.desc}</p>
               </button>
             );
           })}
@@ -490,7 +490,7 @@ function ResolveDisputeModal({
           >
             {busy ? (
               <span className="inline-flex items-center justify-center gap-2">
-                <Loader2 size={13} className="animate-spin" />
+                <Loader2 size={14} className="animate-spin" />
                 {t("Inatuma...", "Sending...")}
               </span>
             ) : (
@@ -704,9 +704,9 @@ function AdminActionsPanel({ deal, lang }) {
       className="border rounded-lg p-3 flex flex-col gap-3"
     >
       <div className="flex items-center gap-1.5">
-        <Shield size={13} color={COLORS.green} />
+        <Shield size={14} color={COLORS.green} />
         <p
-          className="text-[11px] font-bold uppercase"
+          className="text-xs font-bold uppercase"
           style={{ color: COLORS.green }}
         >
           {t("Vitendo vya Msimamizi", "Admin Actions")}
@@ -717,23 +717,23 @@ function AdminActionsPanel({ deal, lang }) {
       {isLocked && (
         <div
           style={{
-            borderColor: "rgba(232,163,61,0.5)",
-            background: "rgba(232,163,61,0.12)",
+            borderColor: "rgba(254,164,6,0.5)",
+            background: "rgba(254,164,6,0.12)",
           }}
-          className="rounded-lg border px-3 py-2 text-[11px] flex items-start gap-2"
+          className="rounded-lg border px-3 py-2 text-xs flex items-start gap-2"
         >
-          <Lock size={12} color="#8A5A16" className="shrink-0 mt-0.5" />
+          <Lock size={12} color={COLORS.goldText} className="shrink-0 mt-0.5" />
           <div className="min-w-0">
-            <p className="font-semibold" style={{ color: "#8A5A16" }}>
+            <p className="font-semibold" style={{ color: COLORS.goldText }}>
               {t("Room imesimamishwa", "Room is locked")}
             </p>
             {deal.lockedReason && (
-              <p className="text-[10px] mt-0.5" style={{ color: "#8A5A16" }}>
+              <p className="text-xs mt-0.5" style={{ color: COLORS.goldText }}>
                 {t("Sababu", "Reason")}: {deal.lockedReason}
               </p>
             )}
             {deal.lockedByName && (
-              <p className="text-[10px] mt-0.5 text-muted">
+              <p className="text-xs mt-0.5 text-muted">
                 {t("Na", "By")}: {deal.lockedByName}
               </p>
             )}
@@ -747,14 +747,14 @@ function AdminActionsPanel({ deal, lang }) {
             borderColor: "rgba(193,80,46,0.4)",
             background: "rgba(193,80,46,0.08)",
           }}
-          className="rounded-lg border px-3 py-2 text-[11px] flex items-start gap-2"
+          className="rounded-lg border px-3 py-2 text-xs flex items-start gap-2"
         >
           <Ban size={12} color={COLORS.rust} className="shrink-0 mt-0.5" />
           <div className="min-w-0">
             <p className="font-semibold" style={{ color: COLORS.rust }}>
               {t("Imeghairiwa na admin", "Cancelled by admin")}
             </p>
-            <p className="text-[10px] mt-0.5" style={{ color: COLORS.rust }}>
+            <p className="text-xs mt-0.5" style={{ color: COLORS.rust }}>
               {t(
                 "Haiwezi kufufuliwa na watumiaji — inahitaji support.",
                 "Cannot be reopened by users — requires support."
@@ -767,7 +767,7 @@ function AdminActionsPanel({ deal, lang }) {
       {/* ── Ujumbe wa admin ── */}
       {!isCancelled && (
         <div>
-          <label className="text-[11px] font-semibold text-secondary block mb-1.5">
+          <label className="text-xs font-semibold text-secondary block mb-1.5">
             {t("Tuma ujumbe kama Msimamizi", "Send message as Admin")}
           </label>
           <textarea
@@ -783,14 +783,14 @@ function AdminActionsPanel({ deal, lang }) {
               "Message will be visible to both parties..."
             )}
             style={{
-              background: "white",
+              background: "rgb(var(--c-card))",
               borderColor: COLORS.sandLine,
               color: COLORS.night,
             }}
             className="w-full rounded-lg border px-3 py-2 text-xs outline-none resize-none"
           />
           {msgError && (
-            <p className="text-[10px] mt-1" style={{ color: COLORS.rust }}>
+            <p className="text-xs mt-1" style={{ color: COLORS.rust }}>
               {msgError}
             </p>
           )}
@@ -800,9 +800,9 @@ function AdminActionsPanel({ deal, lang }) {
               disabled={sendingMsg || !message.trim()}
               style={{
                 background: message.trim() ? COLORS.green : COLORS.sandLine,
-                color: message.trim() ? "white" : "rgba(16,26,46,0.4)",
+                color: message.trim() ? "white" : "rgba(1,25,87,0.4)",
               }}
-              className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg disabled:cursor-not-allowed"
             >
               {sendingMsg ? (
                 <Loader2 size={12} className="animate-spin" />
@@ -825,11 +825,11 @@ function AdminActionsPanel({ deal, lang }) {
                 setLockOpen(true);
               }}
               style={{
-                borderColor: "rgba(232,163,61,0.4)",
-                color: "#8A5A16",
-                background: "white",
+                borderColor: "rgba(254,164,6,0.4)",
+                color: COLORS.goldText,
+                background: "rgb(var(--c-card))",
               }}
-              className="inline-flex items-center justify-center gap-1.5 text-[11px] font-semibold px-3 py-2 rounded-lg border hover:bg-amber-50 transition-colors"
+              className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border hover:bg-gold/10 transition-colors"
             >
               <Lock size={12} />
               {t("Simamisha Room (Lock)", "Suspend Room (Lock)")}
@@ -845,9 +845,9 @@ function AdminActionsPanel({ deal, lang }) {
               style={{
                 borderColor: "rgba(47,109,79,0.4)",
                 color: COLORS.green,
-                background: "white",
+                background: "rgb(var(--c-card))",
               }}
-              className="inline-flex items-center justify-center gap-1.5 text-[11px] font-semibold px-3 py-2 rounded-lg border hover:bg-green-50 transition-colors"
+              className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border hover:bg-green/10 transition-colors"
             >
               <Unlock size={12} />
               {t("Fungua Room (Unlock)", "Reopen Room (Unlock)")}
@@ -863,9 +863,9 @@ function AdminActionsPanel({ deal, lang }) {
               style={{
                 borderColor: "rgba(193,80,46,0.4)",
                 color: COLORS.rust,
-                background: "white",
+                background: "rgb(var(--c-card))",
               }}
-              className="inline-flex items-center justify-center gap-1.5 text-[11px] font-semibold px-3 py-2 rounded-lg border hover:bg-red-50 transition-colors"
+              className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border hover:bg-rust/10 transition-colors"
             >
               <Ban size={12} />
               {t("Ghairi Deal (Cancel)", "Cancel Deal")}
@@ -880,7 +880,7 @@ function AdminActionsPanel({ deal, lang }) {
         showExpireReservation ||
         showExpireInspection) && (
         <div>
-          <p className="text-[10px] font-semibold text-secondary uppercase mb-1.5">
+          <p className="text-xs font-semibold text-secondary uppercase mb-1.5">
             {t("Vitendo vingine", "Other actions")}
           </p>
           <div className="flex flex-col gap-1.5">
@@ -891,11 +891,11 @@ function AdminActionsPanel({ deal, lang }) {
                 style={{
                   borderColor: "rgba(193,80,46,0.4)",
                   color: COLORS.rust,
-                  background: "white",
+                  background: "rgb(var(--c-card))",
                 }}
-                className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg border hover:bg-red-50 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border hover:bg-rust/10 transition-colors"
               >
-                <Gavel size={11} />
+                <Gavel size={12} />
                 {t("Tatua Mgogoro (Resolve Dispute)", "Resolve Dispute")}
               </button>
             )}
@@ -906,11 +906,11 @@ function AdminActionsPanel({ deal, lang }) {
                 style={{
                   borderColor: "rgba(47,109,79,0.4)",
                   color: COLORS.green,
-                  background: "white",
+                  background: "rgb(var(--c-card))",
                 }}
-                className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg border hover:bg-green-50 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border hover:bg-green/10 transition-colors"
               >
-                <Banknote size={11} />
+                <Banknote size={12} />
                 {t("Rudisha Malipo (Refund)", "Refund Payments")} · {formatTZS(refundable)}
               </button>
             )}
@@ -921,11 +921,11 @@ function AdminActionsPanel({ deal, lang }) {
                 style={{
                   borderColor: COLORS.sandLine,
                   color: COLORS.night,
-                  background: "white",
+                  background: "rgb(var(--c-card))",
                 }}
-                className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg border hover:bg-gray-50 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border hover:bg-page transition-colors"
               >
-                <Timer size={11} />
+                <Timer size={12} />
                 {t("Maliza Reservation", "Expire Reservation")}
               </button>
             )}
@@ -936,11 +936,11 @@ function AdminActionsPanel({ deal, lang }) {
                 style={{
                   borderColor: COLORS.sandLine,
                   color: COLORS.night,
-                  background: "white",
+                  background: "rgb(var(--c-card))",
                 }}
-                className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg border hover:bg-gray-50 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border hover:bg-page transition-colors"
               >
-                <Clock size={11} />
+                <Clock size={12} />
                 {t("Maliza Ukaguzi", "Expire Inspection")}
               </button>
             )}
@@ -1177,7 +1177,7 @@ export default function DealRoomViewer({
           <div className="flex items-center gap-1.5 mb-1.5">
             <Flag size={12} color={COLORS.rust} />
             <p
-              className="text-[11px] font-semibold uppercase"
+              className="text-xs font-semibold uppercase"
               style={{ color: COLORS.rust }}
             >
               {t("Ripoti Zilizowasilishwa", "Submitted Reports")} (
@@ -1188,10 +1188,10 @@ export default function DealRoomViewer({
             {reports.map((r) => (
               <div
                 key={r.id ?? r.code}
-                className="text-[11px] text-secondary flex items-start gap-2"
+                className="text-xs text-secondary flex items-start gap-2"
               >
                 <AlertTriangle
-                  size={11}
+                  size={12}
                   color={COLORS.rust}
                   className="shrink-0 mt-0.5"
                 />
@@ -1216,7 +1216,7 @@ export default function DealRoomViewer({
 
       {/* Parties */}
       <div
-        style={{ borderColor: COLORS.sandLine, background: "white" }}
+        style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
         className="border rounded-lg px-3 py-2.5 flex flex-col gap-1.5"
       >
         <InfoRow
@@ -1240,7 +1240,7 @@ export default function DealRoomViewer({
 
       {/* Price Info */}
       <div
-        style={{ borderColor: COLORS.sandLine, background: "white" }}
+        style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
         className="border rounded-lg px-3 py-2.5 flex flex-col gap-1.5"
       >
         <InfoRow
@@ -1298,11 +1298,11 @@ export default function DealRoomViewer({
       {/* Payment Proof */}
       {paymentProof && (
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold text-secondary uppercase mb-1.5">
+          <p className="text-xs font-semibold text-secondary uppercase mb-1.5">
             {t("Uthibitisho wa Malipo", "Payment Proof")}
           </p>
           <div
-            style={{ borderColor: COLORS.sandLine, background: "white" }}
+            style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
             className="border rounded-lg px-3 py-2.5 flex flex-col gap-1.5"
           >
             <InfoRow
@@ -1327,7 +1327,7 @@ export default function DealRoomViewer({
                 href={paymentProof.url}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-1.5 text-xs font-semibold text-[#2F6D4F] hover:underline mt-1"
+                className="flex items-center gap-1.5 text-xs font-semibold text-green hover:underline mt-1"
               >
                 <Paperclip size={12} />
                 {t("Fungua Picha ya Uthibitisho", "Open Proof Image")}
@@ -1340,18 +1340,18 @@ export default function DealRoomViewer({
       {/* Message History */}
       <div className="min-w-0">
         <div className="flex items-center justify-between mb-1.5">
-          <p className="text-[11px] font-semibold text-secondary uppercase">
+          <p className="text-xs font-semibold text-secondary uppercase">
             {t("Historia ya Mazungumzo", "Message History")}
           </p>
           {messageCount > 0 && (
-            <span className="text-[10px] text-muted">
+            <span className="text-xs text-muted">
               {messageCount} {t("ujumbe", "messages")}
             </span>
           )}
         </div>
         <div
           style={{ borderColor: COLORS.sandLine }}
-          className="max-h-72 sm:max-h-96 overflow-y-auto flex flex-col gap-2 bg-gray-50/50 border rounded-lg p-2.5 sm:p-3"
+          className="max-h-72 sm:max-h-96 overflow-y-auto flex flex-col gap-2 bg-page/50 border rounded-lg p-2.5 sm:p-3"
         >
           {messageCount === 0 ? (
             <p className="text-xs text-muted text-center py-4">
@@ -1374,7 +1374,7 @@ export default function DealRoomViewer({
       </div>
 
       {/* Footer */}
-      <p className="text-[10px] text-muted text-center">
+      <p className="text-xs text-muted text-center">
         {t(
           "Admin view — unaweza kutuma ujumbe kama msimamizi, kusimamisha room, au kughairi.",
           "Admin view — you can send messages as admin, lock the room, or cancel."

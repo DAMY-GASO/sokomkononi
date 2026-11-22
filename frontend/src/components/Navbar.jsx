@@ -51,7 +51,7 @@ function NotificationBell() {
     >
       <Bell size={19} />
       {unreadCount > 0 && (
-        <span className="absolute right-1.5 top-1.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-rust px-1 text-[10px] font-bold text-white">
+        <span className="absolute right-1.5 top-1.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-rust px-1 text-xs font-bold text-white">
           {unreadCount > 99 ? "99+" : unreadCount}
         </span>
       )}
@@ -260,7 +260,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                 height={32}
                 className="h-8 w-8 shrink-0 rounded-full"
               />
-              <span className="truncate whitespace-nowrap text-[15px] font-bold tracking-tight sm:text-[16px]">
+              <span className="truncate whitespace-nowrap text-base font-bold tracking-tight sm:text-base">
                 Soko<span className="text-gold">Mkononi</span>
               </span>
             </Link>
@@ -377,10 +377,10 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                   type="button"
                   onClick={() => toggleMenu("lang")}
                   aria-expanded={openMenu === "lang"}
-                  className="flex h-9 items-center gap-1 rounded-full border border-white/20 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white sm:h-10 sm:gap-1.5 sm:px-3 sm:text-[12px]"
+                  className="flex h-9 items-center gap-1 rounded-full border border-white/20 px-2.5 text-xs font-semibold uppercase tracking-wider text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white sm:h-10 sm:gap-1.5 sm:px-3 sm:text-xs"
                 >
                   <Globe size={12} className="sm:hidden" />
-                  <Globe size={13} className="hidden sm:block" />
+                  <Globe size={14} className="hidden sm:block" />
                   {currentLang.code}
                 </button>
                 {openMenu === "lang" && (
@@ -412,7 +412,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                   to={dashboardTo}
                   className="hidden h-10 items-center gap-1.5 rounded-full bg-gold px-3.5 text-sm font-semibold text-night keep-light transition-colors hover:bg-flame sm:inline-flex"
                 >
-                  <LayoutDashboard size={15} />
+                  <LayoutDashboard size={16} />
                   {dashboardLabel}
                 </Link>
               )}
@@ -429,7 +429,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                     {user.avatarUrl ? (
                       <img src={user.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
                     ) : (
-                      <span className="grid h-8 w-8 place-items-center rounded-full bg-gold text-[12px] font-bold text-night keep-light">
+                      <span className="grid h-8 w-8 place-items-center rounded-full bg-gold text-xs font-bold text-night keep-light">
                         {safeStr(user.name)?.charAt(0)?.toUpperCase() || "U"}
                       </span>
                     )}
@@ -444,7 +444,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                         <p className="truncate text-sm font-semibold text-white">
                           {safeStr(user.name) || "User"}
                         </p>
-                        <p className="truncate text-[12px] text-white/55">
+                        <p className="truncate text-xs text-white/55">
                           {safeStr(user.email)}
                         </p>
                       </div>
@@ -458,7 +458,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                           to={to}
                           className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/85 transition-colors hover:bg-white/[0.06] hover:text-white"
                         >
-                          <Icon size={15} className="text-white/55" />
+                          <Icon size={16} className="text-white/55" />
                           {label}
                         </Link>
                       ))}
@@ -466,14 +466,14 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                         onClick={handleShare}
                         className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-white/85 transition-colors hover:bg-white/[0.06] hover:text-white"
                       >
-                        <Share2 size={15} className="text-white/55" />
+                        <Share2 size={16} className="text-white/55" />
                         {lang === "sw" ? "Shiriki SokoMkononi" : "Share SokoMkononi"}
                       </button>
                       <button
                         onClick={handleTheme}
                         className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-white/85 transition-colors hover:bg-white/[0.06] hover:text-white"
                       >
-                        {theme === "dark" ? <Sun size={15} className="text-white/55" /> : <Moon size={15} className="text-white/55" />}
+                        {theme === "dark" ? <Sun size={16} className="text-white/55" /> : <Moon size={16} className="text-white/55" />}
                         {theme === "dark"
                           ? (lang === "sw" ? "Hali ya Mwanga" : "Light mode")
                           : (lang === "sw" ? "Hali ya Giza" : "Dark mode")}
@@ -483,7 +483,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                         onClick={handleLogout}
                         className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-[#FF8A65] transition-colors hover:bg-rust/20"
                       >
-                        <LogOut size={15} />
+                        <LogOut size={16} />
                         {lang === "sw" ? "Toka" : "Logout"}
                       </button>
                     </div>
@@ -523,7 +523,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
           <div className="flex items-center justify-between border-b border-white/[0.08] px-5 py-4">
             <div className="flex items-center gap-2.5">
               <img src="/logo.webp" alt="" className="h-8 w-8 rounded-full" />
-              <span className="text-[15px] font-bold text-white">SokoMkononi</span>
+              <span className="text-base font-bold text-white">SokoMkononi</span>
             </div>
             <button
               onClick={() => setMobileOpen(false)}
@@ -537,7 +537,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
             {user && (
               <Link
                 to={dashboardTo}
-                className="mb-2 flex items-center gap-2 rounded-lg bg-gold px-3 py-3 text-[15px] font-semibold text-night keep-light"
+                className="mb-2 flex items-center gap-2 rounded-lg bg-gold px-3 py-3 text-base font-semibold text-night keep-light"
               >
                 <LayoutDashboard size={16} />
                 {dashboardLabel}
@@ -545,13 +545,13 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
             )}
             <Link
               to="/"
-              className="flex items-center rounded-lg px-3 py-3 text-[15px] font-medium text-white/85 hover:bg-white/[0.06] hover:text-white"
+              className="flex items-center rounded-lg px-3 py-3 text-base font-medium text-white/85 hover:bg-white/[0.06] hover:text-white"
             >
               {lang === "sw" ? "Nyumbani" : "Home"}
             </Link>
             <button
               onClick={() => setMobileSub((v) => (v === "cat" ? null : "cat"))}
-              className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-[15px] font-medium text-white/85 hover:bg-white/[0.06] hover:text-white"
+              className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-base font-medium text-white/85 hover:bg-white/[0.06] hover:text-white"
             >
               <span>{lang === "sw" ? "Kategoria" : "Categories"}</span>
               <Chev open={mobileSub === "cat"} />
@@ -582,19 +582,19 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
             {/* Listings → /mali-zote (mobile) */}
             <Link
               to="/mali-zote"
-              className="flex items-center rounded-lg px-3 py-3 text-[15px] font-medium text-white/85 hover:bg-white/[0.06] hover:text-white"
+              className="flex items-center rounded-lg px-3 py-3 text-base font-medium text-white/85 hover:bg-white/[0.06] hover:text-white"
             >
               {lang === "sw" ? "Mali Zote" : "Listings"}
             </Link>
             <Link
               to="/kuhusu"
-              className="flex items-center rounded-lg px-3 py-3 text-[15px] font-medium text-white/85 hover:bg-white/[0.06] hover:text-white"
+              className="flex items-center rounded-lg px-3 py-3 text-base font-medium text-white/85 hover:bg-white/[0.06] hover:text-white"
             >
               {lang === "sw" ? "Kuhusu" : "About"}
             </Link>
             <button
               onClick={() => setMobileSub((v) => (v === "help" ? null : "help"))}
-              className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-[15px] font-medium text-white/85 hover:bg-white/[0.06] hover:text-white"
+              className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-base font-medium text-white/85 hover:bg-white/[0.06] hover:text-white"
             >
               <span>{lang === "sw" ? "Msaada" : "Help"}</span>
               <Chev open={mobileSub === "help"} />
@@ -614,26 +614,26 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
             )}
             <button
               onClick={handleTheme}
-              className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-[15px] font-medium text-white/85 hover:bg-white/[0.06] hover:text-white"
+              className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-base font-medium text-white/85 hover:bg-white/[0.06] hover:text-white"
             >
               <div className="flex items-center gap-2">
                 {theme === "dark" ? <Sun size={16} className="text-white/60" /> : <Moon size={16} className="text-white/60" />}
                 <span>{lang === "sw" ? "Mwonekano" : "Appearance"}</span>
               </div>
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-white/50">
+              <span className="text-xs font-semibold uppercase tracking-wider text-white/50">
                 {theme === "dark" ? (lang === "sw" ? "Giza" : "Dark") : (lang === "sw" ? "Mwanga" : "Light")}
               </span>
             </button>
             <button
               onClick={() => setMobileSub((v) => (v === "lang" ? null : "lang"))}
-              className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-[15px] font-medium text-white/85 hover:bg-white/[0.06] hover:text-white"
+              className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-base font-medium text-white/85 hover:bg-white/[0.06] hover:text-white"
             >
               <div className="flex items-center gap-2">
                 <Globe size={16} className="text-white/60" />
                 <span>{lang === "sw" ? "Lugha" : "Language"}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-white/50">
+                <span className="text-xs font-semibold uppercase tracking-wider text-white/50">
                   {currentLang.code}
                 </span>
                 <Chev open={mobileSub === "lang"} />

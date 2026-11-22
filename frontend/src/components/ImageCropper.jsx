@@ -239,7 +239,7 @@ export default function ImageCropper({
       aria-modal="true"
       aria-label={t("Kata picha", "Crop photo")}
     >
-      <div className="w-full max-w-md rounded-2xl bg-white p-4 sm:p-5 shadow-2xl">
+      <div className="w-full max-w-md rounded-2xl bg-card p-4 sm:p-5 shadow-2xl">
         {/* Header */}
         <div className="mb-3 flex items-center justify-between">
           <div>
@@ -257,7 +257,7 @@ export default function ImageCropper({
             type="button"
             onClick={onCancel}
             aria-label={t("Funga", "Close")}
-            className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
+            className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-page"
           >
             <X size={18} />
           </button>
@@ -266,7 +266,7 @@ export default function ImageCropper({
         {/* Eneo la kukata */}
         <div
           ref={boxRef}
-          className="relative mx-auto aspect-square w-full touch-none select-none overflow-hidden rounded-xl border border-gray-200 bg-white cursor-grab active:cursor-grabbing"
+          className="relative mx-auto aspect-square w-full touch-none select-none overflow-hidden rounded-xl border border-hairline bg-white cursor-grab active:cursor-grabbing"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
@@ -314,7 +314,7 @@ export default function ImageCropper({
           )}
 
           {loadError && (
-            <div className="absolute inset-0 flex items-center justify-center bg-[#101A2E] p-5 text-center text-sm text-white/80">
+            <div className="absolute inset-0 flex items-center justify-center bg-night p-5 text-center text-sm text-white/80">
               {t(
                 "Picha hii haiwezi kusomwa. Jaribu picha ya JPG au PNG.",
                 "This image can't be read. Try a JPG or PNG photo."
@@ -335,7 +335,7 @@ export default function ImageCropper({
             onChange={(e) => changeZoom(Number(e.target.value))}
             disabled={!nat.w || loadError}
             aria-label={t("Kuvuta", "Zoom")}
-            className="h-1.5 w-full cursor-pointer accent-[#FEA406]"
+            className="h-1.5 w-full cursor-pointer accent-gold"
           />
           <ZoomIn size={16} className="shrink-0 text-secondary" />
         </div>
@@ -349,7 +349,7 @@ export default function ImageCropper({
               resetOffset();
             }}
             disabled={!nat.w || loadError}
-            className="rounded-full border border-gray-200 px-3 py-1 text-primary hover:bg-gray-50 disabled:opacity-50"
+            className="rounded-full border border-hairline px-3 py-1 text-primary hover:bg-page disabled:opacity-50"
           >
             {t("Picha nzima", "Fit")}
           </button>
@@ -360,7 +360,7 @@ export default function ImageCropper({
               resetOffset();
             }}
             disabled={!nat.w || loadError}
-            className="rounded-full border border-gray-200 px-3 py-1 text-primary hover:bg-gray-50 disabled:opacity-50"
+            className="rounded-full border border-hairline px-3 py-1 text-primary hover:bg-page disabled:opacity-50"
           >
             {t("Jaza mraba", "Fill")}
           </button>
@@ -372,7 +372,7 @@ export default function ImageCropper({
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-primary hover:bg-gray-50 disabled:opacity-50"
+            className="flex-1 rounded-xl border border-hairline px-4 py-2.5 text-sm font-semibold text-primary hover:bg-page disabled:opacity-50"
           >
             {t("Ghairi", "Cancel")}
           </button>
@@ -380,7 +380,7 @@ export default function ImageCropper({
             type="button"
             onClick={handleConfirm}
             disabled={busy || !nat.w || loadError}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#FEA406] px-4 py-2.5 text-sm font-semibold text-[#101A2E] hover:bg-[#D98706] disabled:opacity-50"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-gold px-4 py-2.5 text-sm font-semibold text-night hover:bg-flame disabled:opacity-50"
           >
             <Check size={16} />
             {busy ? t("Inakata...", "Cropping...") : t("Kata na Tumia", "Crop & Use")}

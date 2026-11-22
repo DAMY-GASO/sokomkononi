@@ -43,21 +43,21 @@ import {
 // COLOR MAPS
 // ============================================================
 const COLOR_MAP = {
-  gray: { bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
-  gold: { bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
+  gray: { bg: "rgba(1,25,87,0.08)", fg: COLORS.night },
+  gold: { bg: "rgba(254,164,6,0.16)", fg: COLORS.goldText },
   rust: { bg: "rgba(193,80,46,0.12)", fg: COLORS.rust },
   green: { bg: "rgba(47,109,79,0.12)", fg: COLORS.green },
-  blue: { bg: "rgba(37,99,235,0.12)", fg: "#2563EB" },
-  night: { bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
+  blue: { bg: "rgba(0,98,253,0.12)", fg: COLORS.royal },
+  night: { bg: "rgba(1,25,87,0.08)", fg: COLORS.night },
 };
 
 const FEEDBACK_ICONS = { MessageSquare, AlertTriangle, Lightbulb, Star };
 
 const FEEDBACK_STATUS_META = {
   new: { label: { sw: "Mpya", en: "New" }, bg: "rgba(193,80,46,0.12)", fg: COLORS.rust },
-  read: { label: { sw: "Imesomwa", en: "Read" }, bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
+  read: { label: { sw: "Imesomwa", en: "Read" }, bg: "rgba(254,164,6,0.16)", fg: COLORS.goldText },
   answered: { label: { sw: "Imejibiwa", en: "Answered" }, bg: "rgba(47,109,79,0.12)", fg: COLORS.green },
-  archived: { label: { sw: "Imewekwa kwenye kumbukumbu", en: "Archived" }, bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
+  archived: { label: { sw: "Imewekwa kwenye kumbukumbu", en: "Archived" }, bg: "rgba(1,25,87,0.08)", fg: COLORS.night },
 };
 
 // ============================================================
@@ -70,7 +70,7 @@ function AttachmentPreview({ att }) {
       href={att.url}
       target="_blank"
       rel="noreferrer"
-      className="flex items-center gap-2 text-xs text-primary bg-white rounded-lg px-2.5 py-1.5 hover:bg-gray-50 transition-colors w-full min-w-0"
+      className="flex items-center gap-2 text-xs text-primary bg-card rounded-lg px-2.5 py-1.5 hover:bg-page transition-colors w-full min-w-0"
     >
       {att.isImage ? (
         <img src={att.url} alt={att.name} className="w-9 h-9 rounded object-cover shrink-0" />
@@ -78,9 +78,9 @@ function AttachmentPreview({ att }) {
         <Paperclip size={12} className="text-muted shrink-0" />
       )}
       <div className="flex-1 min-w-0">
-        <p className="truncate font-medium text-[11px]">{att.name}</p>
+        <p className="truncate font-medium text-xs">{att.name}</p>
         {att.uploadedByName && (
-          <p className="text-[10px] text-muted truncate">{att.uploadedByName}</p>
+          <p className="text-xs text-muted truncate">{att.uploadedByName}</p>
         )}
       </div>
     </a>
@@ -262,7 +262,7 @@ function CannedPicker({ lang, currentText = "", onPick, disabled = false }) {
         title={t("Majibu ya haraka", "Canned responses")}
         aria-label={t("Majibu ya haraka", "Canned responses")}
         className="w-9 h-9 rounded-full flex items-center justify-center text-muted hover:text-secondary border disabled:opacity-50"
-        style={{ borderColor: COLORS.sandLine, background: "white" }}
+        style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
       >
         <Zap size={14} />
       </button>
@@ -271,21 +271,21 @@ function CannedPicker({ lang, currentText = "", onPick, disabled = false }) {
         <div
           style={{
             borderColor: COLORS.sandLine,
-            background: "white",
+            background: "rgb(var(--c-card))",
             position: "fixed",
             left: pos.left,
             bottom: pos.bottom,
           }}
           className="z-50 w-64 max-w-[calc(100vw-16px)] rounded-xl border shadow-lg p-1.5"
         >
-          <p className="text-[10px] font-semibold text-secondary uppercase px-2 py-1">
+          <p className="text-xs font-semibold text-secondary uppercase px-2 py-1">
             {t("Majibu ya haraka", "Canned responses")}
           </p>
           <div className="max-h-56 overflow-y-auto">
             {items.map((it) => (
               <div
                 key={it.id}
-                className="group flex items-center gap-1 rounded-lg hover:bg-gray-50"
+                className="group flex items-center gap-1 rounded-lg hover:bg-page"
               >
                 <button
                   type="button"
@@ -298,7 +298,7 @@ function CannedPicker({ lang, currentText = "", onPick, disabled = false }) {
                   <p className="text-xs font-semibold text-primary truncate">
                     {it.label}
                   </p>
-                  <p className="text-[10px] text-muted line-clamp-2 break-words">
+                  <p className="text-xs text-muted line-clamp-2 break-words">
                     {it.text}
                   </p>
                 </button>
@@ -307,9 +307,9 @@ function CannedPicker({ lang, currentText = "", onPick, disabled = false }) {
                     type="button"
                     onClick={() => remove(it.id)}
                     aria-label={t("Ondoa template", "Remove template")}
-                    className="p-1.5 text-muted hover:text-[#C1502E] shrink-0"
+                    className="p-1.5 text-muted hover:text-rust shrink-0"
                   >
-                    <Trash2 size={11} />
+                    <Trash2 size={12} />
                   </button>
                 )}
               </div>
@@ -319,7 +319,7 @@ function CannedPicker({ lang, currentText = "", onPick, disabled = false }) {
             type="button"
             onClick={handleSaveCurrent}
             disabled={!currentText.trim()}
-            className="w-full mt-1 text-[11px] font-semibold px-2 py-1.5 rounded-lg border disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full mt-1 text-xs font-semibold px-2 py-1.5 rounded-lg border disabled:opacity-40 disabled:cursor-not-allowed"
             style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
           >
             {t("Hifadhi andiko la sasa kama template", "Save current text as template")}
@@ -396,7 +396,7 @@ function FeedbackAnalytics({ feedback, lang }) {
 
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
       className="rounded-xl border p-3 sm:p-4 mb-5 w-full min-w-0"
     >
       <button
@@ -408,7 +408,7 @@ function FeedbackAnalytics({ feedback, lang }) {
           <p className="text-sm font-semibold text-primary">
             {t("Uchambuzi wa Rating", "Rating Analytics")}
           </p>
-          <p className="text-[11px] text-muted">
+          <p className="text-xs text-muted">
             {t(
               `Wastani ${overall.toFixed(1)}/5 kutoka maoni ${ratedCount}`,
               `Average ${overall.toFixed(1)}/5 from ${ratedCount} ratings`
@@ -435,13 +435,13 @@ function FeedbackAnalytics({ feedback, lang }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-4">
           {/* Trend */}
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold text-secondary uppercase mb-2">
+            <p className="text-xs font-semibold text-secondary uppercase mb-2">
               {t("Mwelekeo (miezi 6)", "Trend (6 months)")}
             </p>
             <div className="flex items-end justify-between gap-1.5" style={{ height: BAR_H + 34 }}>
               {months.map((m) => (
                 <div key={m.key} className="flex-1 min-w-0 flex flex-col items-center justify-end">
-                  <span className="text-[10px] font-bold text-primary mb-0.5">
+                  <span className="text-xs font-bold text-primary mb-0.5">
                     {m.avg != null ? m.avg.toFixed(1) : "—"}
                   </span>
                   <div
@@ -456,7 +456,7 @@ function FeedbackAnalytics({ feedback, lang }) {
                     }}
                     className="w-full max-w-[28px] rounded-t"
                   />
-                  <span className="text-[10px] text-muted mt-1 truncate w-full text-center">
+                  <span className="text-xs text-muted mt-1 truncate w-full text-center">
                     {m.label}
                   </span>
                 </div>
@@ -466,12 +466,12 @@ function FeedbackAnalytics({ feedback, lang }) {
 
           {/* Distribution */}
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold text-secondary uppercase mb-2">
+            <p className="text-xs font-semibold text-secondary uppercase mb-2">
               {t("Mgawanyo wa nyota", "Star distribution")}
             </p>
             <div className="flex flex-col gap-1.5">
               {[5, 4, 3, 2, 1].map((n) => (
-                <div key={n} className="flex items-center gap-2 text-[11px]">
+                <div key={n} className="flex items-center gap-2 text-xs">
                   <span className="w-6 flex items-center gap-0.5 text-secondary shrink-0">
                     {n}
                     <Star size={10} fill={COLORS.gold} color={COLORS.gold} />
@@ -652,7 +652,7 @@ function TicketCard({
       id={`ticket-${ticket.id}`}
       style={{
         borderColor: highlight ? COLORS.gold : COLORS.sandLine,
-        background: "white",
+        background: "rgb(var(--c-card))",
         boxShadow: highlight ? `0 0 0 2px ${COLORS.gold}40` : "none",
       }}
       className="rounded-xl border overflow-hidden w-full max-w-full min-w-0 transition-shadow"
@@ -670,7 +670,7 @@ function TicketCard({
             />
           )}
           <div
-            style={{ background: catColors?.bg || "#F5F3EC" }}
+            style={{ background: catColors?.bg || COLORS.sand }}
             className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
           >
             <Headphones size={16} color={catColors.fg} />
@@ -682,36 +682,36 @@ function TicketCard({
               {isNew && (
                 <span
                   style={{ background: COLORS.rust, color: "white" }}
-                  className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+                  className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
                 >
                   NEW
                 </span>
               )}
-              <span className="text-[10px] font-bold text-muted shrink-0 whitespace-nowrap">
+              <span className="text-xs font-bold text-muted shrink-0 whitespace-nowrap">
                 {ticket.code || ticket.id}
               </span>
               <span
                 style={{ background: catColors?.bg, color: catColors?.fg }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+                className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
               >
                 {category?.label?.[lang] || ticket.category}
               </span>
               <span
                 style={{ background: priColors?.bg, color: priColors?.fg }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+                className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
               >
                 {priority?.label?.[lang] || ticket.priority}
               </span>
               <span
                 style={{ background: statusColors?.bg, color: statusColors?.fg }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+                className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
               >
                 {status?.label?.[lang] || ticket.status}
               </span>
               {ticket.slaOverdue && (
                 <span
                   style={{ background: "rgba(193,80,46,0.2)", color: COLORS.rust }}
-                  className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+                  className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
                 >
                   ⏰ {t("SLA IMEPITA", "SLA OVERDUE")}
                 </span>
@@ -724,19 +724,19 @@ function TicketCard({
 
             <div className="flex items-center gap-2 mt-1 text-xs text-secondary flex-wrap">
               <span className="flex items-center gap-1 min-w-0">
-                <User size={11} className="shrink-0" />
+                <User size={12} className="shrink-0" />
                 <span className="truncate">{ticket.userName}</span>
               </span>
               <span className="text-muted shrink-0">•</span>
               <span className="flex items-center gap-1 shrink-0">
-                <Clock size={11} />
+                <Clock size={12} />
                 {timeAgo(ticket.createdAt, lang)}
               </span>
               {ticket.assignedToName && (
                 <>
                   <span className="text-muted shrink-0">•</span>
                   <span className="flex items-center gap-1 min-w-0">
-                    <UserCheck size={11} className="shrink-0" />
+                    <UserCheck size={12} className="shrink-0" />
                     <span className="truncate">{ticket.assignedToName}</span>
                   </span>
                 </>
@@ -770,7 +770,7 @@ function TicketCard({
 
           {/* Conversation */}
           <div className="min-w-0 w-full">
-            <p className="text-[10px] font-semibold text-secondary uppercase mb-2">
+            <p className="text-xs font-semibold text-secondary uppercase mb-2">
               {t("Mazungumzo", "Conversation")}
             </p>
             <div className="flex flex-col gap-2 max-h-72 overflow-y-auto pr-1">
@@ -783,16 +783,16 @@ function TicketCard({
                   >
                     <div
                       style={{
-                        background: isAdmin ? COLORS.night : "white",
+                        background: isAdmin ? COLORS.night : "rgb(var(--c-card))",
                         color: isAdmin ? COLORS.sand : "var(--text-primary)",
                         borderColor: COLORS.sandLine,
                       }}
                       className="border rounded-2xl px-3 py-2 max-w-[85%] text-xs min-w-0"
                     >
                       <p
-                        className="font-semibold mb-0.5 text-[10px] uppercase"
+                        className="font-semibold mb-0.5 text-xs uppercase"
                         style={{
-                          color: isAdmin ? "rgba(245,243,236,0.6)" : "var(--text-muted)",
+                          color: isAdmin ? "rgba(244,247,252,0.6)" : "var(--text-muted)",
                         }}
                       >
                         {msg.senderName}
@@ -810,9 +810,9 @@ function TicketCard({
                         </div>
                       )}
                       <p
-                        className="text-[10px] mt-1"
+                        className="text-xs mt-1"
                         style={{
-                          color: isAdmin ? "rgba(245,243,236,0.5)" : "var(--text-muted)",
+                          color: isAdmin ? "rgba(244,247,252,0.5)" : "var(--text-muted)",
                         }}
                       >
                         {timeAgo(msg.at, lang)}
@@ -842,7 +842,7 @@ function TicketCard({
                   disabled={isBusy("reply")}
                   title={t("Ambatisha faili", "Attach files")}
                   className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-muted hover:text-secondary border"
-                  style={{ borderColor: COLORS.sandLine, background: "white" }}
+                  style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
                 >
                   <Paperclip size={14} />
                 </button>
@@ -861,7 +861,7 @@ function TicketCard({
                   placeholder={t("Andika jibu...", "Type a reply...")}
                   disabled={isBusy("reply")}
                   style={{ borderColor: COLORS.sandLine }}
-                  className="flex-1 min-w-0 rounded-full border px-3 py-2 text-xs outline-none bg-white disabled:opacity-50"
+                  className="flex-1 min-w-0 rounded-full border px-3 py-2 text-xs outline-none bg-card disabled:opacity-50"
                 />
                 <button
                   onClick={handleSendReply}
@@ -895,7 +895,7 @@ function TicketCard({
                   {replyFiles.map((f, i) => (
                     <div
                       key={i}
-                      className="relative flex items-center gap-1.5 text-xs bg-white border rounded-lg px-2 py-1.5"
+                      className="relative flex items-center gap-1.5 text-xs bg-card border rounded-lg px-2 py-1.5"
                       style={{ borderColor: COLORS.sandLine }}
                     >
                       {f.preview ? (
@@ -907,7 +907,7 @@ function TicketCard({
                       <button
                         type="button"
                         onClick={() => removeReplyFile(i)}
-                        className="text-muted hover:text-[#C1502E]"
+                        className="text-muted hover:text-rust"
                       >
                         <Trash2 size={12} />
                       </button>
@@ -966,7 +966,7 @@ function TicketCard({
                   onChange={(e) => handlePriorityChange(e.target.value)}
                   disabled={isBusy("priority")}
                   style={{ borderColor: COLORS.sandLine }}
-                  className="text-xs font-semibold px-2 py-2 rounded-lg border bg-white outline-none w-full sm:w-auto sm:ml-auto disabled:opacity-50"
+                  className="text-xs font-semibold px-2 py-2 rounded-lg border bg-card outline-none w-full sm:w-auto sm:ml-auto disabled:opacity-50"
                 >
                   {TICKET_PRIORITIES.map((p) => (
                     <option key={p.key} value={p.key}>
@@ -978,7 +978,7 @@ function TicketCard({
                 <button
                   onClick={handleRemove}
                   disabled={isBusy("remove")}
-                  className="p-2 text-muted hover:text-[#C1502E] transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-2 text-muted hover:text-rust transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label={t("Ondoa", "Remove")}
                 >
                   {isBusy("remove") ? (
@@ -1007,7 +1007,7 @@ function TicketCard({
               <button
                 onClick={handleRemove}
                 disabled={isBusy("remove")}
-                className="ml-auto p-2 text-muted hover:text-[#C1502E] transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="ml-auto p-2 text-muted hover:text-rust transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label={t("Ondoa", "Remove")}
               >
                 {isBusy("remove") ? (
@@ -1066,7 +1066,7 @@ function FeedbackCard({ item, lang }) {
 
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
       className="rounded-xl border overflow-hidden w-full max-w-full min-w-0"
     >
       <div className="p-3 sm:p-4 w-full min-w-0">
@@ -1081,14 +1081,14 @@ function FeedbackCard({ item, lang }) {
           <div className="flex-1 min-w-0 overflow-hidden">
             <div className="flex items-center gap-1.5 flex-wrap mb-1">
               <span
-                style={{ background: `${COLORS.gold}20`, color: "#8A5A16" }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+                style={{ background: `${COLORS.gold}20`, color: COLORS.goldText }}
+                className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
               >
                 {ft.label?.[lang] || ft.label?.sw}
               </span>
               <span
                 style={{ background: status.bg, color: status.fg }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+                className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
               >
                 {status.label?.[lang] || status.label?.sw}
               </span>
@@ -1097,9 +1097,9 @@ function FeedbackCard({ item, lang }) {
                   {[1, 2, 3, 4, 5].map((n) => (
                     <Star
                       key={n}
-                      size={11}
+                      size={12}
                       fill={n <= item.rating ? COLORS.gold : "none"}
-                      color={n <= item.rating ? COLORS.gold : "#D1D5DB"}
+                      color={n <= item.rating ? COLORS.gold : COLORS.sandLine}
                     />
                   ))}
                 </span>
@@ -1112,7 +1112,7 @@ function FeedbackCard({ item, lang }) {
 
             <div className="flex items-center gap-2 mt-1 text-xs text-secondary flex-wrap">
               <span className="flex items-center gap-1 min-w-0">
-                <User size={11} className="shrink-0" />
+                <User size={12} className="shrink-0" />
                 <span className="truncate">{item.userName || "—"}</span>
               </span>
               {item.userEmail && (
@@ -1123,7 +1123,7 @@ function FeedbackCard({ item, lang }) {
               )}
               <span className="text-muted shrink-0">•</span>
               <span className="flex items-center gap-1 shrink-0">
-                <Clock size={11} />
+                <Clock size={12} />
                 {timeAgo(item.createdAt, lang)}
               </span>
             </div>
@@ -1154,11 +1154,11 @@ function FeedbackCard({ item, lang }) {
           )}
 
           <div className="min-w-0 w-full">
-            <p className="text-[10px] font-semibold text-secondary uppercase mb-1">
+            <p className="text-xs font-semibold text-secondary uppercase mb-1">
               {t("Ujumbe", "Message")}
             </p>
             <div
-              style={{ borderColor: COLORS.sandLine, background: "white" }}
+              style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
               className="rounded-lg border px-3 py-2.5 text-xs text-primary leading-relaxed whitespace-pre-wrap break-words w-full min-w-0"
             >
               {item.message || "—"}
@@ -1167,7 +1167,7 @@ function FeedbackCard({ item, lang }) {
 
           {item.adminReply && (
             <div className="min-w-0 w-full">
-              <p className="text-[10px] font-semibold text-secondary uppercase mb-1">
+              <p className="text-xs font-semibold text-secondary uppercase mb-1">
                 {t("Jibu la Admin", "Admin Reply")}
                 {item.repliedAt && (
                   <span className="text-muted font-normal ml-2">
@@ -1192,7 +1192,7 @@ function FeedbackCard({ item, lang }) {
               placeholder={t("Andika jibu lako...", "Type your reply...")}
               disabled={busy}
               style={{ borderColor: COLORS.sandLine }}
-              className="flex-1 min-w-0 rounded-full border px-3 py-2 text-xs outline-none bg-white disabled:opacity-50"
+              className="flex-1 min-w-0 rounded-full border px-3 py-2 text-xs outline-none bg-card disabled:opacity-50"
             />
             <button
               onClick={handleSendReply}
@@ -1216,7 +1216,7 @@ function FeedbackCard({ item, lang }) {
             <button
               onClick={handleRemove}
               disabled={removing}
-              className="p-2 text-muted hover:text-[#C1502E] transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2 text-muted hover:text-rust transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label={t("Ondoa", "Remove")}
             >
               {removing ? (
@@ -1479,7 +1479,7 @@ export default function SupportSection() {
             background: "rgb(var(--c-card))",
           }}
         >
-          <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />
+          <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
           {refreshing
             ? t("Inasasisha...", "Refreshing...")
             : t("Sasisha", "Refresh")}
@@ -1489,7 +1489,7 @@ export default function SupportSection() {
       {/* TABS */}
       <div className="flex justify-center mb-5 w-full min-w-0">
         <div
-          style={{ background: "white", borderColor: COLORS.sandLine }}
+          style={{ background: "rgb(var(--c-card))", borderColor: COLORS.sandLine }}
           className="flex rounded-full border p-1 w-full sm:w-auto"
         >
           <button
@@ -1500,15 +1500,15 @@ export default function SupportSection() {
             }}
             className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-full transition-colors"
           >
-            <Headphones size={13} />
+            <Headphones size={14} />
             {t("Tickets", "Tickets")}
             {ticketCounts.total > 0 && (
               <span
                 style={{
-                  background: tab === "tickets" ? "rgba(245,243,236,0.18)" : COLORS.sandLine,
+                  background: tab === "tickets" ? "rgba(244,247,252,0.18)" : COLORS.sandLine,
                   color: tab === "tickets" ? COLORS.sand : "var(--text-primary)",
                 }}
-                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-1"
+                className="text-xs font-bold px-1.5 py-0.5 rounded-full ml-1"
               >
                 {ticketCounts.total}
               </span>
@@ -1522,15 +1522,15 @@ export default function SupportSection() {
             }}
             className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-full transition-colors"
           >
-            <MessageSquare size={13} />
+            <MessageSquare size={14} />
             {t("Maoni", "Feedback")}
             {feedbackCounts.total > 0 && (
               <span
                 style={{
-                  background: tab === "feedback" ? "rgba(245,243,236,0.18)" : COLORS.sandLine,
+                  background: tab === "feedback" ? "rgba(244,247,252,0.18)" : COLORS.sandLine,
                   color: tab === "feedback" ? COLORS.sand : "var(--text-primary)",
                 }}
-                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-1"
+                className="text-xs font-bold px-1.5 py-0.5 rounded-full ml-1"
               >
                 {feedbackCounts.total}
               </span>
@@ -1543,24 +1543,24 @@ export default function SupportSection() {
       {tab === "tickets" && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3 mb-5 w-full">
-            <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
-              <p className="text-[10px] font-semibold text-secondary uppercase truncate">{t("Zote", "Total")}</p>
+            <div style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
+              <p className="text-xs font-semibold text-secondary uppercase truncate">{t("Zote", "Total")}</p>
               <p style={{ color: "var(--text-primary)" }} className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words">{ticketCounts.total}</p>
             </div>
-            <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
-              <p className="text-[10px] font-semibold text-secondary uppercase truncate">{t("Wazi", "Open")}</p>
+            <div style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
+              <p className="text-xs font-semibold text-secondary uppercase truncate">{t("Wazi", "Open")}</p>
               <p className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words" style={{ color: COLORS.rust }}>{ticketCounts.open}</p>
             </div>
-            <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
-              <p className="text-[10px] font-semibold text-secondary uppercase truncate">{t("Inaendelea", "In Progress")}</p>
-              <p className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words" style={{ color: "#8A5A16" }}>{ticketCounts.inProgress}</p>
+            <div style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
+              <p className="text-xs font-semibold text-secondary uppercase truncate">{t("Inaendelea", "In Progress")}</p>
+              <p className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words" style={{ color: COLORS.goldText }}>{ticketCounts.inProgress}</p>
             </div>
-            <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
-              <p className="text-[10px] font-semibold text-secondary uppercase truncate">{t("Zimetatuliwa", "Resolved")}</p>
+            <div style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
+              <p className="text-xs font-semibold text-secondary uppercase truncate">{t("Zimetatuliwa", "Resolved")}</p>
               <p className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words" style={{ color: COLORS.green }}>{ticketCounts.resolved}</p>
             </div>
-            <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full col-span-2 sm:col-span-1">
-              <p className="text-[10px] font-semibold text-secondary uppercase truncate">{t("SLA Imepita", "SLA Overdue")}</p>
+            <div style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full col-span-2 sm:col-span-1">
+              <p className="text-xs font-semibold text-secondary uppercase truncate">{t("SLA Imepita", "SLA Overdue")}</p>
               <p className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words" style={{ color: ticketCounts.overdue > 0 ? COLORS.rust : COLORS.green }}>{ticketCounts.overdue}</p>
             </div>
           </div>
@@ -1570,7 +1570,7 @@ export default function SupportSection() {
               <button
                 onClick={() => setStatusFilter("all")}
                 style={{
-                  background: statusFilter === "all" ? COLORS.night : "white",
+                  background: statusFilter === "all" ? COLORS.night : "rgb(var(--c-card))",
                   color: statusFilter === "all" ? COLORS.sand : "var(--text-primary)",
                   borderColor: COLORS.sandLine,
                 }}
@@ -1590,7 +1590,7 @@ export default function SupportSection() {
                     key={s.key}
                     onClick={() => setStatusFilter(s.key)}
                     style={{
-                      background: statusFilter === s.key ? COLORS.night : "white",
+                      background: statusFilter === s.key ? COLORS.night : "rgb(var(--c-card))",
                       color: statusFilter === s.key ? COLORS.sand : "var(--text-primary)",
                       borderColor: COLORS.sandLine,
                     }}
@@ -1609,7 +1609,7 @@ export default function SupportSection() {
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
                 style={{ borderColor: COLORS.sandLine }}
-                className="text-xs font-semibold px-3 py-2 rounded-lg border bg-white outline-none shrink-0 w-full sm:w-auto"
+                className="text-xs font-semibold px-3 py-2 rounded-lg border bg-card outline-none shrink-0 w-full sm:w-auto"
               >
                 <option value="all">{t("Kategoria Zote", "All Categories")} ({ticketCategoryCounts.all})</option>
                 {TICKET_CATEGORIES.map((c) => (
@@ -1624,7 +1624,7 @@ export default function SupportSection() {
                   value={ticketQuery}
                   onChange={(e) => setTicketQuery(e.target.value)}
                   placeholder={t("Tafuta kwa ID, mada, mtumiaji...", "Search by ID, subject, user...")}
-                  className="smk-inline-search w-full rounded-lg border border-gray-200 bg-white pl-3 pr-10 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
+                  className="smk-inline-search w-full rounded-lg border border-hairline bg-card pl-3 pr-10 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
                   style={{ WebkitAppearance: "none" }}
                 />
                 <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" />
@@ -1638,14 +1638,14 @@ export default function SupportSection() {
                 <button
                   onClick={() => setBulkMode(true)}
                   style={{ borderColor: COLORS.sandLine, color: "var(--text-primary)" }}
-                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border bg-white"
+                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border bg-card"
                 >
-                  <Reply size={13} />
+                  <Reply size={14} />
                   {t("Jibu kwa Wingi", "Bulk Reply")}
                 </button>
               ) : (
                 <div
-                  style={{ borderColor: COLORS.gold, background: "white" }}
+                  style={{ borderColor: COLORS.gold, background: "rgb(var(--c-card))" }}
                   className="rounded-xl border-2 p-3 sm:p-4 flex flex-col gap-2.5 w-full min-w-0"
                 >
                   <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1666,7 +1666,7 @@ export default function SupportSection() {
                         }
                         disabled={bulkBusy}
                         style={{ borderColor: COLORS.sandLine }}
-                        className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border disabled:opacity-50"
+                        className="text-xs font-semibold px-2.5 py-1.5 rounded-lg border disabled:opacity-50"
                       >
                         {t("Chagua zote zilizoonyeshwa", "Select all shown")}
                       </button>
@@ -1674,7 +1674,7 @@ export default function SupportSection() {
                         onClick={() => setSelectedIds(new Set())}
                         disabled={bulkBusy || selectedIds.size === 0}
                         style={{ borderColor: COLORS.sandLine }}
-                        className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border disabled:opacity-50"
+                        className="text-xs font-semibold px-2.5 py-1.5 rounded-lg border disabled:opacity-50"
                       >
                         {t("Ondoa", "Clear")}
                       </button>
@@ -1682,7 +1682,7 @@ export default function SupportSection() {
                         onClick={exitBulkMode}
                         disabled={bulkBusy}
                         style={{ borderColor: COLORS.sandLine, color: COLORS.rust }}
-                        className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border disabled:opacity-50"
+                        className="text-xs font-semibold px-2.5 py-1.5 rounded-lg border disabled:opacity-50"
                       >
                         {t("Funga", "Exit")}
                       </button>
@@ -1708,7 +1708,7 @@ export default function SupportSection() {
                         "Write the reply to send to all selected tickets..."
                       )}
                       style={{ borderColor: COLORS.sandLine }}
-                      className="flex-1 min-w-0 rounded-lg border px-3 py-2 text-xs outline-none bg-white resize-none disabled:opacity-50"
+                      className="flex-1 min-w-0 rounded-lg border px-3 py-2 text-xs outline-none bg-card resize-none disabled:opacity-50"
                     />
                     <button
                       onClick={handleBulkSend}
@@ -1717,9 +1717,9 @@ export default function SupportSection() {
                       className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {bulkBusy ? (
-                        <Loader2 size={13} className="animate-spin" />
+                        <Loader2 size={14} className="animate-spin" />
                       ) : (
-                        <Send size={13} />
+                        <Send size={14} />
                       )}
                       {t("Tuma", "Send")}
                     </button>
@@ -1755,7 +1755,7 @@ export default function SupportSection() {
 
           {filteredTickets.length === 0 ? (
             <div
-              style={{ borderColor: COLORS.sandLine, background: "white" }}
+              style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
               className="rounded-2xl border-2 border-dashed p-8 sm:p-10 text-center w-full"
             >
               <Inbox size={40} className="mx-auto text-muted mb-3" />
@@ -1793,20 +1793,20 @@ export default function SupportSection() {
       {tab === "feedback" && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-5 w-full">
-            <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
-              <p className="text-[10px] font-semibold text-secondary uppercase truncate">{t("Zote", "Total")}</p>
+            <div style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
+              <p className="text-xs font-semibold text-secondary uppercase truncate">{t("Zote", "Total")}</p>
               <p style={{ color: "var(--text-primary)" }} className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words">{feedbackCounts.total}</p>
             </div>
-            <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
-              <p className="text-[10px] font-semibold text-secondary uppercase truncate">{t("Mpya", "New")}</p>
+            <div style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
+              <p className="text-xs font-semibold text-secondary uppercase truncate">{t("Mpya", "New")}</p>
               <p className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words" style={{ color: COLORS.rust }}>{feedbackCounts.byStatus.new}</p>
             </div>
-            <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
-              <p className="text-[10px] font-semibold text-secondary uppercase truncate">{t("Zimejibiwa", "Answered")}</p>
+            <div style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
+              <p className="text-xs font-semibold text-secondary uppercase truncate">{t("Zimejibiwa", "Answered")}</p>
               <p className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words" style={{ color: COLORS.green }}>{feedbackCounts.byStatus.answered}</p>
             </div>
-            <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
-              <p className="text-[10px] font-semibold text-secondary uppercase truncate">{t("Wastani wa Rating", "Avg Rating")}</p>
+            <div style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
+              <p className="text-xs font-semibold text-secondary uppercase truncate">{t("Wastani wa Rating", "Avg Rating")}</p>
               <p className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words" style={{ color: COLORS.gold }}>{avgRating}</p>
             </div>
           </div>
@@ -1818,7 +1818,7 @@ export default function SupportSection() {
               <button
                 onClick={() => setTypeFilter("all")}
                 style={{
-                  background: typeFilter === "all" ? COLORS.night : "white",
+                  background: typeFilter === "all" ? COLORS.night : "rgb(var(--c-card))",
                   color: typeFilter === "all" ? COLORS.sand : "var(--text-primary)",
                   borderColor: COLORS.sandLine,
                 }}
@@ -1831,7 +1831,7 @@ export default function SupportSection() {
                   key={ft.key}
                   onClick={() => setTypeFilter(ft.key)}
                   style={{
-                    background: typeFilter === ft.key ? COLORS.night : "white",
+                    background: typeFilter === ft.key ? COLORS.night : "rgb(var(--c-card))",
                     color: typeFilter === ft.key ? COLORS.sand : "var(--text-primary)",
                     borderColor: COLORS.sandLine,
                   }}
@@ -1849,7 +1849,7 @@ export default function SupportSection() {
                 value={feedbackStatusFilter}
                 onChange={(e) => setFeedbackStatusFilter(e.target.value)}
                 style={{ borderColor: COLORS.sandLine }}
-                className="text-xs font-semibold px-3 py-2 rounded-lg border bg-white outline-none shrink-0 w-full sm:w-auto"
+                className="text-xs font-semibold px-3 py-2 rounded-lg border bg-card outline-none shrink-0 w-full sm:w-auto"
               >
                 <option value="all">{t("Hali Zote", "All Statuses")}</option>
                 <option value="new">{t("Mpya", "New")} ({feedbackCounts.byStatus.new})</option>
@@ -1861,7 +1861,7 @@ export default function SupportSection() {
                   value={feedbackQuery}
                   onChange={(e) => setFeedbackQuery(e.target.value)}
                   placeholder={t("Tafuta kwa kichwa, ujumbe, mtumiaji...", "Search by subject, message, user...")}
-                  className="smk-inline-search w-full rounded-lg border border-gray-200 bg-white pl-3 pr-10 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
+                  className="smk-inline-search w-full rounded-lg border border-hairline bg-card pl-3 pr-10 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
                   style={{ WebkitAppearance: "none" }}
                 />
                 <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" />
@@ -1871,7 +1871,7 @@ export default function SupportSection() {
 
           {filteredFeedback.length === 0 ? (
             <div
-              style={{ borderColor: COLORS.sandLine, background: "white" }}
+              style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
               className="rounded-2xl border-2 border-dashed p-8 sm:p-10 text-center w-full"
             >
               <Inbox size={40} className="mx-auto text-muted mb-3" />

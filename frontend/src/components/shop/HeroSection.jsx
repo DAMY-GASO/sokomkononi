@@ -10,12 +10,13 @@ import { usePublicListings } from "../../config/listingsStore.js";
 import { useAppStoreLinks } from "../../config/systemSettingsStore.js";
 import { api } from "../../api/client.js";
 import { pickVariantUrl } from "../../utils/imageVariants.js";
+import { COLORS } from "../../pages/dashboard/components/shared.js";
 
 /* ── Safe color constants (always visible on the navy hero) ── */
 const HERO_TEXT   = "#FFFFFF";
 const HERO_SUB    = "#FFFFFF";
 const HERO_MUTED  = "rgba(255,255,255,0.65)";
-const HERO_ACCENT = "#FEA406";
+const HERO_ACCENT = COLORS.gold;
 
 function Typewriter({ text, speed = 22 }) {
   const [shown, setShown] = useState("");
@@ -63,7 +64,7 @@ function Stat({ value, label, icon }) {
         <div className="text-lg font-bold tabular-nums sm:text-xl" style={{ color: "#FFFFFF" }}>
           {value}
         </div>
-        <div className="text-[11px] font-medium uppercase tracking-wider" style={{ color: HERO_MUTED }}>
+        <div className="text-xs font-medium uppercase tracking-wider" style={{ color: HERO_MUTED }}>
           {label}
         </div>
       </div>
@@ -86,8 +87,8 @@ function FloatCard({ icon, title, desc, delay = "0ms" }) {
         {icon}
       </span>
       <div className="min-w-0">
-        <p className="text-[12px] font-semibold leading-tight" style={{ color: "#FFFFFF" }}>{title}</p>
-        <p className="truncate text-[11px] leading-tight" style={{ color: HERO_MUTED }}>{desc}</p>
+        <p className="text-xs font-semibold leading-tight" style={{ color: "#FFFFFF" }}>{title}</p>
+        <p className="truncate text-xs leading-tight" style={{ color: HERO_MUTED }}>{desc}</p>
       </div>
     </div>
   );
@@ -134,13 +135,13 @@ function TrendingCard({ listing, fallbackLabel }) {
             <Sparkles size={56} strokeWidth={1.2} />
           </div>
         )}
-        <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
+        <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wider"
               style={{ background: HERO_ACCENT, color: "#011957" }}>
           <Sparkles size={10} />
           {fallbackLabel}
         </span>
         {listing.views > 0 && (
-          <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium backdrop-blur-sm"
+          <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-xs font-medium backdrop-blur-sm"
                 style={{ color: "#FFFFFF" }}>
             <Eye size={10} /> {listing.views}
           </span>
@@ -149,16 +150,16 @@ function TrendingCard({ listing, fallbackLabel }) {
 
       <div className="flex items-start justify-between gap-3 px-3 pb-1 pt-3">
         <div className="min-w-0">
-          <p className="truncate text-[15px] font-semibold" style={{ color: "#FFFFFF" }}>
+          <p className="truncate text-base font-semibold" style={{ color: "#FFFFFF" }}>
             {listing.title}
           </p>
-          <p className="mt-0.5 flex items-center gap-1.5 text-[12px]" style={{ color: HERO_SUB }}>
+          <p className="mt-0.5 flex items-center gap-1.5 text-xs" style={{ color: HERO_SUB }}>
             <MapPin size={12} /> {listing.location || listing.region || "Tanzania"}
           </p>
         </div>
         {priceLabel && (
           <div className="text-right shrink-0">
-            <div className="text-[15px] font-bold tabular-nums" style={{ color: HERO_ACCENT }}>
+            <div className="text-base font-bold tabular-nums" style={{ color: HERO_ACCENT }}>
               {priceLabel}
             </div>
           </div>
@@ -181,7 +182,7 @@ function AppDownloadButtons({ lang }) {
 
   return (
     <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
-      <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: HERO_MUTED }}>
+      <span className="text-xs font-medium uppercase tracking-wider" style={{ color: HERO_MUTED }}>
         {t("Pakua App:", "Get the App:")}
       </span>
       <div className="flex flex-wrap gap-2">
@@ -347,7 +348,7 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" style={{ background: HERO_ACCENT }} />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ background: HERO_ACCENT }} />
               </span>
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: HERO_TEXT }}>
+              <span className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: HERO_TEXT }}>
                 {t("Soko la Mali Tanzania", "Property Marketplace")}
               </span>
             </span>
@@ -371,7 +372,7 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
             </h1>
 
             <p
-              className="mt-5 min-h-[4rem] max-w-xl text-[15px] leading-relaxed sm:min-h-[3.5rem] sm:text-base"
+              className="mt-5 min-h-[4rem] max-w-xl text-base leading-relaxed sm:min-h-[3.5rem] sm:text-base"
               style={{ color: "#FFFFFF" }}
               aria-label={subtitle}
             >
@@ -396,7 +397,7 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
             {/* ✅ MAARUFU (POPULAR) */}
             <div className="mt-4 w-full">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-medium uppercase tracking-wider shrink-0" style={{ color: HERO_MUTED }}>
+                <span className="text-xs font-medium uppercase tracking-wider shrink-0" style={{ color: HERO_MUTED }}>
                   {t("Maarufu:", "Popular:")}
                 </span>
               </div>
@@ -410,7 +411,7 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
                   <Link
                     key={c.slug}
                     to={`/kategoria/${c.slug}`}
-                    className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors whitespace-nowrap shrink-0"
+                    className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap shrink-0"
                     style={{
                       background: "rgba(255,255,255,0.05)",
                       border: "1px solid rgba(255,255,255,0.14)",
@@ -418,7 +419,7 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
                     }}
                   >
                     {c.label}
-                    <ChevronRight size={11} className="opacity-60" />
+                    <ChevronRight size={12} className="opacity-60" />
                   </Link>
                 ))}
               </div>
@@ -466,13 +467,13 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
             {/* Stats — Users, Properties, Rated */}
             <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 sm:justify-start">
               <Stat
-                icon={<Users size={15} />}
+                icon={<Users size={16} />}
                 value={(publicStats.users || 0).toLocaleString()}
                 label={t("Watumiaji", "Users")}
               />
               <span aria-hidden="true" className="hidden h-8 w-px sm:block" style={{ background: "rgba(255,255,255,0.14)" }} />
               <Stat
-                icon={<Home size={15} />}
+                icon={<Home size={16} />}
                 value={(publicStats.properties || 0).toLocaleString()}
                 label={t("Mali", "Properties")}
               />

@@ -22,6 +22,7 @@ import {
   LineChart,
   MiniRow,
 } from "../shared/Charts.jsx";
+import { CHART } from "../shared/chartColors.js";
 
 // ✅ Timezone Fix
 const formatDateTZ = (dateString) => {
@@ -39,41 +40,41 @@ const formatDateTZ = (dateString) => {
 };
 
 const STREAM_COLORS = {
-  listing:     "#0891B2",
-  reservation: "#2F6D4F",
-  boost:       "#FEA406",
-  leading:     "#7C3AED",
-  advertise:   "#C1502E",
-  success:     "#2563EB",
-  bundle:      "#DB2777",
+  listing:     CHART.slate,
+  reservation: COLORS.green,
+  boost:       COLORS.gold,
+  leading:     COLORS.royalLight,
+  advertise:   COLORS.rust,
+  success:     COLORS.royal,
+  bundle:      COLORS.goldInk,
 };
 
 const DEAL_STATUS_COLORS = {
-  negotiating:            "#FEA406",
-  offer_sent:             "#D97706",
-  accepted:               "#2F6D4F",
-  reserved:               "#0062FD",
-  awaiting_final_payment: "#2563EB",
-  payment_proof_submitted:"#7C3AED",
-  completed:              "#059669",
-  disputed:               "#C1502E",
-  cancelled:              "#6B7280",
+  negotiating:            COLORS.gold,
+  offer_sent:             COLORS.flame,
+  accepted:               COLORS.green,
+  reserved:               COLORS.royal,
+  awaiting_final_payment: COLORS.royalLight,
+  payment_proof_submitted:COLORS.goldInk,
+  completed:              CHART.greenLight,
+  disputed:               COLORS.rust,
+  cancelled:              CHART.slate,
 };
 
 const LISTING_STATUS_COLORS = {
-  live: "#2F6D4F",
-  reserved: "#FEA406",
-  sold: "#7C3AED",
-  pending_payment: "#D97706",
-  approved_pending_payment: "#0891B2",
-  pending_approval: "#0062FD",
-  paid_pending_approval: "#2563EB",
-  in_review: "#0062FD",
-  needs_edit: "#B45309",
-  draft: "#9CA3AF",
-  rejected: "#C1502E",
-  paused: "#6B7280",
-  expired: "#9CA3AF",
+  live: COLORS.green,
+  reserved: COLORS.gold,
+  sold: COLORS.royalLight,
+  pending_payment: COLORS.flame,
+  approved_pending_payment: CHART.slate,
+  pending_approval: COLORS.royal,
+  paid_pending_approval: CHART.greenLight,
+  in_review: COLORS.royal,
+  needs_edit: COLORS.goldInk,
+  draft: CHART.slateLight,
+  rejected: COLORS.rust,
+  paused: CHART.slate,
+  expired: CHART.slateLight,
 };
 
 async function downloadReport(format, { period, from, to }) {
@@ -125,7 +126,7 @@ function DownloadPanel({ lang }) {
   const formats = [
     { key: "csv", label: "CSV", icon: FileSpreadsheet, color: COLORS.green },
     { key: "pdf", label: "PDF", icon: FileText, color: COLORS.rust },
-    { key: "doc", label: "DOC", icon: File, color: "#2563EB" },
+    { key: "doc", label: "DOC", icon: File, color: COLORS.royal },
   ];
 
   const handleDownload = async (format) => {
@@ -181,7 +182,7 @@ function DownloadPanel({ lang }) {
         </div>
       </div>
 
-      <p className="text-[11px] font-semibold text-secondary uppercase tracking-wide mb-1.5">
+      <p className="text-xs font-semibold text-secondary uppercase tracking-wide mb-1.5">
         {t("Kipindi", "Period")}
       </p>
       <div className="flex flex-wrap gap-1.5 mb-3">
@@ -191,7 +192,7 @@ function DownloadPanel({ lang }) {
             type="button"
             onClick={() => setPeriod(p.key)}
             style={{
-              background: period === p.key ? COLORS.night : "white",
+              background: period === p.key ? COLORS.night : "rgb(var(--c-card))",
               color: period === p.key ? COLORS.sand : "var(--text-primary)",
               borderColor: COLORS.sandLine,
             }}
@@ -205,21 +206,21 @@ function DownloadPanel({ lang }) {
       {period === "custom" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
           <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-semibold text-secondary flex items-center gap-1">
-              <Calendar size={11} /> {t("Kuanzia", "From")}
+            <span className="text-xs font-semibold text-secondary flex items-center gap-1">
+              <Calendar size={12} /> {t("Kuanzia", "From")}
             </span>
             <input
               type="date"
               value={from}
               max={to || todayStr}
               onChange={(e) => setFrom(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none w-full focus:border-[#FEA406] cursor-pointer"
+              className="border border-hairline rounded-lg px-3 py-2 text-xs outline-none w-full focus:border-gold cursor-pointer"
               style={{ colorScheme: "light dark" }}
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-semibold text-secondary flex items-center gap-1">
-              <Calendar size={11} /> {t("Mpaka", "To")}
+            <span className="text-xs font-semibold text-secondary flex items-center gap-1">
+              <Calendar size={12} /> {t("Mpaka", "To")}
             </span>
             <input
               type="date"
@@ -227,14 +228,14 @@ function DownloadPanel({ lang }) {
               min={from || undefined}
               max={todayStr}
               onChange={(e) => setTo(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none w-full focus:border-[#FEA406] cursor-pointer"
+              className="border border-hairline rounded-lg px-3 py-2 text-xs outline-none w-full focus:border-gold cursor-pointer"
               style={{ colorScheme: "light dark" }}
             />
           </label>
         </div>
       )}
 
-      <p className="text-[11px] font-semibold text-secondary uppercase tracking-wide mb-1.5">
+      <p className="text-xs font-semibold text-secondary uppercase tracking-wide mb-1.5">
         {t("Muundo", "Format")}
       </p>
       <div className="grid grid-cols-3 gap-2">
@@ -245,11 +246,11 @@ function DownloadPanel({ lang }) {
             onClick={() => handleDownload(key)}
             disabled={!!busy}
             style={{
-              background: "white",
+              background: "rgb(var(--c-card))",
               borderColor: `${color}40`,
               color,
             }}
-            className="flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2.5 rounded-lg border transition-colors hover:bg-gray-50 disabled:opacity-60"
+            className="flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2.5 rounded-lg border transition-colors hover:bg-page disabled:opacity-60"
           >
             {busy === key ? (
               <Loader2 size={14} className="animate-spin" />
@@ -284,7 +285,7 @@ function DownloadPanel({ lang }) {
 function ChartCard({ title, icon: Icon, iconColor, hint, children }) {
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
       className="rounded-xl border p-3 sm:p-4 min-w-0 w-full"
     >
       <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3 min-w-0">
@@ -293,7 +294,7 @@ function ChartCard({ title, icon: Icon, iconColor, hint, children }) {
           <h3 className="text-sm font-semibold text-primary truncate">{title}</h3>
         </div>
         {hint && (
-          <span className="shrink-0 text-[10px] font-medium text-muted">
+          <span className="shrink-0 text-xs font-medium text-muted">
             {hint}
           </span>
         )}
@@ -330,11 +331,11 @@ export default function ReportsSection() {
     if (apiReports?.usersBreakdown) {
       const u = apiReports.usersBreakdown;
       return [
-        { label: t("Wauzaji Pekee", "Sellers Only"), value: u.sellers, display: u.sellers.toLocaleString("en-US"), color: "#FEA406" },
-        { label: t("Wanunuzi Pekee", "Buyers Only"), value: u.buyers, display: u.buyers.toLocaleString("en-US"), color: "#2F6D4F" },
-        { label: t("Wote Wawili", "Both"), value: u.both, display: u.both.toLocaleString("en-US"), color: "#7C3AED" },
-        { label: t("Wapya", "Neither"), value: u.neither, display: u.neither.toLocaleString("en-US"), color: "#9CA3AF" },
-        { label: t("Admins", "Admins"), value: u.admins, display: u.admins.toLocaleString("en-US"), color: "#DC2626" },
+        { label: t("Wauzaji Pekee", "Sellers Only"), value: u.sellers, display: u.sellers.toLocaleString("en-US"), color: COLORS.gold },
+        { label: t("Wanunuzi Pekee", "Buyers Only"), value: u.buyers, display: u.buyers.toLocaleString("en-US"), color: COLORS.green },
+        { label: t("Wote Wawili", "Both"), value: u.both, display: u.both.toLocaleString("en-US"), color: COLORS.royalLight },
+        { label: t("Wapya", "Neither"), value: u.neither, display: u.neither.toLocaleString("en-US"), color: CHART.slateLight },
+        { label: t("Admins", "Admins"), value: u.admins, display: u.admins.toLocaleString("en-US"), color: COLORS.rust },
       ].filter((d) => d.value > 0);
     }
 
@@ -349,11 +350,11 @@ export default function ReportsSection() {
       else neitherRole++;
     });
     return [
-      { label: t("Wauzaji Pekee", "Sellers Only"), value: sellersOnly, display: sellersOnly.toLocaleString("en-US"), color: "#FEA406" },
-      { label: t("Wanunuzi Pekee", "Buyers Only"), value: buyersOnly, display: buyersOnly.toLocaleString("en-US"), color: "#2F6D4F" },
-      { label: t("Wote Wawili", "Both"), value: bothRoles, display: bothRoles.toLocaleString("en-US"), color: "#7C3AED" },
-      { label: t("Wapya", "Neither"), value: neitherRole, display: neitherRole.toLocaleString("en-US"), color: "#9CA3AF" },
-      { label: t("Admins", "Admins"), value: totalAdmins, display: totalAdmins.toLocaleString("en-US"), color: "#DC2626" },
+      { label: t("Wauzaji Pekee", "Sellers Only"), value: sellersOnly, display: sellersOnly.toLocaleString("en-US"), color: COLORS.gold },
+      { label: t("Wanunuzi Pekee", "Buyers Only"), value: buyersOnly, display: buyersOnly.toLocaleString("en-US"), color: COLORS.green },
+      { label: t("Wote Wawili", "Both"), value: bothRoles, display: bothRoles.toLocaleString("en-US"), color: COLORS.royalLight },
+      { label: t("Wapya", "Neither"), value: neitherRole, display: neitherRole.toLocaleString("en-US"), color: CHART.slateLight },
+      { label: t("Admins", "Admins"), value: totalAdmins, display: totalAdmins.toLocaleString("en-US"), color: COLORS.rust },
     ].filter((d) => d.value > 0);
   }, [localUsers, apiReports, lang]);
 
@@ -363,7 +364,7 @@ export default function ReportsSection() {
   const usersGrowthData = useMemo(() => {
     const growth = apiReports?.usersGrowth || [];
     const dayColors = {
-      Mon: "#2563EB", Tue: "#7C3AED", Wed: "#DB2777", Thu: "#EA580C", Fri: "#CA8A04", Sat: "#16A34A", Sun: "#DC2626",
+      Mon: COLORS.royal, Tue: COLORS.royalLight, Wed: COLORS.gold, Thu: COLORS.flame, Fri: COLORS.goldInk, Sat: COLORS.green, Sun: CHART.greenLight,
     };
 
     const now = new Date();
@@ -417,7 +418,7 @@ export default function ReportsSection() {
           label: labels[key] || key,
           value: count,
           display: count.toLocaleString("en-US"),
-          color: LISTING_STATUS_COLORS[key] || "#9CA3AF",
+          color: LISTING_STATUS_COLORS[key] || CHART.slateLight,
         }))
         .filter((d) => d.value > 0);
     }
@@ -429,7 +430,7 @@ export default function ReportsSection() {
         const count = listings.filter((l) => l.status === s).length;
         return {
           label: labels[s], value: count, display: count.toLocaleString("en-US"),
-          color: LISTING_STATUS_COLORS[s] || "#9CA3AF",
+          color: LISTING_STATUS_COLORS[s] || CHART.slateLight,
         };
       })
       .filter((d) => d.value > 0);
@@ -450,7 +451,7 @@ export default function ReportsSection() {
           label: labels[key] || key,
           value: count,
           display: count.toLocaleString("en-US"),
-          color: DEAL_STATUS_COLORS[key] || "#9CA3AF",
+          color: DEAL_STATUS_COLORS[key] || CHART.slateLight,
         }))
         .filter((d) => d.value > 0);
     }
@@ -477,7 +478,7 @@ export default function ReportsSection() {
         return {
           label: `${s.label} (${pct.toFixed(1)}%)`,
           value: value, display: formatTZS(value),
-          color: STREAM_COLORS[s.key] || "#9CA3AF",
+          color: STREAM_COLORS[s.key] || CHART.slateLight,
         };
       })
       .filter((d) => d.value > 0);
@@ -765,7 +766,7 @@ export default function ReportsSection() {
           <ChartCard
             title={t("Mgawanyo wa Watumiaji", "User Breakdown")}
             icon={Users}
-            iconColor="#2563EB"
+            iconColor={COLORS.royal}
             hint={t(`${usersTotal} watumiaji`, `${usersTotal} users`)}
           >
             <DonutChart
@@ -814,7 +815,7 @@ export default function ReportsSection() {
           <ChartCard
             title={t("Mgawanyo wa Deals", "Deals Breakdown")}
             icon={Handshake}
-            iconColor="#7C3AED"
+            iconColor={COLORS.royalLight}
             hint={t(`${reports.totalDeals} deals`, `${reports.totalDeals} deals`)}
           >
             {dealsDonut.length === 0 ? (
@@ -863,7 +864,7 @@ export default function ReportsSection() {
           <ChartCard
             title={t("Mgawanyo wa Deals kwa Hali", "Deals by Status")}
             icon={Handshake}
-            iconColor="#2563EB"
+            iconColor={COLORS.royal}
           >
             <VBarChart
               data={dealsStatusData}
@@ -884,7 +885,7 @@ export default function ReportsSection() {
           <ChartCard
             title={t("Kategoria Zinazoonekana Zaidi", "Top Categories")}
             icon={Tag}
-            iconColor="#0891B2"
+            iconColor={CHART.slate}
           >
             {reports.topCategories?.length === 0 ? (
               <p className="text-xs text-muted text-center py-6">
@@ -897,7 +898,7 @@ export default function ReportsSection() {
                   return {
                     label: cat?.label?.[lang] || c.name || c.key,
                     value: c.count || 0,
-                    color: "#0891B2",
+                    color: CHART.slate,
                   };
                 })}
                 valueFormat={(v) => v.toLocaleString("en-US")}
@@ -944,7 +945,7 @@ export default function ReportsSection() {
                     label={l.title}
                     sub={formatTZS(l.price)}
                     value={`${(l.views || 0).toLocaleString("en-US")}`}
-                    color={i === 0 ? COLORS.gold : i === 1 ? "#9CA3AF" : i === 2 ? "#CD7F32" : COLORS.green}
+                    color={i === 0 ? COLORS.gold : i === 1 ? CHART.slateLight : i === 2 ? COLORS.goldInk : COLORS.green}
                   />
                 ))}
               </div>
@@ -954,7 +955,7 @@ export default function ReportsSection() {
           <ChartCard
             title={t("Wauzaji Bora (kwa Views)", "Top Sellers (by Views)")}
             icon={Users}
-            iconColor="#7C3AED"
+            iconColor={COLORS.royalLight}
           >
             {reports.topSellers?.length === 0 ? (
               <p className="text-xs text-muted text-center py-6">
@@ -969,7 +970,7 @@ export default function ReportsSection() {
                     label={s.name || "—"}
                     sub={`${s.listings || 0} ${t("mali", "listings")}`}
                     value={`${(s.views || 0).toLocaleString("en-US")}`}
-                    color={i === 0 ? COLORS.gold : i === 1 ? "#9CA3AF" : i === 2 ? "#CD7F32" : "#7C3AED"}
+                    color={i === 0 ? COLORS.gold : i === 1 ? CHART.slateLight : i === 2 ? COLORS.goldInk : COLORS.royalLight}
                   />
                 ))}
               </div>
