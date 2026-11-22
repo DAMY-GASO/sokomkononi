@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowRight, Search, MessageSquare, KeyRound, Flame } from "lucide-react";
+import { ArrowRight, Search, MessageSquare, KeyRound, Flame, Star } from "lucide-react";
 
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useAuth } from "../config/authStore.js";
@@ -30,6 +30,17 @@ import {
   boostTier,
   rotateByTier,
 } from "../config/listingRanking.js";
+
+// ============================================================
+// RANGI ZA BADGE (kila section ina rangi yake)
+//   Featured   → navy + dhahabu   (Imependekezwa)
+//   Advertised → bluu + nyeupe    (Imetangazwa)  [kwenye AdvertisedSection]
+//   Trending   → machungwa-moto   (Inavuma)      [sawa na badge ya kadi]
+// ============================================================
+const BADGE_COLORS = {
+  featured: { bg: "#011957", ink: "#FEA406" },
+  trending: { bg: "#E8590C", ink: "#FFFFFF" },
+};
 
 // ============================================================
 // HELPERS
@@ -295,6 +306,12 @@ export default function HomePage() {
             title={lang === "sw" ? "Mali Zinazopendekezwa" : "Featured Listings"}
             subtitle={lang === "sw" ? "Mali zenye kipaumbele cha utafutaji kutoka kwa wauzaji wetu." : "Priority listings from our sellers."}
             listings={featured} viewAllTo="/mali-zote?featured=1" savedIds={savedIds} onToggleSave={handleToggleSave}
+            cardBadge={{
+              icon: <Star size={10} />,
+              label: lang === "sw" ? "Imependekezwa" : "Featured",
+              bg: BADGE_COLORS.featured.bg,
+              ink: BADGE_COLORS.featured.ink,
+            }}
           />
         )}
 
@@ -333,6 +350,8 @@ export default function HomePage() {
             cardBadge={{
               icon: <Flame size={10} />,
               label: lang === "sw" ? "Inavuma" : "Trending",
+              bg: BADGE_COLORS.trending.bg,
+              ink: BADGE_COLORS.trending.ink,
             }}
           />
         )}

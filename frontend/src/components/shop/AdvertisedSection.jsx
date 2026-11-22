@@ -42,14 +42,20 @@ export default function AdvertisedSection({
 
             return (
               <div key={l.id} className="relative">
-                <span className="absolute -top-2 -left-2 z-10 bg-[#0062FD] text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-md flex items-center gap-1">
-                  <Megaphone size={10} /> {t("Tangazo", "Ad")}
+                {/* Badge ya bluu: Imetangazwa */}
+                <span
+                  className="absolute -top-2 -left-2 z-10 flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold shadow-md ring-1 ring-white/20"
+                  style={{ background: "#0062FD", color: "#FFFFFF" }}
+                >
+                  <Megaphone size={10} /> {t("Imetangazwa", "Advertised")}
                 </span>
                 <ListingCardShop
                   listing={l}
                   category={cat}
                   Icon={Icon}
                   lang={lang}
+                  // Zima badge ya ndani ya kadi (Inavuma) isichanganye na hii
+                  hidePromoBadge
                   isSaved={savedIds.some((x) => String(x) === String(l.id))}
                   onToggleSave={onToggleSave}
                 />

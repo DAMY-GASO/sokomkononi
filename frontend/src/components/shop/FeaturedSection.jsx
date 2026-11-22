@@ -6,6 +6,8 @@ import { useActiveCategories, getCategoryIcon } from "../../config/categoriesSto
 import ListingCardShop from "./ListingCardShop.jsx";
 import { Section, SectionHeader, Button } from "../ui";
 
+// cardBadge = { icon, label, bg?, ink? }
+// bg na ink ni hiari; default ni rangi ya machungwa ya awali.
 export default function FeaturedSection({ gridCols = "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4", title, subtitle, badge, listings = [], viewAllTo = "/mali-zote", viewAllLabel, emptyText, savedIds = [], onToggleSave, cardBadge = null, onLoadMore, loadingMore = false, hasMore = false, loadMoreLabel }) {
   const { lang } = useLanguage();
   const categories = useActiveCategories();
@@ -25,14 +27,29 @@ export default function FeaturedSection({ gridCols = "grid-cols-2 sm:grid-cols-3
             const cat = categories.find((c) => c.key === l.category);
             const Icon = getCategoryIcon(cat?.iconKey || "Home");
             const card = (
-              <ListingCardShop listing={l} category={cat} Icon={Icon} lang={lang} isSaved={savedIds.some((x) => String(x) === String(l.id))} onToggleSave={onToggleSave} />
+              <ListingCardShop
+                listing={l}
+                category={cat}
+                Icon={Icon}
+                lang={lang}
+                // Section ikiwa na badge yake, zima ya ndani ya kadi (isijirudie)
+                hidePromoBadge={!!cardBadge}
+                isSaved={savedIds.some((x) => String(x) === String(l.id))}
+                onToggleSave={onToggleSave}
+              />
             );
-            // Bila badge: muonekano wa awali (Featured, New Arrivals).
+            // Bila badge: muonekano wa awali (New Arrivals).
             if (!cardBadge) return React.cloneElement(card, { key: l.id });
-            // Na badge (mf. Trending): kona ya juu-kushoto kama Advertised.
+            // Na badge (Featured, Trending): kona ya juu-kushoto kama Advertised.
             return (
               <div key={l.id} className="relative">
-                <span className="absolute -top-2 -left-2 z-10 flex items-center gap-1 rounded-md bg-[#FEA406] px-2 py-1 text-[10px] font-bold text-[#011957] shadow-md">
+                <span
+                  className="absolute -top-2 -left-2 z-10 flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold shadow-md ring-1 ring-white/20"
+                  style={{
+                    background: cardBadge.bg || "#FEA406",
+                    color: cardBadge.ink || "#011957",
+                  }}
+                >
                   {cardBadge.icon}
                   {cardBadge.label}
                 </span>

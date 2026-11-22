@@ -36,12 +36,14 @@ function getPhotos(listing) {
 }
 
 // Badges (badge = label + color token)
+// "boost" sasa inaitwa INAVUMA / TRENDING na ina rangi sawa na badge ya
+// Trending kwenye HomePage (#E8590C) ili zisichanganywe na Featured/Advertised.
 function Badge({ kind, lang }) {
   const defs = {
     new:     { label: { sw: "MPYA",        en: "NEW" },       bg: "#2F6D4F" },
     sale:    { label: { sw: "PUNGUZO",     en: "SALE" },      bg: "#C1502E" },
     hot:     { label: { sw: "MOTO",        en: "HOT" },       bg: "#FEA406", ink: "#011957" },
-    boost:   { label: { sw: "IMEANGAZIWA", en: "FEATURED" },  bg: "#FEA406", ink: "#011957" },
+    boost:   { label: { sw: "INAVUMA",     en: "TRENDING" },  bg: "#E8590C", ink: "#FFFFFF" },
   };
   const d = defs[kind];
   if (!d) return null;
@@ -63,6 +65,8 @@ export default function ListingCardShop({
   isSaved = false,
   onToggleSave,
   className = "",
+  // Zima badge ya boost ya ndani ya kadi (section yenyewe inaonyesha badge yake)
+  hidePromoBadge = false,
 }) {
   if (!listing) return null;
 
@@ -87,7 +91,7 @@ export default function ListingCardShop({
 
   const badges = [];
   if (isNew && !sold) badges.push("new");
-  if (boosted) badges.push("boost");
+  if (boosted && !hidePromoBadge) badges.push("boost");
   if (reserved) badges.push("hot");
   if (sold) badges.push("sale");
 
