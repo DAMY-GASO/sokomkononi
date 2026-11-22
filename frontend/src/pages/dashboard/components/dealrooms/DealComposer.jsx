@@ -46,7 +46,7 @@ export default function DealComposer({
         deal.status !== "cancelled" &&
         !isLocked && (
           <div
-            style={{ borderColor: COLORS.sandLine, background: "white" }}
+            style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
             className="flex flex-col gap-2 p-3 border-t"
           >
             {attachPreview && (
@@ -64,7 +64,7 @@ export default function DealComposer({
                     className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
                     aria-label={lang === "sw" ? "Ondoa picha" : "Remove image"}
                   >
-                    <X size={11} />
+                    <X size={12} />
                   </button>
                 </div>
               </div>
@@ -120,13 +120,13 @@ export default function DealComposer({
       {isLocked && deal.status !== "cancelled" && (
         <div
           style={{
-            borderColor: "rgba(232,163,61,0.4)",
-            background: "rgba(232,163,61,0.08)",
+            borderColor: "rgba(254,164,6,0.4)",
+            background: "rgba(254,164,6,0.08)",
           }}
           className="border-t px-3 sm:px-4 py-3 flex items-center justify-center gap-2 text-xs font-medium"
         >
-          <Lock size={13} color="#8A5A16" />
-          <span style={{ color: "#8A5A16" }}>
+          <Lock size={14} color={COLORS.goldText} />
+          <span style={{ color: COLORS.goldText }}>
             {lang === "sw"
               ? "Ujumbe umezimwa — room imesimamishwa na msimamizi."
               : "Messaging is disabled — room is suspended by admin."}

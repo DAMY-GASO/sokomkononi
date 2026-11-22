@@ -17,15 +17,15 @@ export const notificationsApi = {
   markRead: (id) => api.post(`/notifications/${id}/read/`, {}),
   markAllRead: () => api.post("/notifications/read-all/", {}),
 
-  // ⬇️ Hard delete (permanent)
+  // Hard delete (permanent)
   hardRemove: (id) => api.delete(`/notifications/${id}/?hard=true`),
   hardRemoveAll: (params = {}) =>
     api.delete(`/notifications/clear-all/${toQuery(params)}`),
 
-  // ⬇️ Create a notification (used to notify admin about deletions, etc.)
+  // Create a notification (used to notify admin about deletions, etc.)
   create: (payload = {}) => api.post("/notifications/", payload),
 
-  // ⬇️ Convenience: notify the admin team about an event
+  // Convenience: notify the admin team about an event
   notifyAdmin: (payload = {}) =>
     api.post("/notifications/", { ...payload, audience: "admin" }),
 };

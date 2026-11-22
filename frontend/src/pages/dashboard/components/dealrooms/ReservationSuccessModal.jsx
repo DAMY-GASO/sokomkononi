@@ -11,7 +11,7 @@ export default function ReservationSuccessModal({ open, onClose, onContinueDeal,
 
   return (
     <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 bg-black/60">
-      <div className="bg-white rounded-2xl max-w-md w-full p-6 text-center shadow-2xl">
+      <div className="bg-card rounded-2xl max-w-md w-full p-6 text-center shadow-2xl">
         <div
           className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
           style={{ background: COLORS.green }}
@@ -38,11 +38,11 @@ export default function ReservationSuccessModal({ open, onClose, onContinueDeal,
           </button>
           <button
             onClick={onGoToReservations}
-            className="w-full py-3 rounded-xl font-semibold text-sm border transition-colors hover:bg-gray-50"
+            className="w-full py-3 rounded-xl font-semibold text-sm border transition-colors hover:bg-page"
             style={{
               borderColor: COLORS.sandLine,
               color: COLORS.night,
-              background: "white",
+              background: "rgb(var(--c-card))",
             }}
           >
             {t("Nenda kwenye My Reservations", "Go to My Reservations")}

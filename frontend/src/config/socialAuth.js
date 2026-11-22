@@ -5,7 +5,7 @@
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
-// ⚠️ Services ID (sio App ID).
+// Services ID (sio App ID).
 const APPLE_CLIENT_ID = import.meta.env.VITE_APPLE_CLIENT_ID || "";
 
 // Redirect URI kwa Apple JS (inahitajika hata kwa popup, lazima ilingane na Apple Developer)

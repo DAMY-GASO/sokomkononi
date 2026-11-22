@@ -4,11 +4,12 @@ import L from "leaflet";
 import { Loader2, MapPin, Navigation } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { TZ_REGIONS, WILAYA_SUGGESTIONS } from "../config/categorySchemas.js";
+import { COLORS } from "../pages/dashboard/components/shared.js";
 
 /* ── Brand-aligned marker (data URL — no import issues in Vite) ── */
 const MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="44" viewBox="0 0 32 44">
   <path d="M16 0C7.2 0 0 7.2 0 16c0 11.8 16 28 16 28s16-16.2 16-28C32 7.2 24.8 0 16 0z"
-        fill="#FEA406" stroke="#011957" stroke-width="2.2"/>
+        fill={COLORS.gold} stroke="#011957" stroke-width="2.2"/>
   <circle cx="16" cy="16" r="6" fill="#011957"/>
 </svg>`;
 
@@ -309,7 +310,7 @@ export default function LocationPicker({
                      bg-[color:rgb(var(--c-royal))] text-white hover:bg-[color:rgb(var(--c-royal-dark))]
                      disabled:opacity-60"
         >
-          {locating ? <Loader2 size={13} className="animate-spin-slow" /> : <Navigation size={13} />}
+          {locating ? <Loader2 size={14} className="animate-spin-slow" /> : <Navigation size={14} />}
           {locating ? t("Inatafuta...", "Locating...") : t("Tumia mahali pangu", "Use my location")}
         </button>
 
@@ -326,15 +327,15 @@ export default function LocationPicker({
         )}
 
         {position && (
-          <span className="ml-auto inline-flex items-center gap-1 text-[11px] font-mono text-secondary">
-            <MapPin size={11} className="text-[#FEA406]" />
+          <span className="ml-auto inline-flex items-center gap-1 text-xs font-mono text-secondary">
+            <MapPin size={12} className="text-gold-ink" />
             {Number(position[0]).toFixed(5)}, {Number(position[1]).toFixed(5)}
           </span>
         )}
       </div>
 
       {inAppBrowser && (
-        <p className="text-[11px] text-[#C1502E]">
+        <p className="text-xs text-rust">
           {t(
             "Unatumia browser ya ndani ya app (Instagram/Facebook/TikTok), ambayo mara nyingi huzuia location. Fungua tovuti kwenye Safari au Chrome.",
             "You're in an in-app browser (Instagram/Facebook/TikTok), which often blocks location. Open the site in Safari or Chrome."
@@ -343,11 +344,11 @@ export default function LocationPicker({
       )}
 
       {geoError && (
-        <p className="text-[11px] text-[#C1502E]">{geoError}</p>
+        <p className="text-xs text-rust">{geoError}</p>
       )}
 
       {accuracy != null && (
-        <p className="text-[11px] text-secondary">
+        <p className="text-xs text-secondary">
           {t(`Usahihi: ±${accuracy} m. Buruta alama kurekebisha.`, `Accuracy: ±${accuracy} m. Drag the pin to adjust.`)}
         </p>
       )}
@@ -386,7 +387,7 @@ export default function LocationPicker({
         </MapContainer>
       </div>
 
-      <p className="text-[11px] leading-snug text-secondary">
+      <p className="text-xs leading-snug text-secondary">
         {t(
           "Bofya au buruta alama kwenye ramani — Mkoa, Wilaya na Eneo vitajazwa vyenyewe. Ukiandika eneo, alama itahamia huko.",
           "Tap or drag the pin — Region, District and Area fill in automatically. If you type an area, the pin moves there."

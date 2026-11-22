@@ -35,9 +35,9 @@ export default function ListingViewsChart({ listings }) {
     return (
       <div
         className="rounded-xl border p-6 text-center"
-        style={{ borderColor: COLORS.sandLine, background: "white" }}
+        style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
       >
-        <Eye size={28} className="mx-auto mb-2" color="rgba(16,26,46,0.25)" />
+        <Eye size={28} className="mx-auto mb-2" color="rgba(1,25,87,0.25)" />
         <p className="text-sm font-semibold text-primary">
           {t("Hakuna mionekano bado", "No views yet")}
         </p>
@@ -54,7 +54,7 @@ export default function ListingViewsChart({ listings }) {
   return (
     <div
       className="rounded-xl border p-4 sm:p-5"
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
     >
       <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
@@ -64,8 +64,8 @@ export default function ListingViewsChart({ listings }) {
           </h2>
         </div>
         <span
-          className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
-          style={{ background: "rgba(232,163,61,0.15)", color: "#8A5A16" }}
+          className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+          style={{ background: "rgba(254,164,6,0.15)", color: COLORS.goldText }}
         >
           <TrendingUp size={10} className="inline -mt-0.5 mr-1" />
           Top {topListings.length}
@@ -90,7 +90,7 @@ export default function ListingViewsChart({ listings }) {
               </div>
               <div
                 className="h-2.5 rounded-full overflow-hidden"
-                style={{ background: "rgba(16,26,46,0.06)" }}
+                style={{ background: "rgba(1,25,87,0.06)" }}
                 role="img"
                 aria-label={`${l.title || "Listing"}: ${l.views || 0} views`}
               >
@@ -108,7 +108,7 @@ export default function ListingViewsChart({ listings }) {
         })}
       </div>
 
-      <p className="text-[10px] text-muted mt-3 text-center">
+      <p className="text-xs text-muted mt-3 text-center">
         {t(
           "Mionekano huhesabiwa kila mtumiaji anapofungua ukurasa wa mali.",
           "Views are counted each time a user opens a property page."

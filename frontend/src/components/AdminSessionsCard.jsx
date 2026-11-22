@@ -130,7 +130,7 @@ export default function AdminSessionsCard({ lang }) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-5">
+    <div className="bg-card rounded-xl border border-hairline p-5">
       <div className="flex items-center gap-3 mb-3">
         <div
           className="w-10 h-10 rounded-lg flex items-center justify-center"
@@ -184,7 +184,7 @@ export default function AdminSessionsCard({ lang }) {
             return (
               <li
                 key={s.id}
-                className="flex items-center gap-3 rounded-lg border border-gray-100 px-3 py-2.5"
+                className="flex items-center gap-3 rounded-lg border border-hairline px-3 py-2.5"
               >
                 <Icon size={18} className="text-muted shrink-0" />
                 <div className="flex-1 min-w-0">
@@ -192,7 +192,7 @@ export default function AdminSessionsCard({ lang }) {
                     {s.device_name || t("Kifaa kisichojulikana", "Unknown device")}
                     {s.is_current && (
                       <span
-                        className="text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0"
+                        className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0"
                         style={{
                           background: `${COLORS.green}20`,
                           color: COLORS.green,
@@ -202,7 +202,7 @@ export default function AdminSessionsCard({ lang }) {
                       </span>
                     )}
                   </p>
-                  <p className="text-[10px] sm:text-xs text-secondary truncate">
+                  <p className="text-xs text-secondary truncate">
                     {s.ip_address || "—"} · {t("Ilitumika", "Last active")}:{" "}
                     {timeAgo(s.last_seen, lang)}
                   </p>
@@ -212,7 +212,7 @@ export default function AdminSessionsCard({ lang }) {
                     type="button"
                     onClick={() => handleRevoke(s)}
                     disabled={busy || busyAll}
-                    className="p-2 text-muted hover:text-[#C1502E] rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                    className="p-2 text-muted hover:text-rust rounded-lg hover:bg-page disabled:opacity-50"
                     title={t("Toa kifaa", "Sign out device")}
                     aria-label={t("Toa kifaa", "Sign out device")}
                   >

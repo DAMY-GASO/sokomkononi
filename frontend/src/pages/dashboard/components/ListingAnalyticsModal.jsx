@@ -85,7 +85,7 @@ export default function ListingAnalyticsModal({ listingId, listing, lang, onClos
       aria-modal="true"
     >
       <div
-        className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl"
+        className="w-full max-w-md rounded-2xl bg-card p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -93,7 +93,7 @@ export default function ListingAnalyticsModal({ listingId, listing, lang, onClos
           <div className="flex items-center gap-2 min-w-0">
             <div
               className="grid h-9 w-9 shrink-0 place-items-center rounded-lg"
-              style={{ background: "rgba(232,163,61,0.15)", color: COLORS.goldInk }}
+              style={{ background: "rgba(254,164,6,0.15)", color: COLORS.goldInk }}
             >
               <BarChart3 size={16} />
             </div>
@@ -101,7 +101,7 @@ export default function ListingAnalyticsModal({ listingId, listing, lang, onClos
               <h2 className="text-sm font-bold text-primary">
                 {t("Analytics", "Analytics")}
               </h2>
-              <p className="text-[11px] text-secondary truncate">
+              <p className="text-xs text-secondary truncate">
                 {listing?.title || ""}
               </p>
             </div>
@@ -131,25 +131,25 @@ export default function ListingAnalyticsModal({ listingId, listing, lang, onClos
             <div className="grid grid-cols-3 gap-2 mb-3">
               <div
                 className="rounded-xl p-3 text-center"
-                style={{ background: "rgba(232,163,61,0.08)" }}
+                style={{ background: "rgba(254,164,6,0.08)" }}
               >
                 <Eye size={14} className="mx-auto mb-1" color={COLORS.goldInk} />
                 <p className="text-lg font-bold text-primary tabular-nums">
                   {(stats.total_views || 0).toLocaleString()}
                 </p>
-                <p className="text-[9px] font-semibold text-secondary uppercase tracking-wider">
+                <p className="text-xs font-semibold text-secondary uppercase tracking-wider">
                   {t("Mionekano", "Views")}
                 </p>
               </div>
               <div
                 className="rounded-xl p-3 text-center"
-                style={{ background: "rgba(37,99,235,0.08)" }}
+                style={{ background: "rgba(0,98,253,0.08)" }}
               >
-                <MessageSquare size={14} className="mx-auto mb-1" color="#2563EB" />
+                <MessageSquare size={14} className="mx-auto mb-1" color={COLORS.royal} />
                 <p className="text-lg font-bold text-primary tabular-nums">
                   {(stats.total_inquiries || 0).toLocaleString()}
                 </p>
-                <p className="text-[9px] font-semibold text-secondary uppercase tracking-wider">
+                <p className="text-xs font-semibold text-secondary uppercase tracking-wider">
                   {t("Maulizio", "Inquiries")}
                 </p>
               </div>
@@ -161,7 +161,7 @@ export default function ListingAnalyticsModal({ listingId, listing, lang, onClos
                 <p className="text-lg font-bold text-primary tabular-nums">
                   {(stats.total_reservations || 0).toLocaleString()}
                 </p>
-                <p className="text-[9px] font-semibold text-secondary uppercase tracking-wider">
+                <p className="text-xs font-semibold text-secondary uppercase tracking-wider">
                   {t("Reservations", "Reservations")}
                 </p>
               </div>
@@ -190,7 +190,7 @@ export default function ListingAnalyticsModal({ listingId, listing, lang, onClos
                     }}
                   />
                 </div>
-                <p className="text-[10px] text-muted mt-1">
+                <p className="text-xs text-muted mt-1">
                   {t("Maulizio ÷ Mionekano", "Inquiries ÷ Views")}
                 </p>
               </div>
@@ -198,7 +198,7 @@ export default function ListingAnalyticsModal({ listingId, listing, lang, onClos
 
             {/* Metadata */}
             <div
-              className="rounded-xl border p-3 text-[11px] space-y-1"
+              className="rounded-xl border p-3 text-xs space-y-1"
               style={{ borderColor: COLORS.sandLine }}
             >
               {listing?.postedAt && (
@@ -221,7 +221,7 @@ export default function ListingAnalyticsModal({ listingId, listing, lang, onClos
 
             {/* Fallback note */}
             {stats.fallback && (
-              <p className="text-[10px] text-muted text-center mt-3 leading-relaxed">
+              <p className="text-xs text-muted text-center mt-3 leading-relaxed">
                 {t(
                   "Analytics ya kina (mionekano kwa siku) itapatikana hivi karibuni.",
                   "Detailed analytics (views over time) will be available soon."

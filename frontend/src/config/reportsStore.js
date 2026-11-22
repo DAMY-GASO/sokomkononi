@@ -20,7 +20,7 @@ const EMPTY = {
   usersGrowth: [],
   listingsGrowth: [],
   revenueByMonth: [],
-  revenueByDay: [], // ✅ MPYA
+  revenueByDay: [], // MPYA
   dealsByStatus: {
     negotiating: 0,
     accepted: 0,
@@ -103,7 +103,7 @@ function buildFromApi(raw) {
       total: Number(d.total ?? d.revenue) || 0,
     })),
 
-    // ✅ MPYA: revenueByDay
+    // MPYA: revenueByDay
     revenueByDay: pickArr(src, "revenueByDay", "revenue_by_day").map((d) => ({
       date: d.date || d.day || d.label,
       label: d.label || d.date || d.day || "",

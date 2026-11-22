@@ -45,17 +45,17 @@ export default function PromotedBannerStrip({ onOpenListing = () => {} }) {
       {/* Badge + Icon — centered kwenye mobile, inline kwenye desktop */}
       <div className="flex items-center gap-2 shrink-0">
         <span
-          style={{ background: "rgba(232,163,61,0.18)", color: COLORS.gold }}
+          style={{ background: "rgba(254,164,6,0.18)", color: COLORS.gold }}
           className="flex items-center gap-1 text-body-sm font-bold px-2 py-1 rounded-full uppercase tracking-wide"
         >
-          <Megaphone size={11} /> {t("Tangazo", "Sponsored")}
+          <Megaphone size={12} /> {t("Tangazo", "Sponsored")}
         </span>
 
         <div
           style={{ background: COLORS.gold }}
           className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
         >
-          {Icon && <Icon size={15} color={COLORS.night} />}
+          {Icon && <Icon size={16} color={COLORS.night} />}
         </div>
       </div>
 
@@ -68,7 +68,7 @@ export default function PromotedBannerStrip({ onOpenListing = () => {} }) {
           {banner.listingTitle}
         </p>
         <p
-          style={{ color: "rgba(245,243,236,0.6)" }}
+          style={{ color: "rgba(244,247,252,0.6)" }}
           className="flex items-center justify-center sm:justify-start gap-1 text-body-sm truncate"
         >
           <MapPin size={10} className="shrink-0" /> {banner.location}
@@ -87,7 +87,7 @@ export default function PromotedBannerStrip({ onOpenListing = () => {} }) {
                 background:
                   i === index % banners.length
                     ? COLORS.gold
-                    : "rgba(245,243,236,0.25)",
+                    : "rgba(244,247,252,0.25)",
               }}
               className="w-1.5 h-1.5 rounded-full"
             />
@@ -98,7 +98,7 @@ export default function PromotedBannerStrip({ onOpenListing = () => {} }) {
       {/* Chevron — centered kwenye mobile, inline kwenye desktop */}
       <ChevronRight
         size={16}
-        color="rgba(245,243,236,0.5)"
+        color="rgba(244,247,252,0.5)"
         className="shrink-0 hidden sm:block"
       />
     </button>

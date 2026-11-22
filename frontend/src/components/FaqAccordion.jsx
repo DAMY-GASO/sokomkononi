@@ -31,16 +31,16 @@ export default function FaqAccordion({ items, lang = "sw" }) {
         const question = pickQuestion(faq, lang);
         const answer = pickAnswer(faq, lang);
         return (
-          <div key={index} className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+          <div key={index} className="border border-hairline rounded-lg overflow-hidden bg-card">
             <button
               type="button"
               onClick={() => toggle(index)}
               aria-expanded={isOpen}
-              className="w-full flex items-start justify-between gap-4 p-4 text-left hover:bg-[#F5F3EC]/60 transition-colors"
+              className="w-full flex items-start justify-between gap-4 p-4 text-left hover:bg-sand/60 transition-colors"
             >
               <h3 className="h-card flex-1">{question}</h3>
               <svg
-                className={`w-5 h-5 flex-shrink-0 text-[#FEA406] transition-transform duration-200 mt-0.5 ${
+                className={`w-5 h-5 flex-shrink-0 text-gold-ink transition-transform duration-200 mt-0.5 ${
                   isOpen ? "rotate-180" : ""
                 }`}
                 viewBox="0 0 24 24"

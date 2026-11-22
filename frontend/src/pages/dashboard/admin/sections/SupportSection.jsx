@@ -3,7 +3,7 @@
 // Admin — Customer Care (tickets + feedback).
 // Bilingual + mobile-responsive + Async actions na rollback.
 //
-// ✅ MPYA:
+// MPYA:
 //   - Inasoma ?ticket={id} kutoka URL (kutoka notification)
 //   - Inafungua ticket husika + ina-scroll
 //   - Inahydrate tickets kwenye mount (na refresh kila 30s kama ipo wazi)
@@ -536,7 +536,7 @@ function TicketCard({
 
   const isBusy = (key) => !!busy[key];
 
-  // ✅ Badge ya NEW kwa ticket OPEN bila assignment
+  // Badge ya NEW kwa ticket OPEN bila assignment
   const isNew = ticket.status === "open" && !ticket.assignedTo;
 
   const handleSendReply = async () => {
@@ -678,7 +678,7 @@ function TicketCard({
 
           <div className="flex-1 min-w-0 overflow-hidden">
             <div className="flex items-center gap-1.5 flex-wrap mb-1">
-              {/* ✅ Badge ya NEW */}
+              {/* Badge ya NEW */}
               {isNew && (
                 <span
                   style={{ background: COLORS.rust, color: "white" }}
@@ -713,7 +713,7 @@ function TicketCard({
                   style={{ background: "rgba(193,80,46,0.2)", color: COLORS.rust }}
                   className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
                 >
-                  ⏰ {t("SLA IMEPITA", "SLA OVERDUE")}
+                  <Clock size={12} className="inline -mt-0.5 mr-1" />{t("SLA IMEPITA", "SLA OVERDUE")}
                 </span>
               )}
             </div>
@@ -1241,7 +1241,7 @@ export default function SupportSection() {
   const feedback = useFeedback();
   const [searchParams] = useSearchParams();
 
-  // ✅ Ticket focus kutoka URL
+  // Ticket focus kutoka URL
   const focusedTicketId = (() => {
     const raw = searchParams.get("ticket");
     if (!raw) return null;
@@ -1267,7 +1267,7 @@ export default function SupportSection() {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ✅ Hydrate tickets kwenye mount + auto-refresh kila 30s
+  // Hydrate tickets kwenye mount + auto-refresh kila 30s
   useEffect(() => {
     hydrateTicketsFromApi();
     const timer = setInterval(() => {
@@ -1278,12 +1278,12 @@ export default function SupportSection() {
     return () => clearInterval(timer);
   }, []);
 
-  // ✅ Kama kuna `?ticket=`, nenda kwenye tab ya tickets
+  // Kama kuna `?ticket=`, nenda kwenye tab ya tickets
   useEffect(() => {
     if (focusedTicketId) setTab("tickets");
   }, [focusedTicketId]);
 
-  // ✅ Scroll kwenda ticket iliyochaguliwa
+  // Scroll kwenda ticket iliyochaguliwa
   useEffect(() => {
     if (!focusedTicketId) return;
     const timer = setTimeout(() => {
@@ -1389,7 +1389,7 @@ export default function SupportSection() {
       );
     }
 
-    // ✅ Ticket iliyochaguliwa iwe juu
+    // Ticket iliyochaguliwa iwe juu
     if (focusedTicketId) {
       result.sort((a, b) => {
         if (a.id === focusedTicketId) return -1;

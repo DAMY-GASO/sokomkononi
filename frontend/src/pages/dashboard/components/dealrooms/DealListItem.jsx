@@ -41,8 +41,8 @@ export default function DealListItem({ deal, active, onSelect, lang, unreadCount
         </p>
         <span
           style={{
-            background: status?.bg || "#F5F3EC",
-            color: status?.fg || "#101A2E",
+            background: status?.bg || COLORS.sand,
+            color: status?.fg || COLORS.night,
           }}
           className="inline-block text-body-sm font-semibold px-2 py-0.5 rounded-full"
         >
@@ -59,7 +59,7 @@ export default function DealListItem({ deal, active, onSelect, lang, unreadCount
         {deal.adminLocked && deal.status !== "cancelled" && (
           <span
             className="inline-block ml-1 text-body-sm font-semibold px-2 py-0.5 rounded-full"
-            style={{ background: "rgba(232,163,61,0.2)", color: "#8A5A16" }}
+            style={{ background: "rgba(254,164,6,0.2)", color: COLORS.goldText }}
           >
             <Lock size={10} className="inline mr-0.5" />
             {lang === "sw" ? "Imesimamishwa" : "Locked"}
@@ -67,9 +67,9 @@ export default function DealListItem({ deal, active, onSelect, lang, unreadCount
         )}
       </div>
 
-      {/* ✅ MPYA: badge ya ujumbe ambao haujasomwa */}
+      {/* MPYA: badge ya ujumbe ambao haujasomwa */}
       {unreadCount > 0 && (
-        <span className="absolute top-2 right-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-bold shadow">
+        <span className="absolute top-2 right-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-rust text-white text-xs font-bold shadow">
           {unreadCount > 99 ? "99+" : unreadCount}
         </span>
       )}

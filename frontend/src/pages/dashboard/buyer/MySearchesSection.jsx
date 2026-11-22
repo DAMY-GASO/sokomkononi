@@ -2,16 +2,16 @@
 // MySearchesSection.jsx — B.7 FINAL
 //
 // Marekebisho:
-//  ✅ Edit search (PATCH /searches/{id}/) — imeunganishwa
-//  ✅ Onyesha `matchCount` kutoka backend (si client-side)
-//  ✅ Tumia camelCase fields kutoka searchesStore.norm():
+//  Edit search (PATCH /searches/{id}/) — imeunganishwa
+//  Onyesha `matchCount` kutoka backend (si client-side)
+//  Tumia camelCase fields kutoka searchesStore.norm():
 //     name, query, category, region, minPrice, maxPrice,
 //     verifiedOnly, matchCount, lastChecked, createdAt
-//  ✅ Ondoa `detectSearchAlertsAsync()` kwenye mount
+//  Ondoa `detectSearchAlertsAsync()` kwenye mount
 //     (backend Celery `searches.send_search_alerts` inafanya kila dakika 5)
-//  ✅ Form moja inatumika kwa create na edit
-//  ✅ Loading state kwenye save/update
-//  ✅ Timestamp ya `lastChecked`
+//  Form moja inatumika kwa create na edit
+//  Loading state kwenye save/update
+//  Timestamp ya `lastChecked`
 // ============================================================
 
 import React, { useState, useMemo } from "react";
@@ -92,7 +92,7 @@ function SearchForm({ initial, categories, lang, onSubmit, onCancel, busy }) {
 
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
       className="rounded-2xl border p-4 mb-4 flex flex-col gap-3 max-w-md mx-auto"
     >
       <div className="flex items-center justify-between">
@@ -122,7 +122,7 @@ function SearchForm({ initial, categories, lang, onSubmit, onCancel, busy }) {
             "mfano: Toyota Harrier Dar",
             "e.g. Toyota Harrier Dar"
           )}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
+          className="border border-hairline rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
         />
       </label>
 
@@ -135,7 +135,7 @@ function SearchForm({ initial, categories, lang, onSubmit, onCancel, busy }) {
           value={form.query}
           onChange={(e) => setForm({ ...form, query: e.target.value })}
           placeholder={t("mfano: Harrier", "e.g. Harrier")}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
+          className="border border-hairline rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
         />
       </label>
 
@@ -149,7 +149,7 @@ function SearchForm({ initial, categories, lang, onSubmit, onCancel, busy }) {
           onChange={(e) =>
             setForm({ ...form, category: e.target.value || null })
           }
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
+          className="border border-hairline rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
         >
           <option value="">{t("Zote", "All")}</option>
           {categories.map((cat) => (
@@ -170,7 +170,7 @@ function SearchForm({ initial, categories, lang, onSubmit, onCancel, busy }) {
           onChange={(e) =>
             setForm({ ...form, region: e.target.value || null })
           }
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
+          className="border border-hairline rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
         >
           <option value="">{t("Zote", "All")}</option>
           {REGIONS.map((r) => (
@@ -193,7 +193,7 @@ function SearchForm({ initial, categories, lang, onSubmit, onCancel, busy }) {
               setForm({ ...form, minPrice: cleanPriceInput(e.target.value) })
             }
             placeholder="0"
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
+            className="border border-hairline rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
           />
         </label>
         <label className="flex flex-col gap-1.5 text-center">
@@ -206,7 +206,7 @@ function SearchForm({ initial, categories, lang, onSubmit, onCancel, busy }) {
               setForm({ ...form, maxPrice: cleanPriceInput(e.target.value) })
             }
             placeholder="100,000,000"
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
+            className="border border-hairline rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
           />
         </label>
       </div>
@@ -228,7 +228,7 @@ function SearchForm({ initial, categories, lang, onSubmit, onCancel, busy }) {
 
       {error && (
         <div
-          style={{ background: "rgba(193,80,46,0.1)", color: "#C1502E" }}
+          style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
           className="text-xs font-semibold px-3 py-2 rounded-lg"
         >
           {error}
@@ -239,7 +239,7 @@ function SearchForm({ initial, categories, lang, onSubmit, onCancel, busy }) {
         <button
           onClick={onCancel}
           disabled={busy}
-          className="text-btn font-semibold px-3 py-2 rounded-lg border border-gray-200 text-secondary hover:bg-gray-50 disabled:opacity-50"
+          className="text-btn font-semibold px-3 py-2 rounded-lg border border-hairline text-secondary hover:bg-page disabled:opacity-50"
         >
           {t("Ghairi", "Cancel")}
         </button>
@@ -365,7 +365,7 @@ export default function MySearchesSection() {
               style={{ background: COLORS.gold, color: COLORS.night }}
               className="flex items-center gap-1.5 text-btn font-semibold rounded-lg px-4 py-2.5"
             >
-              <Plus size={13} />
+              <Plus size={14} />
               {t("Utafutaji Mpya", "New Search")}
             </button>
           )}
@@ -398,7 +398,7 @@ export default function MySearchesSection() {
         {searches.length === 0 && !showForm && !editingId && (
           <div
             style={{ borderColor: COLORS.sandLine }}
-            className="rounded-2xl border-2 border-dashed p-10 text-center bg-white"
+            className="rounded-2xl border-2 border-dashed p-10 text-center bg-card"
           >
             <Bell size={48} className="mx-auto text-muted mb-3" />
             <h3 className="text-primary font-semibold mb-1">
@@ -427,7 +427,7 @@ export default function MySearchesSection() {
                   key={s.id}
                   style={{
                     borderColor: COLORS.sandLine,
-                    background: "white",
+                    background: "rgb(var(--c-card))",
                   }}
                   className="rounded-xl border p-4"
                 >

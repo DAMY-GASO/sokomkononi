@@ -54,7 +54,7 @@ function norm(raw) {
   if (!raw) return null;
   return {
     id: raw.id,
-    code: raw.code || "", // ⬅️ USIWE raw.id
+    code: raw.code || "", // USIWE raw.id
     type: TYPE_FROM_API[raw.type] || (raw.type || "package").toLowerCase(),
     name: raw.name || { sw: "", en: "" },
     description: raw.description || { sw: "", en: "" },
@@ -87,12 +87,12 @@ function toApi(form) {
     description: form.description,
     price: Number(form.price) || 0,
     credits,
-    validityDays: Number(form.validityDays) || 90, // ⬅️ camelCase
+    validityDays: Number(form.validityDays) || 90, // camelCase
     services: form.services || [],
-    discountPercent: Number(form.discountPercent) || 0, // ⬅️ camelCase
+    discountPercent: Number(form.discountPercent) || 0, // camelCase
     icon: form.icon || "Package",
     color: form.color || "night",
-    active: form.active !== false, // ⬅️ active (sio is_active)
+    active: form.active !== false, // active (sio is_active)
     featured: !!form.featured,
   };
 }

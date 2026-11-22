@@ -39,7 +39,7 @@ export const transactionsApi = {
   confirmPayment: (id, confirmation_note = "") =>
     api.post(`/transactions/${id}/confirm-payment/`, { confirmation_note }),
 
-  // ✅ MPYA: Muuzaji anakataa uthibitisho wa malipo — proof inafutwa,
+  // MPYA: Muuzaji anakataa uthibitisho wa malipo — proof inafutwa,
   // buyer anaweza kupakia tena.
   rejectPaymentProof: (id, reason = "") =>
     api.post(`/transactions/${id}/reject-payment-proof/`, { reason }),

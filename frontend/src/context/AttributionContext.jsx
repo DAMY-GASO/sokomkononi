@@ -13,6 +13,8 @@
 // ============================================================
 import React, { createContext, useCallback, useContext, useRef, useState } from "react";
 import { useLanguage } from "./LanguageContext.jsx";
+import { CHART } from "../pages/dashboard/admin/shared/chartColors.js";
+import { COLORS } from "../pages/dashboard/components/shared.js";
 
 const AttributionContext = createContext(null);
 
@@ -100,7 +102,7 @@ function AttributionModal({ open, onClose }) {
       name: "Francis Bahati",
       host: "francisbahatiportfolio.netlify.app",
       initials: "FB",
-      bg: "#FEA406",
+      bg: COLORS.gold,
       fg: "#011957",
     },
   ];
@@ -115,7 +117,7 @@ function AttributionModal({ open, onClose }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden"
+        className="w-full max-w-md rounded-2xl bg-card shadow-2xl overflow-hidden"
         style={{ animation: "scale-in 0.25s cubic-bezier(0.16,1,0.3,1) both" }}
       >
         {/* Header */}
@@ -165,14 +167,14 @@ function AttributionModal({ open, onClose }) {
                 {l.initials}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-[#011957] truncate">
+                <p className="text-sm font-semibold text-night truncate">
                   {l.name}
                 </p>
-                <p className="text-xs text-[#6B7280] truncate">{l.host}</p>
+                <p className="text-xs text-muted truncate">{l.host}</p>
               </div>
               <svg
                 width="16" height="16" viewBox="0 0 24 24" fill="none"
-                stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                stroke={CHART.slateLight} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                 className="shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
                 aria-hidden="true"
               >
@@ -192,8 +194,8 @@ function AttributionModal({ open, onClose }) {
           >
             {t("Sawa, Asante!", "Got it, Thanks!")}
           </button>
-          <p className="text-center text-[10px] text-[#9CA3AF] mt-3">
-            {t("Siri ya SokoMkononi ✨", "A SokoMkononi secret ✨")}
+          <p className="text-center text-xs text-muted mt-3">
+            {t("Siri ya SokoMkononi", "A SokoMkononi secret")}
           </p>
         </div>
       </div>

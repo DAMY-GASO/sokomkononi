@@ -3,7 +3,7 @@
 // MAHALI PAMOJA pa kuamua nani anapewa kipaumbele (Leading / Boost)
 // na jinsi ya kuzungusha kwa haki. Inatumika na HomePage na AllListingsPage.
 //
-// ⚠️ Majina ya fields hayajathibitishwa na listingsStore — kama sehemu ya
+// Majina ya fields hayajathibitishwa na listingsStore — kama sehemu ya
 // "Zinazopendekezwa" inatoka tupu, rekebisha HAPA tu (isLeadingListing,
 // leadingTier, boostTier).
 // ============================================================

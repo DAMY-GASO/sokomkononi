@@ -363,7 +363,7 @@ export async function permanentDeleteUserAsync(id, { reason, confirmText } = {})
   }
 
   try {
-    // ✅ body moja kwa moja — api.delete(path, body)
+    // body moja kwa moja — api.delete(path, body)
     await api.delete(`/admin/users/${id}/permanent/`, {
       reason: cleanReason,
       confirm_text: cleanConfirm,

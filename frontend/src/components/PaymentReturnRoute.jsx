@@ -122,7 +122,7 @@ export default function PaymentReturnRoute() {
     >
       <div
         style={{ borderColor: COLORS.sandLine }}
-        className="bg-white rounded-2xl border max-w-md w-full p-8 text-center"
+        className="bg-card rounded-2xl border max-w-md w-full p-8 text-center"
         aria-live="polite"
       >
         {stage === "POLLING" && (
@@ -134,7 +134,7 @@ export default function PaymentReturnRoute() {
             <p className="text-sm text-secondary mb-3">
               {sw ? "Tafadhali usifunge ukurasa huu." : "Please don't close this page."}
             </p>
-            <p className="text-[11px] text-muted">{attempt}/{MAX_POLL_ATTEMPTS}</p>
+            <p className="text-xs text-muted">{attempt}/{MAX_POLL_ATTEMPTS}</p>
           </>
         )}
 
@@ -158,7 +158,7 @@ export default function PaymentReturnRoute() {
               </p>
             )}
             {transid && (
-              <p className="text-[11px] text-muted font-mono mb-5">
+              <p className="text-xs text-muted font-mono mb-5">
                 {sw ? "Kumbukumbu" : "Reference"}: {transid}
               </p>
             )}
@@ -172,7 +172,7 @@ export default function PaymentReturnRoute() {
               </button>
               <Link
                 to="/"
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 text-primary text-center"
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-hairline text-primary text-center"
               >
                 {sw ? "Nyumbani" : "Home"}
               </Link>
@@ -197,7 +197,7 @@ export default function PaymentReturnRoute() {
             <div className="flex flex-col sm:flex-row gap-2">
               <button
                 onClick={() => navigate(txPath)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 text-primary"
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-hairline text-primary"
               >
                 {sw ? "Miamala Yangu" : "My Transactions"}
               </button>

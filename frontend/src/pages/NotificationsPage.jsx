@@ -2,9 +2,9 @@
 // NotificationsPage.jsx — B.12 FINAL
 //
 // Marekebisho:
-//  ✅ Ongeza kitufe cha "Washa Push (hata tab imefungwa)"
-//  ✅ Service Worker + VAPID integration
-//  ✅ Kila kitu kingine kimebaki kama kilivyo
+//  Ongeza kitufe cha "Washa Push (hata tab imefungwa)"
+//  Service Worker + VAPID integration
+//  Kila kitu kingine kimebaki kama kilivyo
 // ============================================================
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -25,7 +25,7 @@ import { useLanguage } from "../context/LanguageContext.jsx";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { useNotificationAlerts } from "../config/notificationAlerts.js";
-// ✅ MPYA
+// MPYA
 import {
   isPushSupported,
   getPushPermission,
@@ -120,7 +120,7 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
         background: notif.read ? "rgb(var(--c-card))" : (config?.bg || "rgb(var(--c-page))"),
         borderColor: "rgb(var(--c-hairline))",
       }}
-      className="rounded-xl border p-4 flex items-start gap-3 transition-all cursor-pointer hover:shadow-md hover:border-[#FEA406]/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FEA406]"
+      className="rounded-xl border p-4 flex items-start gap-3 transition-all cursor-pointer hover:shadow-md hover:border-gold/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
     >
       <div
         style={{ background: config?.bg || "rgb(var(--c-page))" }}
@@ -160,7 +160,7 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
         {timeText && (
           <p
             style={{ color: "var(--text-muted)" }}
-            className="text-[11px] font-medium"
+            className="text-xs font-medium"
           >
             {timeText}
           </p>
@@ -211,7 +211,7 @@ export default function NotificationsPage() {
   const alerts = useNotificationAlerts();
   const [alertMsg, setAlertMsg] = useState("");
 
-  // ✅ MPYA: Push state
+  // MPYA: Push state
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
   const [pushMsg, setPushMsg] = useState("");
@@ -389,7 +389,7 @@ export default function NotificationsPage() {
         {/* ARIFA: kivinjari + sauti + push */}
         <div className="flex flex-col items-center gap-2 mb-4">
           <div className="flex items-center justify-center gap-2 flex-wrap">
-            {/* ✅ MPYA: Push button */}
+            {/* MPYA: Push button */}
             {isPushSupported() && (
               <button
                 type="button"
@@ -408,11 +408,11 @@ export default function NotificationsPage() {
                 }
               >
                 {pushBusy ? (
-                  <Loader2 size={13} className="animate-spin" />
+                  <Loader2 size={14} className="animate-spin" />
                 ) : pushEnabled ? (
-                  <Smartphone size={13} />
+                  <Smartphone size={14} />
                 ) : (
-                  <BellRing size={13} />
+                  <BellRing size={14} />
                 )}
                 {pushEnabled
                   ? lang === "sw"
@@ -436,7 +436,7 @@ export default function NotificationsPage() {
                 }}
                 className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border bg-card"
               >
-                <BellRing size={13} />
+                <BellRing size={14} />
                 {alerts.browserOn
                   ? lang === "sw" ? "Kivinjari: ZIMEWASHWA" : "Browser: ON"
                   : lang === "sw" ? "Washa kivinjari" : "Enable browser"}
@@ -454,14 +454,14 @@ export default function NotificationsPage() {
               }}
               className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border bg-card"
             >
-              {alerts.soundOn ? <Volume2 size={13} /> : <VolumeX size={13} />}
+              {alerts.soundOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
               {alerts.soundOn
                 ? lang === "sw" ? "Sauti: ZIMEWASHWA" : "Sound: ON"
                 : lang === "sw" ? "Sauti: ZIMEZIMWA" : "Sound: OFF"}
             </button>
           </div>
 
-          {/* ✅ Push message */}
+          {/* Push message */}
           {pushMsg && (
             <p
               style={{
@@ -473,20 +473,20 @@ export default function NotificationsPage() {
                     ? COLORS.dangerText
                     : COLORS.successText,
               }}
-              className="text-[11px] text-center max-w-md"
+              className="text-xs text-center max-w-md"
             >
               {pushMsg}
             </p>
           )}
 
           {alertMsg && (
-            <p style={{ color: COLORS.dangerText }} className="text-[11px] text-center max-w-md">
+            <p style={{ color: COLORS.dangerText }} className="text-xs text-center max-w-md">
               {alertMsg}
             </p>
           )}
 
           {pushEnabled && (
-            <p style={{ color: "var(--text-muted)" }} className="text-[11px] text-center max-w-md">
+            <p style={{ color: "var(--text-muted)" }} className="text-xs text-center max-w-md">
               {lang === "sw"
                 ? "Utapokea taarifa kwenye kifaa chako hata ukifunga kivinjari."
                 : "You'll receive notifications on your device even when the browser is closed."}
@@ -494,7 +494,7 @@ export default function NotificationsPage() {
           )}
 
           {!pushEnabled && alerts.browserOn && (
-            <p style={{ color: "var(--text-muted)" }} className="text-[11px] text-center max-w-md">
+            <p style={{ color: "var(--text-muted)" }} className="text-xs text-center max-w-md">
               {lang === "sw"
                 ? "Arifa za kivinjari zinafanya kazi tu wakati SokoMkononi iko wazi."
                 : "Browser alerts work only while SokoMkononi is open."}

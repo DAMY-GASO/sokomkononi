@@ -6,8 +6,8 @@
 //
 // Marekebisho:
 //  - Ongeza "Uthibitisho Wangu" (My Verification) kwenye quick actions
-//  - ⬅️ Chuja listings za seller mwenyewe (buyer haoni mali zake)
-//  - ✅ Ondoa hatua za "Jinsi ya Kununua" — badala yake kitufe kikubwa
+//  - Chuja listings za seller mwenyewe (buyer haoni mali zake)
+//  - Ondoa hatua za "Jinsi ya Kununua" — badala yake kitufe kikubwa
 // ============================================================
 
 import React, { useMemo, useState } from "react";
@@ -61,7 +61,7 @@ export default function BuyerOverview({ onNavigate }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   // ============================================================
-  // ⬅️ Chuja listings za seller mwenyewe
+  // Chuja listings za seller mwenyewe
   // ============================================================
   const listings = useMemo(() => {
     if (!user?.id) return publicListings;
@@ -167,13 +167,13 @@ export default function BuyerOverview({ onNavigate }) {
       key: "verification",
       label: t("Uthibitisho Wangu", "My Verification"),
       icon: ShieldCheck,
-      color: "#7C3AED",
+      color: COLORS.royalLight,
     },
     {
       key: "safety",
       label: t("Msaada", "Support"),
       icon: Shield,
-      color: "#2563EB",
+      color: COLORS.royal,
     },
   ];
 
@@ -195,8 +195,8 @@ export default function BuyerOverview({ onNavigate }) {
       <div className="mb-6 text-center">
         <h1 className="h-title">
           {t(
-            `Karibu, ${user?.name?.split(" ")[0] || "Mnunuzi"} 👋`,
-            `Welcome, ${user?.name?.split(" ")[0] || "Buyer"} 👋`
+            `Karibu, ${user?.name?.split(" ")[0] || "Mnunuzi"}`,
+            `Welcome, ${user?.name?.split(" ")[0] || "Buyer"}`
           )}
         </h1>
         <p className="text-body-sm text-secondary mt-2 max-w-xl mx-auto">
@@ -207,11 +207,11 @@ export default function BuyerOverview({ onNavigate }) {
         </p>
       </div>
 
-      {/* ✅ KITUFE KIKUBWA: Jinsi ya Kununua (Badala ya Steps) */}
+      {/* KITUFE KIKUBWA: Jinsi ya Kununua (Badala ya Steps) */}
       <button
         type="button"
         onClick={() => navigate("/jinsi-ya-kununua")}
-        className="w-full flex items-center gap-3 bg-white rounded-xl border border-gray-100 p-4 mb-6 hover:border-gold hover:shadow-sm transition-all text-left"
+        className="w-full flex items-center gap-3 bg-card rounded-xl border border-hairline p-4 mb-6 hover:border-gold hover:shadow-sm transition-all text-left"
       >
         <div
           className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
@@ -247,7 +247,7 @@ export default function BuyerOverview({ onNavigate }) {
             placeholder={t("Unatafuta nini?", "What are you looking for?")}
             className="w-full rounded-full border pl-12 pr-32 py-3.5 text-sm outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-all"
             style={{
-              background: "white",
+              background: "rgb(var(--c-card))",
               borderColor: COLORS.sandLine,
               color: COLORS.night,
             }}
@@ -295,7 +295,7 @@ export default function BuyerOverview({ onNavigate }) {
       </div>
 
       {/* QUICK ACTIONS */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 mb-6">
+      <div className="bg-card rounded-xl border border-hairline p-4 sm:p-5 mb-6">
         <h2 className="h-card mb-4 text-center">
           {t("Vitendo vya Haraka", "Quick Actions")}
         </h2>
@@ -304,7 +304,7 @@ export default function BuyerOverview({ onNavigate }) {
             <button
               key={key}
               onClick={() => onNavigate(key)}
-              className="flex flex-col items-center justify-center gap-1.5 p-3 sm:p-4 rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all"
+              className="flex flex-col items-center justify-center gap-1.5 p-3 sm:p-4 rounded-xl border border-hairline hover:border-hairline hover:shadow-sm transition-all"
             >
               <div
                 style={{ background: `${color}15` }}

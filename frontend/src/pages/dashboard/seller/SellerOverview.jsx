@@ -4,12 +4,12 @@
 // Bilingual kamili + mobile-responsive + KILA KITU CENTERED.
 //
 // Marekebisho (B.2 — FINAL):
-//  ✅ Real-time stats kwa polling (listings + leads kila sekunde 60)
-//  ✅ Chart ya "Views per Listing"
-//  ✅ Maulizio Mapya sasa inatumia leadsStore (si sum ya inquiries)
-//  ✅ Reservation Zinasubiri kutoka listings (si deals)
-//  ✅ Deals Hai: chuja kwa side="seller"
-//  ✅ Timestamp "Imesasishwa" + kitufe cha refresh
+//  Real-time stats kwa polling (listings + leads kila sekunde 60)
+//  Chart ya "Views per Listing"
+//  Maulizio Mapya sasa inatumia leadsStore (si sum ya inquiries)
+//  Reservation Zinasubiri kutoka listings (si deals)
+//  Deals Hai: chuja kwa side="seller"
+//  Timestamp "Imesasishwa" + kitufe cha refresh
 // ============================================================
 
 import React, { useMemo, useState, useCallback, useEffect } from "react";
@@ -57,7 +57,7 @@ export default function SellerOverview({ onNavigate }) {
   const listings = useMyListings();
   const unpaidListings = useUnpaidListings();
 
-  // ✅ Chuja deals za seller pekee
+  // Chuja deals za seller pekee
   const allDeals = useDeals(user?.id);
   const deals = useMemo(() => {
     return (allDeals || []).filter((d) => {
@@ -74,7 +74,7 @@ export default function SellerOverview({ onNavigate }) {
   const newLeadsCount = useNewLeadsCount();
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ✅ Polling moja: listings + leads
+  // Polling moja: listings + leads
   const pollFetcher = useCallback(async () => {
     await Promise.allSettled([
       fetchMyListingsFromApi(),
@@ -112,7 +112,7 @@ export default function SellerOverview({ onNavigate }) {
       !["completed", "cancelled", "expired"].includes(d.status)
     ).length;
 
-    // ✅ Reservation Zinasubiri — LISTINGS (doc inavyosema)
+    // Reservation Zinasubiri — LISTINGS (doc inavyosema)
     const pendingReservations = myListings.filter(
       (l) => l.status === "reserved"
     ).length;
@@ -135,8 +135,8 @@ export default function SellerOverview({ onNavigate }) {
     { key: "post", label: t("Weka Mali", "Post Property"), icon: PlusCircle, color: COLORS.gold },
     { key: "leads", label: t("Maulizio", "Enquiries"), icon: Inbox, color: COLORS.green },
     { key: "deals", label: t("Vyumba vya Majadiliano", "Deal Rooms"), icon: MessagesSquare, color: COLORS.rust },
-    { key: "verification", label: t("Uthibitisho Wangu", "My Verification"), icon: ShieldCheck, color: "#7C3AED" },
-    { key: "safety", label: t("Msaada", "Support"), icon: Shield, color: "#2563EB" },
+    { key: "verification", label: t("Uthibitisho Wangu", "My Verification"), icon: ShieldCheck, color: COLORS.royalLight },
+    { key: "safety", label: t("Msaada", "Support"), icon: Shield, color: COLORS.royal },
     { key: "feedback", label: t("Maoni", "Feedback"), icon: MessageSquarePlus, color: COLORS.green },
   ];
 
@@ -145,25 +145,25 @@ export default function SellerOverview({ onNavigate }) {
       {/* GREETING + REFRESH */}
       <div className="mb-6 text-center">
         <h1 className="h-title">
-          {t(`Karibu, ${user?.name?.split(" ")[0] || "Muuzaji"} 👋`,
-             `Welcome, ${user?.name?.split(" ")[0] || "Seller"} 👋`)}
+          {t(`Karibu, ${user?.name?.split(" ")[0] || "Muuzaji"}`,
+             `Welcome, ${user?.name?.split(" ")[0] || "Seller"}`)}
         </h1>
         <p className="text-body-sm text-secondary mt-2 max-w-xl mx-auto">
           {t("Hii ni muhtasari wa mali zako, maulizio, na makubaliano.",
              "Here's a summary of your listings, enquiries, and deals.")}
         </p>
         <div className="mt-3 flex items-center justify-center gap-2">
-          <span className="text-[11px] text-muted">
+          <span className="text-xs text-muted">
             {t("Imesasishwa", "Updated")} {timeAgoShort(lastRefreshedAt, lang)}
           </span>
           <button
             onClick={refresh}
             disabled={isRefreshing}
             aria-label={t("Sasisha", "Refresh")}
-            className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border disabled:opacity-50"
-            style={{ borderColor: COLORS.sandLine, color: COLORS.night, background: "white" }}
+            className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-md border disabled:opacity-50"
+            style={{ borderColor: COLORS.sandLine, color: COLORS.night, background: "rgb(var(--c-card))" }}
           >
-            <RefreshCw size={11} className={isRefreshing ? "animate-spin" : ""} />
+            <RefreshCw size={12} className={isRefreshing ? "animate-spin" : ""} />
             {isRefreshing ? t("Inasasisha...", "Refreshing...") : t("Sasisha", "Refresh")}
           </button>
         </div>
@@ -173,7 +173,7 @@ export default function SellerOverview({ onNavigate }) {
       <button
         type="button"
         onClick={() => navigate("/jinsi-ya-kununua#kuuza")}
-        className="w-full flex items-center gap-3 bg-white rounded-xl border border-gray-100 p-4 mb-6 hover:border-gold hover:shadow-sm transition-all text-left"
+        className="w-full flex items-center gap-3 bg-card rounded-xl border border-hairline p-4 mb-6 hover:border-gold hover:shadow-sm transition-all text-left"
       >
         <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(47,109,79,0.1)" }}>
           <BookOpen size={22} color={COLORS.green} />
@@ -200,7 +200,7 @@ export default function SellerOverview({ onNavigate }) {
                 {t(`Una listing ${unpaidListings.length} zisizolipwa ada`,
                    `You have ${unpaidListings.length} unpaid listing${unpaidListings.length === 1 ? "" : "s"}`)}
               </p>
-              <p className="text-[11px] text-secondary mt-0.5">
+              <p className="text-xs text-secondary mt-0.5">
                 {t("Lipa ada ili tangazo lako lionekane hewani.", "Pay the fee to get your listing live.")}
               </p>
             </div>
@@ -219,7 +219,7 @@ export default function SellerOverview({ onNavigate }) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatTile label={t("Mali Hai", "Active Listings")} value={stats.activeListings} icon={ListChecks} color={COLORS.green} />
         <StatTile label={t("Jumla ya Mionekano", "Total Views")} value={stats.totalViews.toLocaleString()} icon={Eye} color={COLORS.gold} />
-        <StatTile label={t("Maulizio Mapya", "New Enquiries")} value={stats.totalEnquiries} icon={MessageSquare} color="#2563EB" />
+        <StatTile label={t("Maulizio Mapya", "New Enquiries")} value={stats.totalEnquiries} icon={MessageSquare} color={COLORS.royal} />
         <StatTile label={t("Deals Hai", "Active Deals")} value={stats.activeDeals} icon={MessagesSquare} color={COLORS.rust} />
       </div>
 
@@ -237,14 +237,14 @@ export default function SellerOverview({ onNavigate }) {
       </div>
 
       {/* QUICK ACTIONS */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 mb-6">
+      <div className="bg-card rounded-xl border border-hairline p-4 sm:p-5 mb-6">
         <h2 className="h-card mb-4 text-center">{t("Vitendo vya Haraka", "Quick Actions")}</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
           {quickActions.map(({ key, label, icon: Icon, color }) => (
             <button
               key={key}
               onClick={() => onNavigate(key)}
-              className="flex flex-col items-center justify-center gap-1.5 p-3 sm:p-4 rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all"
+              className="flex flex-col items-center justify-center gap-1.5 p-3 sm:p-4 rounded-xl border border-hairline hover:border-hairline hover:shadow-sm transition-all"
             >
               <div style={{ background: `${color}15` }} className="w-10 h-10 rounded-lg flex items-center justify-center">
                 <Icon size={18} color={color} />

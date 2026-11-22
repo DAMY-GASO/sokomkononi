@@ -70,10 +70,10 @@ function pickText(log, field, lang) {
   if (!log) return "";
   const v = log[field];
   
-  // ✅ Kama ni object (mfano details_bilingual)
+  // Kama ni object (mfano details_bilingual)
   if (v && typeof v === "object") return v[lang] || v.sw || v.en || "";
   
-  // ✅ Kama kuna detailsSw/detailsEn
+  // Kama kuna detailsSw/detailsEn
   const sw = log[`${field}Sw`] ?? log[`${field}_sw`];
   const en = log[`${field}En`] ?? log[`${field}_en`];
   
@@ -268,7 +268,7 @@ function LogDetailModal({ log, lang, onClose }) {
               <p className="text-sm font-semibold text-primary truncate">
                 {action?.label?.[lang] || action?.label?.sw || log.action}
               </p>
-              <p className="text-[11px] text-muted font-mono truncate">
+              <p className="text-xs text-muted font-mono truncate">
                 {log.action}
               </p>
             </div>
@@ -305,8 +305,8 @@ function LogDetailModal({ log, lang, onClose }) {
 
           {pickText(log, "details", lang) && (
             <div>
-              <p className="text-[10px] font-semibold text-muted uppercase mb-1 flex items-center gap-1">
-                <FileText size={11} />
+              <p className="text-xs font-semibold text-muted uppercase mb-1 flex items-center gap-1">
+                <FileText size={12} />
                 {t("Maelezo", "Details")}
               </p>
               <div
@@ -359,8 +359,8 @@ function LogDetailModal({ log, lang, onClose }) {
 function Field({ icon: Icon, label, value, mono = false }) {
   return (
     <div>
-      <p className="text-[10px] font-semibold text-muted uppercase mb-1 flex items-center gap-1">
-        <Icon size={11} />
+      <p className="text-xs font-semibold text-muted uppercase mb-1 flex items-center gap-1">
+        <Icon size={12} />
         {label}
       </p>
       <p
@@ -677,7 +677,7 @@ export default function AuditLogsSection() {
                   style={{ background: colors?.bg || "rgb(var(--c-page))" }}
                   className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
                 >
-                  <ActionIcon size={15} style={{ color: colors.fg }} />
+                  <ActionIcon size={16} style={{ color: colors.fg }} />
                 </div>
 
                 <div className="flex-1 min-w-0 overflow-hidden">
@@ -687,11 +687,11 @@ export default function AuditLogsSection() {
                         background: colors?.bg || "rgb(var(--c-page))",
                         color: colors?.fg || COLORS.ink,
                       }}
-                      className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+                      className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
                     >
                       {getActionLabel(log.action)}
                     </span>
-                    <span className="text-[10px] text-muted flex items-center gap-1 shrink-0 whitespace-nowrap">
+                    <span className="text-xs text-muted flex items-center gap-1 shrink-0 whitespace-nowrap">
                       <Clock size={10} />
                       {timeAgo(log.at, lang)}
                     </span>
@@ -707,7 +707,7 @@ export default function AuditLogsSection() {
                     </p>
                   )}
 
-                  <p className="text-[11px] text-muted mt-1.5 flex items-center gap-1 min-w-0">
+                  <p className="text-xs text-muted mt-1.5 flex items-center gap-1 min-w-0">
                     <User size={10} className="shrink-0" />
                     <span className="truncate">{log.adminName}</span>
                   </p>

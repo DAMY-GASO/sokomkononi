@@ -8,7 +8,7 @@ export default function DealDetailHeader({ CategoryIcon, counterpartyLabel, deal
     <>
 {/* Header */}
       <div
-        style={{ borderColor: COLORS.sandLine, background: "white" }}
+        style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
         className="flex items-center gap-3 border-b p-3 sm:p-4"
       >
         <button onClick={onBack} className="md:hidden shrink-0" aria-label="Back">
@@ -18,7 +18,7 @@ export default function DealDetailHeader({ CategoryIcon, counterpartyLabel, deal
           style={{ background: COLORS.night }}
           className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
         >
-          {CategoryIcon && <CategoryIcon size={15} color={COLORS.gold} />}
+          {CategoryIcon && <CategoryIcon size={16} color={COLORS.gold} />}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-primary text-sm font-semibold truncate">
@@ -28,7 +28,7 @@ export default function DealDetailHeader({ CategoryIcon, counterpartyLabel, deal
           {deal.listingId ? (
             <Link
               to={`/mali/${deal.listingId}`}
-              className="text-secondary text-body-sm truncate flex items-center gap-1 hover:text-[#FEA406] transition-colors"
+              className="text-secondary text-body-sm truncate flex items-center gap-1 hover:text-gold-ink transition-colors"
             >
               <MapPin size={10} /> {deal.listingTitle}
             </Link>
@@ -40,8 +40,8 @@ export default function DealDetailHeader({ CategoryIcon, counterpartyLabel, deal
         </div>
         <span
           style={{
-            background: status?.bg || "#F5F3EC",
-            color: status?.fg || "#101A2E",
+            background: status?.bg || COLORS.sand,
+            color: status?.fg || COLORS.night,
           }}
           className="text-body-sm font-semibold px-2.5 py-1 rounded-full shrink-0"
         >
@@ -51,7 +51,7 @@ export default function DealDetailHeader({ CategoryIcon, counterpartyLabel, deal
         <button
           onClick={() => setReportOpen(true)}
           style={{ color: COLORS.rust }}
-          className="shrink-0 p-1.5 rounded-full hover:bg-red-50 transition-colors"
+          className="shrink-0 p-1.5 rounded-full hover:bg-rust/10 transition-colors"
           title={
             side === "buyer"
               ? lang === "sw"
@@ -62,7 +62,7 @@ export default function DealDetailHeader({ CategoryIcon, counterpartyLabel, deal
                 : "Report Buyer"
           }
         >
-          <Flag size={15} />
+          <Flag size={16} />
         </button>
 
         <div className="relative shrink-0" ref={menuRef}>
@@ -81,9 +81,9 @@ export default function DealDetailHeader({ CategoryIcon, counterpartyLabel, deal
             <div
               role="menu"
               style={{
-                background: "white",
+                background: "rgb(var(--c-card))",
                 borderColor: COLORS.sandLine,
-                boxShadow: "0 12px 32px rgba(16,26,46,0.18)",
+                boxShadow: "0 12px 32px rgba(1,25,87,0.18)",
               }}
               className="absolute right-0 top-full mt-1 z-50 w-56 rounded-xl border py-1.5"
             >
@@ -96,7 +96,7 @@ export default function DealDetailHeader({ CategoryIcon, counterpartyLabel, deal
                 className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-left hover:bg-black/5"
                 style={{ color: COLORS.night }}
               >
-                <UserRound size={15} />
+                <UserRound size={16} />
                 {isBuyer
                   ? lang === "sw"
                     ? "Profile ya Muuzaji"
@@ -120,7 +120,7 @@ export default function DealDetailHeader({ CategoryIcon, counterpartyLabel, deal
                   className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-left hover:bg-black/5"
                   style={{ color: COLORS.green }}
                 >
-                  <CheckCircle2 size={15} />
+                  <CheckCircle2 size={16} />
                   {lang === "sw"
                     ? "Nimeridhika — Kamilisha Deal"
                     : "I'm satisfied — Finalize Deal"}
@@ -138,7 +138,7 @@ export default function DealDetailHeader({ CategoryIcon, counterpartyLabel, deal
                 className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-left hover:bg-black/5"
                 style={{ color: COLORS.rust }}
               >
-                <LogOut size={15} />
+                <LogOut size={16} />
                 {lang === "sw" ? "Toka kwenye Deal Room" : "Exit this deal room"}
               </button>
             </div>

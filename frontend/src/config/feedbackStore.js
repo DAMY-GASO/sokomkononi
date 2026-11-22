@@ -110,7 +110,7 @@ export async function submitFeedbackAsync(payload) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// ✅ FIX: Backend inatarajia `admin_reply` (snake_case),
+// FIX: Backend inatarajia `admin_reply` (snake_case),
 //         sio `adminReply` (camelCase).
 // ═══════════════════════════════════════════════════════════
 export async function respondToFeedbackAsync(id, reply) {

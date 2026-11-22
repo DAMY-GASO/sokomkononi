@@ -55,8 +55,8 @@ export default function SlaCountdown({ deadline, status, overdue, lang }) {
 
   if (closed) {
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-secondary">
-        <CheckCircle2 size={11} color={COLORS.green} />
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-secondary">
+        <CheckCircle2 size={12} color={COLORS.green} />
         {status === "resolved"
           ? t("Imetatuliwa", "Resolved")
           : status === "in_progress"
@@ -77,14 +77,14 @@ export default function SlaCountdown({ deadline, status, overdue, lang }) {
   if (isOverdue) {
     return (
       <span
-        className="inline-flex items-center gap-1 text-[11px] font-bold"
+        className="inline-flex items-center gap-1 text-xs font-bold"
         style={{ color: COLORS.rust }}
         title={t(
           "Muda wa kujibiwa umepitiliza",
           "Response deadline has passed"
         )}
       >
-        <AlertTriangle size={11} />
+        <AlertTriangle size={12} />
         {t("SLA imepitiliza", "SLA overdue")} · {formatOverdue(Math.abs(diff), lang)}
       </span>
     );
@@ -92,11 +92,11 @@ export default function SlaCountdown({ deadline, status, overdue, lang }) {
 
   return (
     <span
-      className="inline-flex items-center gap-1 text-[11px] font-medium"
-      style={{ color: diff < 3600000 ? COLORS.rust : "#8A5A16" }}
+      className="inline-flex items-center gap-1 text-xs font-medium"
+      style={{ color: diff < 3600000 ? COLORS.rust : COLORS.goldText }}
       title={t("Muda uliobaki wa kujibiwa", "Time left to respond")}
     >
-      <Clock3 size={11} />
+      <Clock3 size={12} />
       {formatRemaining(diff, lang)}
     </span>
   );

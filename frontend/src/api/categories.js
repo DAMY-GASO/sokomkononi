@@ -17,10 +17,10 @@ export const categoriesApi = {
   detail: (idOrSlug) => api.get(`/categories/${idOrSlug}/`),
   uploadImage: (formData) => api.upload("/categories/upload-image/", formData),
 
-  // ⬇️ Reorder — inatuma list ya keys kwa mpangilio mpya
+  // Reorder — inatuma list ya keys kwa mpangilio mpya
   reorder: (order) => api.post("/categories/reorder/", { order }),
 
-  // ⬇️ MPYA: bulk actions — enable/disable/mark_popular/unmark_popular/delete
+  // MPYA: bulk actions — enable/disable/mark_popular/unmark_popular/delete
   bulk: (action, ids) =>
     api.post("/categories/bulk/", { action, ids }),
 };

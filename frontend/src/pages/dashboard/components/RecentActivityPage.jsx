@@ -76,7 +76,7 @@ export default function RecentActivityPage({ side = "seller", onNavigate }) {
               key={f.key}
               onClick={() => setTypeFilter(f.key)}
               style={{
-                background: isActive ? COLORS.night : "white",
+                background: isActive ? COLORS.night : "rgb(var(--c-card))",
                 color: isActive ? COLORS.sand : "var(--text-primary)",
                 borderColor: COLORS.sandLine,
               }}
@@ -92,7 +92,7 @@ export default function RecentActivityPage({ side = "seller", onNavigate }) {
       {/* LIST */}
       {/* ============================================================ */}
       {filtered.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-100 py-14 text-center">
+        <div className="bg-card rounded-xl border border-hairline py-14 text-center">
           <Inbox size={28} className="text-muted mx-auto mb-2" />
           <p className="text-body-sm text-muted">
             {typeFilter === "all"
@@ -101,14 +101,14 @@ export default function RecentActivityPage({ side = "seller", onNavigate }) {
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-100 overflow-hidden">
+        <div className="bg-card rounded-xl border border-hairline divide-y divide-hairline overflow-hidden">
           {filtered.map((a) => {
             const Icon = a.icon;
             return (
               <button
                 key={a.id}
                 onClick={a.onClick}
-                className="w-full flex items-start gap-3 p-3.5 hover:bg-gray-50 transition-colors text-left"
+                className="w-full flex items-start gap-3 p-3.5 hover:bg-page transition-colors text-left"
               >
                 <div
                   style={{ background: `${a.color}15` }}

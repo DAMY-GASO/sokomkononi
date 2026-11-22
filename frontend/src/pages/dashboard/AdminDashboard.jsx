@@ -21,7 +21,7 @@ import {
 } from "../../config/moderationStore.js";
 import { Menu, X, Bell, LogOut, User as UserIcon, Settings, Lock, Home as HomeIcon } from "lucide-react";
 
-// ⬇️ Secret admin path
+// Secret admin path
 import { ADMIN_PATH, ADMIN_LOGIN_PATH } from "../../config/adminPath.js";
 import ThemeToggle from "../../components/ThemeToggle.jsx";
 import { useAdminTwoFactor } from "../../config/adminTwoFactor.js";

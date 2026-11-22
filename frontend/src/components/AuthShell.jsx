@@ -2,8 +2,9 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext.jsx";
+import { COLORS } from "../pages/dashboard/components/shared.js";
 
-function Skyline({ fill = "#FEA406" }) {
+function Skyline({ fill = COLORS.gold }) {
   return (
     <svg viewBox="0 0 400 200" className="absolute bottom-0 left-0 h-40 w-full opacity-[0.15]" preserveAspectRatio="none" aria-hidden="true">
       <rect x="0" y="120" width="46" height="80" fill={fill} />
@@ -32,16 +33,16 @@ export default function AuthShell({ panelHeading, panelSubtext, panelExtra, form
           </Link>
           <Link to="/" className="flex items-center gap-2.5">
             <img src="/logo.webp" alt="" className="h-8 w-8 rounded-full" />
-            <span className="text-[15px] font-bold text-white">SokoMkononi</span>
-            {admin && <span className="rounded-full bg-[#FEA406]/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#FEA406]">Admin</span>}
+            <span className="text-base font-bold text-white">SokoMkononi</span>
+            {admin && <span className="rounded-full bg-gold/20 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-gold">Admin</span>}
           </Link>
         </div>
         <div className="relative z-10 max-w-md">
           <h2 className="text-[clamp(1.75rem,3.5vw,2.5rem)] font-bold leading-[1.1] tracking-tight text-white">{panelHeading}</h2>
-          <p className="mt-4 text-[15px] leading-relaxed text-white/65">{panelSubtext}</p>
+          <p className="mt-4 text-base leading-relaxed text-white/65">{panelSubtext}</p>
           {panelExtra && <div className="mt-8">{panelExtra}</div>}
         </div>
-        <p className="relative z-10 text-[11px] uppercase tracking-[0.16em] text-white/35">© {new Date().getFullYear()} SokoMkononi</p>
+        <p className="relative z-10 text-xs uppercase tracking-[0.16em] text-white/35">© {new Date().getFullYear()} SokoMkononi</p>
         <Skyline />
       </aside>
       <main className="flex items-center justify-center px-5 py-10 sm:px-8 lg:px-12">
@@ -49,7 +50,7 @@ export default function AuthShell({ panelHeading, panelSubtext, panelExtra, form
           <div className="mb-8 flex items-center justify-between lg:hidden">
             <Link to="/" className="flex items-center gap-2">
               <img src="/logo.webp" alt="" className="h-8 w-8 rounded-full" />
-              <span className="text-[15px] font-bold text-primary">SokoMkononi</span>
+              <span className="text-base font-bold text-primary">SokoMkononi</span>
             </Link>
             <Link to="/" className="text-sm font-medium text-secondary hover:text-primary">{t("Nyumbani", "Home")}</Link>
           </div>

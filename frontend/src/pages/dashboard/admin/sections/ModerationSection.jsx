@@ -168,7 +168,7 @@ export default function ModerationSection() {
     return fallback;
   };
 
-  // ✅ FIX: Ongeza ufuatiliaji wa scroll ili kitufe cha "Rudi Kushoto" kionekane
+  // FIX: Ongeza ufuatiliaji wa scroll ili kitufe cha "Rudi Kushoto" kionekane
   useEffect(() => {
     const el = filtersRef.current;
     if (!el) return;
@@ -308,7 +308,7 @@ export default function ModerationSection() {
     );
   }, [merged, statusFilter]);
 
-  // ✅ Counts za kila tab
+  // Counts za kila tab
   const statusCounts = useMemo(() => {
     const c = { _all: merged.length };
     merged.forEach((l) => {
@@ -318,7 +318,7 @@ export default function ModerationSection() {
     return c;
   }, [merged]);
 
-  // ✅ Counts halisi za tabs: backend inahesabu (query moja). Tunazipakia mara ya
+  // Counts halisi za tabs: backend inahesabu (query moja). Tunazipakia mara ya
   // kwanza, na kuzipakia upya (debounce) kila `statusCounts` ya ndani inapobadilika
   // — yaani baada ya approve/reject/bulk/n.k. — ili namba zibaki sahihi.
   useEffect(() => {
@@ -1270,7 +1270,7 @@ export default function ModerationSection() {
         </div>
       )}
 
-      {/* ✅ FIX: Filters scroll — pande zote mbili, scrollbar inayoonekana */}
+      {/* FIX: Filters scroll — pande zote mbili, scrollbar inayoonekana */}
       <div 
         ref={filtersRef}
         className="flex gap-2 mb-4 overflow-x-auto pb-2 w-full"
@@ -1302,7 +1302,7 @@ export default function ModerationSection() {
         ))}
       </div>
 
-      {/* ✅ Kitufe cha kurudi kushoto (kinaonekana tu kwenye simu) */}
+      {/* Kitufe cha kurudi kushoto (kinaonekana tu kwenye simu) */}
       {showScrollLeft && (
         <button
           onClick={() => {

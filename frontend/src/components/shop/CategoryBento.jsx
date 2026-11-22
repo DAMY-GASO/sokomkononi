@@ -9,7 +9,7 @@ export default function CategoryBento({ categories = [], listings = [] }) {
   const { lang } = useLanguage();
   const t = (sw, en) => (lang === "sw" ? sw : en);
   if (!categories.length) return null;
-  // ⬅️ Ongeza categories ZOTE (sio 6 pekee)
+  // Ongeza categories ZOTE (sio 6 pekee)
   const all = categories;
 
   return (
@@ -64,13 +64,13 @@ export default function CategoryBento({ categories = [], listings = [] }) {
               />
 
               <div className="relative z-10 flex h-full min-w-0 flex-col justify-end p-3.5 sm:p-5">
-                <h3 className="line-clamp-2 text-[14px] font-bold leading-tight text-white sm:text-[16px]">
+                <h3 className="line-clamp-2 text-sm font-bold leading-tight text-white sm:text-base">
                   {label}
                 </h3>
-                <p className="mt-1 truncate text-[11px] text-white/75 sm:text-xs">
+                <p className="mt-1 truncate text-xs text-white/75 sm:text-xs">
                   {count} {t("mali", count === 1 ? "listing" : "listings")}
                 </p>
-                <span className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-gold transition-all group-hover:gap-2.5 sm:text-xs">
+                <span className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-gold transition-all group-hover:gap-2.5 sm:text-xs">
                   {t("Tazama", "Shop Now")} <ArrowRight size={12} />
                 </span>
               </div>

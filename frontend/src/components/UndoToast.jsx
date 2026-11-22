@@ -2,16 +2,16 @@
 // UndoToast.jsx — Undo window kwa items zilizofutwa
 //
 // Marekebisho:
-//  ✅ Inasajili fallback handler kwa `listing` — inaruhusu undo
+//  Inasajili fallback handler kwa `listing` — inaruhusu undo
 //     HATA baada ya refresh (memory callbacks zinapotea).
-//  ✅ Bulk undo: item moja yenye `itemIds[]` inaonyeshwa kama
+//  Bulk undo: item moja yenye `itemIds[]` inaonyeshwa kama
 //     toast moja ("Matangazo 5 yamefutwa").
-//  ✅ Toast ya "Kimerejeshwa" inaonekana TU kama `restoreUndo`
+//  Toast ya "Kimerejeshwa" inaonekana TU kama `restoreUndo`
 //     inarudisha `{ ok: true }` (sio "success ya uongo").
-//  ✅ Toast ya kosa inaonyesha sababu halisi (`NO_HANDLER`,
+//  Toast ya kosa inaonyesha sababu halisi (`NO_HANDLER`,
 //     `RESTORE_FAILED`, `NOT_FOUND`).
-//  ✅ Kila undo item inaonyeshwa mara moja (kwa `undoId`).
-//  ✅ Timer ya auto-expire inasafisha toast yenyewe.
+//  Kila undo item inaonyeshwa mara moja (kwa `undoId`).
+//  Timer ya auto-expire inasafisha toast yenyewe.
 // ============================================================
 import React, { useEffect, useRef } from "react";
 import { useToast } from "./Toast.jsx";
@@ -24,7 +24,7 @@ import {
 import { restoreListingAsync } from "../config/listingsStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 
-// ✅ Fallback handler kwa listings — inaruhusu undo HATA baada ya refresh
+// Fallback handler kwa listings — inaruhusu undo HATA baada ya refresh
 // (memory callbacks zinapotea, lakini code hii inabaki).
 registerRestoreHandlers({
   listing: async (itemOrIds) => {

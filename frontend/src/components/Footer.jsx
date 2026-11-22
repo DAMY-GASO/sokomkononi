@@ -72,7 +72,7 @@ export default function Footer({ selectedLang: propLang }) {
   const whatsappNumber = contactInfo?.whatsapp || "255743895038";
   const address = contactInfo?.address || "Dar es Salaam, Tanzania";
 
-  // ✅ Dynamic Social URLs kutoka Contact Info
+  // Dynamic Social URLs kutoka Contact Info
   const SOCIAL = [
     { href: contactInfo?.facebook,  icon: Facebook,  label: "Facebook"  },
     { href: contactInfo?.instagram, icon: Instagram, label: "Instagram" },
@@ -107,7 +107,7 @@ export default function Footer({ selectedLang: propLang }) {
       { to: "/kuhusu", label: t("Kuhusu Sisi", "About Us") },
       { to: "/mawasiliano", label: t("Wasiliana Nasi", "Contact Us") },
       { to: "/jinsi-ya-kununua", label: t("Jinsi Inavyofanya Kazi", "How it works") },
-      // ✅ FIX: deep-link kwenye sehemu ya kuuza (SEO-safe, scroll inafanya kazi)
+      // FIX: deep-link kwenye sehemu ya kuuza (SEO-safe, scroll inafanya kazi)
       { to: "/jinsi-ya-kununua#kuuza", label: t("Jinsi ya Kuuza", "How to Sell") },
       { to: "/mali-zote", label: t("Mali Zote", "All Listings") },
     ]},

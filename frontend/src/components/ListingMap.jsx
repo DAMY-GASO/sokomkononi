@@ -2,10 +2,12 @@ import React from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import { MapPin } from "lucide-react";
+import { CHART } from "../pages/dashboard/admin/shared/chartColors.js";
+import { COLORS } from "../pages/dashboard/components/shared.js";
 
 const MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="44" viewBox="0 0 32 44">
   <path d="M16 0C7.2 0 0 7.2 0 16c0 11.8 16 28 16 28s16-16.2 16-28C32 7.2 24.8 0 16 0z"
-        fill="#FEA406" stroke="#011957" stroke-width="2.2"/>
+        fill={COLORS.gold} stroke="#011957" stroke-width="2.2"/>
   <circle cx="16" cy="16" r="6" fill="#011957"/>
 </svg>`;
 
@@ -49,15 +51,15 @@ export default function ListingMap({ latitude, longitude, title, location }) {
                 {title}
               </strong>
               {location && (
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 4, color: "#6B7280", fontSize: 11 }}>
-                  <MapPin size={11} /> {location}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 4, color: CHART.slate, fontSize: 11 }}>
+                  <MapPin size={12} /> {location}
                 </span>
               )}
               <a
                 href={`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=16/${lat}/${lng}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ display: "block", marginTop: 8, color: "#0062FD", fontSize: 11, textDecoration: "underline" }}
+                style={{ display: "block", marginTop: 8, color: COLORS.royal, fontSize: 11, textDecoration: "underline" }}
               >
                 Open in OpenStreetMap
               </a>

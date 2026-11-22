@@ -5,7 +5,7 @@ import ListingImage from "./ListingImage.jsx";
 import { isBoostActive } from "../utils/listings.js";
 import { Badge, cx } from "./ui";
 
-// ✅ SAFE: hakikisha ni string kila mara
+// SAFE: hakikisha ni string kila mara
 function safeStr(v) {
   if (v == null) return "";
   if (typeof v === "string") return v;
@@ -26,7 +26,7 @@ export function formatTZS(amount) {
   return "TZS " + Math.round(amount || 0).toLocaleString("en-US");
 }
 
-// ✅ Helper: Pata URL ya picha ya tangazo (inashughulikia formats zote)
+// Helper: Pata URL ya picha ya tangazo (inashughulikia formats zote)
 function getListingPhoto(l) {
   if (!l) return null;
 
@@ -58,7 +58,7 @@ const STATUS = {
   sold: { sw: "Imeuzwa", en: "Sold", variant: "night" },
 };
 
-// ✅ MPYA: Reservation Countdown
+// MPYA: Reservation Countdown
 function ReservationCountdown({ expiresInSeconds, lang }) {
   const [timeLeft, setTimeLeft] = useState(expiresInSeconds);
 
@@ -76,8 +76,8 @@ function ReservationCountdown({ expiresInSeconds, lang }) {
 
   if (timeLeft <= 0) {
     return (
-      <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
-        <Clock size={9} />
+      <span className="text-xs font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+        <Clock size={10} />
         {lang === "sw" ? "Imeisha" : "Expired"}
       </span>
     );
@@ -88,8 +88,8 @@ function ReservationCountdown({ expiresInSeconds, lang }) {
   const seconds = timeLeft % 60;
 
   return (
-    <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
-      <Clock size={9} />
+    <span className="text-xs font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+      <Clock size={10} />
       {hours}h {String(minutes).padStart(2, "0")}m {String(seconds).padStart(2, "0")}s
     </span>
   );
@@ -115,7 +115,7 @@ export default function ListingCard({
     return null;
   })();
 
-  // ✅ Tumia helper ya picha
+  // Tumia helper ya picha
   const photo = getListingPhoto(listing) || categoryImageUrl || null;
   const extraPhotosCount = (() => {
     const photos = Array.isArray(listing?.photos) ? listing.photos : [];
@@ -141,11 +141,11 @@ export default function ListingCard({
       className={cx(
         "absolute right-2.5 top-2.5 z-10 grid h-9 w-9 place-items-center rounded-full transition-all",
         isSaved
-          ? "bg-[#C1502E] text-white shadow-md"
-          : "bg-white/95 text-night backdrop-blur-sm hover:bg-white shadow-sm dark:bg-[rgb(8,24,68)]/90 dark:text-white"
+          ? "bg-rust text-white shadow-md"
+          : "bg-white/95 text-night backdrop-blur-sm hover:bg-card shadow-sm dark:bg-[rgb(8,24,68)]/90 dark:text-white"
       )}
     >
-      <Heart size={15} fill={isSaved ? "currentColor" : "none"} />
+      <Heart size={16} fill={isSaved ? "currentColor" : "none"} />
     </button>
   ) : null;
 
@@ -174,7 +174,7 @@ export default function ListingCard({
           <p className="text-[17px] font-bold leading-tight tabular-nums text-primary">
             {formatTZS(listing.price)}
           </p>
-          <h3 className="mt-1 line-clamp-2 text-[14px] leading-snug text-primary">
+          <h3 className="mt-1 line-clamp-2 text-sm leading-snug text-primary">
             {safeStr(listing.title)}
           </h3>
           <p className="mt-auto flex items-center gap-1 truncate pt-2 text-xs text-secondary">
@@ -243,8 +243,8 @@ export default function ListingCard({
           )}
         </div>
         {extra > 0 && (
-          <span className="absolute bottom-2.5 right-2.5 inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
-            <Camera size={11} /> {extra}
+          <span className="absolute bottom-2.5 right-2.5 inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
+            <Camera size={12} /> {extra}
           </span>
         )}
         {HeartBtn}
@@ -254,7 +254,7 @@ export default function ListingCard({
           {formatTZS(listing.price)}
         </p>
         <h3
-          className="mt-1 min-h-[2.4rem] text-[14px] leading-snug text-primary"
+          className="mt-1 min-h-[2.4rem] text-sm leading-snug text-primary"
           style={{
             display: "-webkit-box",
             WebkitLineClamp: 2,

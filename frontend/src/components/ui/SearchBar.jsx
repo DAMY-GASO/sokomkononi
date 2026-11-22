@@ -49,14 +49,14 @@ export default function SearchBar({
       ? {
           wrapper: "border-[color:rgba(255,255,255,0.18)] bg-[color:rgba(255,255,255,0.08)] backdrop-blur-sm",
           input: "text-white placeholder:text-white/45",
-          btn: "bg-[#FEA406] hover:bg-[#FD8706] text-[#011957]",
-          ring: "focus-within:border-[#FEA406]",
+          btn: "bg-gold hover:bg-[#FD8706] text-night",
+          ring: "focus-within:border-gold",
         }
       : {
-          wrapper: "border-[color:rgb(var(--c-hairline))] bg-white",
+          wrapper: "border-[color:rgb(var(--c-hairline))] bg-card",
           input: "text-[color:rgb(var(--text-primary))] placeholder:text-[color:rgb(var(--text-muted))]",
-          btn: "bg-[#FEA406] hover:bg-[#FD8706] text-[#011957]",
-          ring: "focus-within:border-[#FEA406]",
+          btn: "bg-gold hover:bg-[#FD8706] text-night",
+          ring: "focus-within:border-gold",
         };
 
   return (

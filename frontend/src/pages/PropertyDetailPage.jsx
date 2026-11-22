@@ -80,7 +80,7 @@ function reservedTimes(count, lang) {
   return lang === "sw" ? `mara ${n}` : `${n} ${n === 1 ? "time" : "times"}`;
 }
 
-// ✅ Countdown component kwa ajili ya reservation
+// Countdown component kwa ajili ya reservation
 function ReservationCountdown({ expiresInSeconds, lang }) {
   const [timeLeft, setTimeLeft] = useState(expiresInSeconds);
 
@@ -284,7 +284,7 @@ function AttributesTable({ property, lang }) {
   const rows = useMemo(() => {
     const out = [];
     const categoryKey = property.category;
-    // 🛠️ FIX: Hakikisha CATEGORY_EXTRA na attrs ni objects halali
+    // FIX: Hakikisha CATEGORY_EXTRA na attrs ni objects halali
     const baseFields = CATEGORY_EXTRA?.[categoryKey] || [];
     const cfg = getPostingConfig(categoryKey) || {};
     const attrs = property.attributes && typeof property.attributes === "object" ? property.attributes : {};
@@ -293,7 +293,7 @@ function AttributesTable({ property, lang }) {
       if (raw === undefined || raw === null) return null;
       const str = String(raw).trim();
       if (str === "") return null;
-      // 🛠️ FIX: Hakikisha f.options ni array
+      // FIX: Hakikisha f.options ni array
       const opt = Array.isArray(f.options) ? f.options.find((op) => String(op.value) === str) : null;
       return opt ? (opt.label?.[lang] || opt.label?.sw || str) : str;
     };
@@ -484,7 +484,7 @@ function SellerCard({
           disabled={!!contactLoading}
           className="w-full bg-gold hover:bg-flame text-night py-2.5 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          {/* 🛠️ FIX: Onyesha spinner kama inapakia */}
+          {/* FIX: Onyesha spinner kama inapakia */}
           {contactLoading === "deal" ? <Loader2 size={16} className="animate-spin" /> : <MessageSquare size={16} />}
           {contactLoading === "deal" 
             ? t(lang, "Inafungua...", "Opening...") 
@@ -561,7 +561,7 @@ export default function PropertyDetailPage() {
   const isOwner = Boolean(user && ownerId != null && String(ownerId) === String(user.id));
 
   const savedIds = useSavedIds();
-  // 🛠️ FIX: Badilisha jina la parameter kutoka `id` kwenda `savedId` ili kuepuka kugongana na `id` ya useParams
+  // FIX: Badilisha jina la parameter kutoka `id` kwenda `savedId` ili kuepuka kugongana na `id` ya useParams
   const isSaved = property ? savedIds.some((savedId) => String(savedId) === String(property.id)) : false;
   
   const [hydrated, setHydrated] = useState(false);
@@ -569,7 +569,7 @@ export default function PropertyDetailPage() {
   const [activeTab, setActiveTab] = useState("details");
   const [fetchedImages, setFetchedImages] = useState([]);
 
-  // 🛠️ FIX: Unganisha API calls zote kwenye useEffect moja ili kuepuka double fetching
+  // FIX: Unganisha API calls zote kwenye useEffect moja ili kuepuka double fetching
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
@@ -666,7 +666,7 @@ export default function PropertyDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, property]);
 
-  // ✅ Similar listings kutoka backend: GET /listings/{id}/similar/
+  // Similar listings kutoka backend: GET /listings/{id}/similar/
   // Backend ikishindwa/haipo → tunarudi kwenye client-side filter (fallback)
   const [similarIds, setSimilarIds] = useState(null);
   useEffect(() => {
@@ -893,7 +893,7 @@ export default function PropertyDetailPage() {
         priority: "HIGH",
       });
 
-      // ✅ Ujumbe wa mafanikio wenye link kwenda Safety & Support
+      // Ujumbe wa mafanikio wenye link kwenda Safety & Support
       const ticketId = res?.id ?? res?.ticket_id;
       const ticketCode = res?.code ?? res?.ticket_code;
 
@@ -905,7 +905,7 @@ export default function PropertyDetailPage() {
         )
       );
 
-      // ✅ Mpeleke mtumiaji kwenye Safety & Support ikiwa una ticket id
+      // Mpeleke mtumiaji kwenye Safety & Support ikiwa una ticket id
       if (ticketId) {
         setTimeout(() => {
           navigate(`/dashboard/safety?ticket=${ticketId}`);
@@ -965,7 +965,7 @@ export default function PropertyDetailPage() {
         priority: "HIGH",
       });
 
-      // ✅ Ujumbe wa mafanikio wenye link kwenda Safety & Support
+      // Ujumbe wa mafanikio wenye link kwenda Safety & Support
       const ticketId = res?.id ?? res?.ticket_id;
       const ticketCode = res?.code ?? res?.ticket_code;
 
@@ -977,7 +977,7 @@ export default function PropertyDetailPage() {
         )
       );
 
-      // ✅ Mpeleke mtumiaji kwenye Safety & Support ikiwa una ticket id
+      // Mpeleke mtumiaji kwenye Safety & Support ikiwa una ticket id
       if (ticketId) {
         setTimeout(() => {
           navigate(`/dashboard/safety?ticket=${ticketId}`);

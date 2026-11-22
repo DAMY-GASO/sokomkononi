@@ -24,7 +24,7 @@ export default function ImageLightbox({
   const touchDeltaX = useRef(0);
   const [dragOffset, setDragOffset] = useState(0);
 
-  // ✅ HOOKS ZOTE ZINAPASWA KUITWA KABLA YA RETURN NULL
+  // HOOKS ZOTE ZINAPASWA KUITWA KABLA YA RETURN NULL
   const lastTapRef = useRef(0);
 
   // ── Reset wakati open inabadilika ──
@@ -57,7 +57,7 @@ export default function ImageLightbox({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, index]);
 
-  // ✅ SASA RETURN NULL INAKUJA BAADA YA HOOKS ZOTE
+  // SASA RETURN NULL INAKUJA BAADA YA HOOKS ZOTE
   if (!open || images.length === 0) return null;
 
   const current = images[index];
@@ -202,7 +202,7 @@ export default function ImageLightbox({
           />
         </div>
 
-        {/* ✅ Prev button — KUSHOTO KATIKATI ya picha */}
+        {/* Prev button — KUSHOTO KATIKATI ya picha */}
         {images.length > 1 && !zoomed && (
           <button
             onClick={prev}
@@ -213,7 +213,7 @@ export default function ImageLightbox({
           </button>
         )}
 
-        {/* ✅ Next button — KULIA KATIKATI ya picha */}
+        {/* Next button — KULIA KATIKATI ya picha */}
         {images.length > 1 && !zoomed && (
           <button
             onClick={next}
@@ -268,7 +268,7 @@ export default function ImageLightbox({
 
       {/* Hint — swipe kwa simu */}
       {images.length > 1 && (
-        <p className="text-center text-white/40 text-[11px] pb-2 sm:hidden">
+        <p className="text-center text-white/40 text-xs pb-2 sm:hidden">
           {t("Telezesha kushoto/kulia kupita picha", "Swipe left/right to navigate")}
         </p>
       )}

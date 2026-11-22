@@ -1,11 +1,11 @@
 // ============================================================
 // BoostSasa.jsx
 // + feeFree (admin amezima boost fee) → inafanya kazi bila package
-// + ✅ AUTO-CONSUME CREDIT
-// + ✅ PENDING/ACTIVE status — inaonyesha boost iliyopo
-// + ✅ Clear existing kabla ya request mpya (epuka cache ya listing ya awali)
-// + ✅ Defensive: data.pending &&, console.log, timeout (purchaseStatus.js)
-// + ✅ FIXED: Inaonyesha Listing Picker na Packages hata kama boost ipo (kulingana na Advertise/Leading)
+// + AUTO-CONSUME CREDIT
+// + PENDING/ACTIVE status — inaonyesha boost iliyopo
+// + Clear existing kabla ya request mpya (epuka cache ya listing ya awali)
+// + Defensive: data.pending &&, console.log, timeout (purchaseStatus.js)
+// + FIXED: Inaonyesha Listing Picker na Packages hata kama boost ipo (kulingana na Advertise/Leading)
 // ============================================================
 import React, { useState, useEffect, useMemo } from "react";
 import {
@@ -93,7 +93,7 @@ function ListingPicker({ listings, selectedId, onSelect, lang }) {
             onClick={() => onSelect(l.id)}
             style={{
               borderColor: active ? COLORS.gold : COLORS.sandLine,
-              background: active ? "rgba(232,163,61,0.08)" : "white",
+              background: active ? "rgba(254,164,6,0.08)" : "white",
             }}
             className="flex items-center gap-3 p-3 rounded-xl border text-left transition-colors"
           >
@@ -108,18 +108,18 @@ function ListingPicker({ listings, selectedId, onSelect, lang }) {
                 {l.title}
               </p>
               <p className="text-secondary flex items-center gap-1 text-body-sm">
-                <MapPin size={11} /> {l.location}
+                <MapPin size={12} /> {l.location}
               </p>
             </div>
             {boosted && (
               <span
                 style={{
-                  background: "rgba(232,163,61,0.16)",
-                  color: "#8A5A16",
+                  background: "rgba(254,164,6,0.16)",
+                  color: COLORS.goldText,
                 }}
                 className="flex items-center gap-1 text-body-sm font-semibold px-2 py-1 rounded-full shrink-0"
               >
-                <Rocket size={11} />{" "}
+                <Rocket size={12} />{" "}
                 {lang === "sw"
                   ? `Siku ${boostDaysRemaining(l)} zimebaki`
                   : `${boostDaysRemaining(l)} days left`}
@@ -160,7 +160,7 @@ function FlatPackageCard({ pkg, selected, onSelect, lang, free = false }) {
       onClick={() => onSelect(pkg.id)}
       style={{
         borderColor: selected ? COLORS.gold : COLORS.sandLine,
-        background: "white",
+        background: "rgb(var(--c-card))",
       }}
       className="relative flex flex-col items-center text-center gap-3 p-4 rounded-2xl border w-full"
     >
@@ -250,7 +250,7 @@ function BoostBundleCard({ bundle, selected, onSelect, lang }) {
       onClick={() => onSelect(bundle.id)}
       style={{
         borderColor: selected ? COLORS.gold : COLORS.sandLine,
-        background: "white",
+        background: "rgb(var(--c-card))",
       }}
       className="relative flex flex-col items-center text-center gap-3 p-4 rounded-2xl border w-full"
     >
@@ -359,7 +359,7 @@ export default function BoostSasa({
 
   // ── MPYA: hali ya boost iliyopo (active/pending) ──
   const [existingBoost, setExistingBoost] = useState(null);
-  // ✅ Anza na true kama kuna listing — inazuia "onekana → futika → onekana"
+  // Anza na true kama kuna listing — inazuia "onekana → futika → onekana"
   const [loadingBoostStatus, setLoadingBoostStatus] = useState(() => Boolean(selectedId));
   const [statusTick, setStatusTick] = useState(0); // kwa kitufe cha "Jaribu tena"
 
@@ -416,7 +416,7 @@ export default function BoostSasa({
       return setExistingBoost(null);
     };
 
-    // ✅ Kama tuna cache, onyesha papo hapo (bila loading) kisha refresh kimya
+    // Kama tuna cache, onyesha papo hapo (bila loading) kisha refresh kimya
     const cached = peekPurchaseStatus("boosting", selectedId);
     if (cached !== undefined) {
       apply(cached);
@@ -851,7 +851,7 @@ export default function BoostSasa({
         style={{ background: COLORS.sand, minHeight: "600px" }}
       >
         <div
-          className="max-w-md w-full text-center bg-white rounded-2xl border p-8"
+          className="max-w-md w-full text-center bg-card rounded-2xl border p-8"
           style={{ borderColor: COLORS.sandLine }}
         >
           <div
@@ -932,7 +932,7 @@ export default function BoostSasa({
             </span>
             <button
               onClick={() => setStatusTick((n) => n + 1)}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border shadow-sm shrink-0"
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-card border shadow-sm shrink-0"
               style={{ borderColor: COLORS.rust, color: COLORS.rust }}
             >
               {t("Jaribu tena", "Retry")}
@@ -980,7 +980,7 @@ export default function BoostSasa({
                   setSelectedId(null); 
                 }
               }}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border shadow-sm shrink-0"
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-card border shadow-sm shrink-0"
               style={{ borderColor: COLORS.green, color: COLORS.green }}
             >
               {t("Chagua Mali Nyingine", "Change Listing")}
@@ -989,10 +989,10 @@ export default function BoostSasa({
         )}
 
         {hasCredit && stage !== "paying" && !existingBoost && (
-          <div className="rounded-xl bg-[#2F6D4F]/10 border border-[#2F6D4F]/25 px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
+          <div className="rounded-xl bg-green/10 border border-green/25 px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
             <div className="flex items-center gap-2">
               <Wallet size={16} color={COLORS.green} />
-              <span className="text-sm text-[#2F6D4F] font-medium">
+              <span className="text-sm text-green font-medium">
                 {t(
                   `Una Boost Credits ${boostCreditRemaining}`,
                   `You have ${boostCreditRemaining} Boost Credits`
@@ -1002,7 +1002,7 @@ export default function BoostSasa({
             <button
               onClick={handleUseCredit}
               disabled={!selectedListing || creating}
-              className="text-body-sm font-semibold px-3 py-2 rounded-lg bg-[#2F6D4F] text-white disabled:opacity-50"
+              className="text-body-sm font-semibold px-3 py-2 rounded-lg bg-green text-white disabled:opacity-50"
             >
               {creating ? (
                 <Loader2 size={14} className="animate-spin" />
@@ -1078,7 +1078,7 @@ export default function BoostSasa({
                 onClick={() => setPaymentMode("flat")}
                 className="flex-1 sm:flex-none text-xs font-semibold px-4 py-2 rounded-full border transition-colors"
                 style={{
-                  background: paymentMode === "flat" ? COLORS.night : "white",
+                  background: paymentMode === "flat" ? COLORS.night : "rgb(var(--c-card))",
                   color: paymentMode === "flat" ? COLORS.sand : COLORS.night,
                   borderColor:
                     paymentMode === "flat" ? COLORS.night : COLORS.sandLine,
@@ -1092,7 +1092,7 @@ export default function BoostSasa({
                   className="flex-1 sm:flex-none text-xs font-semibold px-4 py-2 rounded-full border transition-colors"
                   style={{
                     background:
-                      paymentMode === "bundle" ? COLORS.night : "white",
+                      paymentMode === "bundle" ? COLORS.night : "rgb(var(--c-card))",
                     color:
                       paymentMode === "bundle" ? COLORS.sand : COLORS.night,
                     borderColor:
@@ -1164,7 +1164,7 @@ export default function BoostSasa({
 
             <div
               className="rounded-2xl border p-4 flex flex-col items-center text-center gap-3 mb-4"
-              style={{ borderColor: COLORS.sandLine, background: "white" }}
+              style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
             >
               <div>
                 <p className="text-secondary text-body-sm mb-0.5">
@@ -1203,16 +1203,16 @@ export default function BoostSasa({
                   color:
                     canBoost && !creating
                       ? COLORS.night
-                      : "rgba(16,26,46,0.4)",
+                      : "rgba(1,25,87,0.4)",
                 }}
                 className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm disabled:cursor-not-allowed"
               >
                 {creating ? (
-                  <Loader2 size={15} className="animate-spin" />
+                  <Loader2 size={16} className="animate-spin" />
                 ) : paymentMode === "flat" ? (
-                  <Rocket size={15} />
+                  <Rocket size={16} />
                 ) : (
-                  <Package size={15} />
+                  <Package size={16} />
                 )}
                 {feeFree || packageIsFree
                   ? t("Angaza Bure", "Boost for Free")

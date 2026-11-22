@@ -24,7 +24,7 @@ import {
 } from "../shared/Charts.jsx";
 import { CHART } from "../shared/chartColors.js";
 
-// ✅ Timezone Fix
+// Timezone Fix
 const formatDateTZ = (dateString) => {
   if (!dateString) return "";
   const d = new Date(dateString);
@@ -360,7 +360,7 @@ export default function ReportsSection() {
 
   const usersTotal = apiReports?.totalUsers ?? (localUsers.length || 0);
 
-  // ✅ Users Growth Data (Cumulative & Rotating Window)
+  // Users Growth Data (Cumulative & Rotating Window)
   const usersGrowthData = useMemo(() => {
     const growth = apiReports?.usersGrowth || [];
     const dayColors = {
@@ -484,7 +484,7 @@ export default function ReportsSection() {
       .filter((d) => d.value > 0);
   }, [platformRevenue]);
 
-  // ✅ Revenue by Month
+  // Revenue by Month
   const revenueByMonth = useMemo(() => {
     const apiMonths = apiReports?.revenueByMonth;
     if (Array.isArray(apiMonths) && apiMonths.length > 0) {
@@ -496,7 +496,7 @@ export default function ReportsSection() {
     return [];
   }, [apiReports]);
 
-  // ✅ Revenue by Day
+  // Revenue by Day
   const revenueByDay = useMemo(() => {
     const apiDays = apiReports?.revenueByDay;
     if (Array.isArray(apiDays) && apiDays.length > 0) {
@@ -577,7 +577,7 @@ export default function ReportsSection() {
     };
   }, [apiReports, listings, deals, locale]);
 
-  // ✅ Listings Growth (Cumulative)
+  // Listings Growth (Cumulative)
   const listingsGrowthData = useMemo(() => {
     const monthsSw = ["Jan","Feb","Mac","Apr","Mei","Jun","Jul","Ago","Sep","Okt","Nov","Des"];
     const DAYS = 30;
@@ -618,7 +618,7 @@ export default function ReportsSection() {
     });
   }, [listings]);
 
-  // ✅ Deals Status as Percentages
+  // Deals Status as Percentages
   const dealsStatusData = useMemo(() => {
     const keys = ["negotiating", "accepted", "reserved", "completed", "cancelled"];
     const labels = {

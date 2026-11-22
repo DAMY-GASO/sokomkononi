@@ -5,6 +5,7 @@ import { useLanguage } from "../../context/LanguageContext.jsx";
 import SocialAuthButtons from "../../components/SocialAuthButtons.jsx";
 import PasswordStrengthMeter from "../../components/PasswordStrengthMeter.jsx";
 import Captcha, { isCaptchaEnabled } from "../../components/Captcha.jsx";
+import { COLORS } from "../dashboard/components/shared.js";
 
 const icons = {
   user: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a7 7 0 0 1 14 0v1" /></svg>),
@@ -18,15 +19,15 @@ const icons = {
 function SkylineDecoration() {
   return (
     <svg viewBox="0 0 400 200" className="absolute bottom-0 left-0 w-full h-40 opacity-[0.18]" preserveAspectRatio="none">
-      <rect x="0" y="120" width="46" height="80" fill="#FEA406" />
-      <rect x="52" y="80" width="34" height="120" fill="#FEA406" />
-      <rect x="92" y="140" width="52" height="60" fill="#FEA406" />
-      <polygon points="150,100 178,60 206,100" fill="#FEA406" />
-      <rect x="150" y="100" width="56" height="100" fill="#FEA406" />
-      <rect x="214" y="70" width="30" height="130" fill="#FEA406" />
-      <rect x="250" y="130" width="60" height="70" fill="#FEA406" />
-      <rect x="316" y="95" width="40" height="105" fill="#FEA406" />
-      <rect x="362" y="150" width="38" height="50" fill="#FEA406" />
+      <rect x="0" y="120" width="46" height="80" fill={COLORS.gold} />
+      <rect x="52" y="80" width="34" height="120" fill={COLORS.gold} />
+      <rect x="92" y="140" width="52" height="60" fill={COLORS.gold} />
+      <polygon points="150,100 178,60 206,100" fill={COLORS.gold} />
+      <rect x="150" y="100" width="56" height="100" fill={COLORS.gold} />
+      <rect x="214" y="70" width="30" height="130" fill={COLORS.gold} />
+      <rect x="250" y="130" width="60" height="70" fill={COLORS.gold} />
+      <rect x="316" y="95" width="40" height="105" fill={COLORS.gold} />
+      <rect x="362" y="150" width="38" height="50" fill={COLORS.gold} />
     </svg>
   );
 }
@@ -43,7 +44,7 @@ function FieldInput({ icon, type = "text", value, onChange, label, inputMode, re
           type={isPassword && showPassword ? "text" : type}
           inputMode={inputMode}
           required={required}
-          className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
+          className="w-full border border-hairline rounded-lg pl-10 pr-10 py-2.5 focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
           value={value}
           onChange={onChange}
         />
@@ -209,7 +210,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
+    <div className="min-h-screen bg-page md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
       <div className="w-full max-w-md md:max-w-none my-8 md:my-0 bg-white rounded-2xl md:rounded-none shadow-xl md:shadow-none overflow-hidden grid grid-cols-1 md:grid-cols-2 md:min-h-screen">
         <div className="dark-surface flex relative bg-night text-white flex-col justify-between p-8 md:p-10 lg:p-14 overflow-hidden">
           <Link to="/" className="flex items-center justify-center gap-2 relative z-10 w-full">
@@ -254,7 +255,7 @@ export default function RegisterPage() {
                       type="checkbox"
                       checked={agreedToTerms}
                       onChange={(e) => setAgreedToTerms(e.target.checked)}
-                      className="mt-0.5 w-4 h-4 rounded border-gray-300 text-gold-ink focus:ring-royal/30 shrink-0"
+                      className="mt-0.5 w-4 h-4 rounded border-hairline text-gold-ink focus:ring-royal/30 shrink-0"
                     />
                     <span>
                       {t("auth_legal_prefix")}{" "}
@@ -300,7 +301,7 @@ export default function RegisterPage() {
                     inputMode="numeric"
                     maxLength={6}
                     autoFocus
-                    className="w-full border border-gray-300 rounded-lg px-3 py-3 text-lg tracking-[0.5em] text-center font-semibold focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
+                    className="w-full border border-hairline rounded-lg px-3 py-3 text-lg tracking-[0.5em] text-center font-semibold focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
                     placeholder="••••••"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}

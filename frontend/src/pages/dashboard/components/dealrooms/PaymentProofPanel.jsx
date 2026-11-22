@@ -42,7 +42,7 @@ export default function PaymentProofPanel({ deal, onSubmit, lang }) {
 
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
       className="border-t px-3 sm:px-4 py-3 flex flex-col gap-3"
     >
       <div className="flex flex-col items-center text-center gap-2">
@@ -103,11 +103,11 @@ export default function PaymentProofPanel({ deal, onSubmit, lang }) {
           onClick={() => fileInputRef.current?.click()}
           style={{
             borderColor: COLORS.sandLine,
-            color: "rgba(16,26,46,0.55)",
+            color: "rgba(1,25,87,0.55)",
           }}
           className="rounded-xl border-2 border-dashed py-5 flex flex-col items-center gap-1.5"
         >
-          <FileImage size={22} color="rgba(16,26,46,0.35)" />
+          <FileImage size={22} color="rgba(1,25,87,0.35)" />
           <span className="text-body-sm font-medium">
             {lang === "sw"
               ? "Bofya kupakia risiti/screenshot"
@@ -137,7 +137,7 @@ export default function PaymentProofPanel({ deal, onSubmit, lang }) {
         disabled={!canSubmit}
         style={{
           background: canSubmit ? COLORS.green : COLORS.sandLine,
-          color: canSubmit ? "white" : "rgba(16,26,46,0.4)",
+          color: canSubmit ? "white" : "rgba(1,25,87,0.4)",
         }}
         className="text-body-sm font-semibold px-3 py-2.5 rounded-lg disabled:cursor-not-allowed"
       >

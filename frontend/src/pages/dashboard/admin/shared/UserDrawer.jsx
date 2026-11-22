@@ -107,7 +107,7 @@ function RefundSection({ refund, lang, onComplete, onFail, busy }) {
             <Phone size={14} style={{ color: COLORS.successText }} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] text-muted uppercase">
+            <p className="text-xs text-muted uppercase">
               {t("Namba ya Simu", "Phone Number")}
             </p>
             <p className="text-sm font-semibold text-primary break-words">
@@ -126,7 +126,7 @@ function RefundSection({ refund, lang, onComplete, onFail, busy }) {
               <Mail size={14} style={{ color: COLORS.goldText }} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] text-muted uppercase">
+              <p className="text-xs text-muted uppercase">
                 {t("Barua Pepe", "Email")}
               </p>
               <p className="text-sm font-semibold text-primary break-words">
@@ -146,7 +146,7 @@ function RefundSection({ refund, lang, onComplete, onFail, busy }) {
               <CreditCard size={14} style={{ color: COLORS.link }} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] text-muted uppercase">
+              <p className="text-xs text-muted uppercase">
                 {t("Njia ya Malipo", "Payment Method")}
               </p>
               <p className="text-sm font-semibold text-primary">
@@ -159,7 +159,7 @@ function RefundSection({ refund, lang, onComplete, onFail, busy }) {
         {/* Reason */}
         {refund.reason && (
           <div>
-            <p className="text-[10px] text-muted uppercase mb-1">
+            <p className="text-xs text-muted uppercase mb-1">
               {t("Sababu", "Reason")}
             </p>
             <p className="text-xs text-secondary break-words">
@@ -370,7 +370,7 @@ function SoldTab({ listings, lang, loading }) {
             <p className="font-medium text-primary truncate">
               {l.title}
             </p>
-            <p className="text-[10px] text-muted mt-0.5">
+            <p className="text-xs text-muted mt-0.5">
               {t("Imeuzwa", "Sold")}:{" "}
               {l.soldAt || l.updatedAt
                 ? formatJoined(l.soldAt || l.updatedAt)
@@ -383,7 +383,7 @@ function SoldTab({ listings, lang, loading }) {
                 background: "rgba(0,98,253,0.12)",
                 color: COLORS.link,
               }}
-              className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+              className="inline-block text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
             >
               SOLD
             </span>
@@ -401,7 +401,7 @@ export default function UserDrawer({
   user,
   onClose,
   lang = "sw",
-  refund = null,        // ⬅️ REFUND MODE
+  refund = null,        // REFUND MODE
   onComplete,           // callback wakati refund imelipwa
   onFail,               // callback wakati refund imeshindwa
   busy = false,
@@ -649,7 +649,7 @@ export default function UserDrawer({
               >
                 {tab.label[lang] || tab.label.sw}
                 {count != null && (
-                  <span className="ml-1 text-[10px] text-muted">
+                  <span className="ml-1 text-xs text-muted">
                     ({count})
                   </span>
                 )}
@@ -685,7 +685,7 @@ export default function UserDrawer({
             >
               <div className="flex justify-between gap-2">
                 <span className="text-secondary flex items-center gap-1">
-                  <Calendar size={11} />
+                  <Calendar size={12} />
                   {t("Alijiunga:", "Joined:")}
                 </span>
                 <span className="font-medium text-primary text-right">

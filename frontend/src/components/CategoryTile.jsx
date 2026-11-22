@@ -67,7 +67,7 @@ export default function CategoryTile({ to, label, count, countLabel, imageUrl, I
               <Icon
                 size={44}
                 strokeWidth={1.4}
-                className="text-[#FEA406] opacity-85
+                className="text-gold-ink opacity-85
                            transition-transform duration-300 group-hover:scale-110
                            sm:size-[52px]"
               />
@@ -80,13 +80,13 @@ export default function CategoryTile({ to, label, count, countLabel, imageUrl, I
           FOREGROUND CONTENT — label + count at the bottom
           ═══════════════════════════════════════════════════════ */}
       <div className="relative z-10 mt-auto flex w-full flex-col items-center gap-1 px-3 pb-3.5 pt-6 text-center">
-        <span className="line-clamp-2 w-full text-[13px] font-bold leading-tight text-white
+        <span className="line-clamp-2 w-full text-sm font-bold leading-tight text-white
                          drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]
-                         sm:text-[15px]">
+                         sm:text-base">
           {label}
         </span>
         {count != null && (
-          <span className="text-[11px] font-medium text-white/75
+          <span className="text-xs font-medium text-white/75
                            drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)] sm:text-xs">
             {count} {countLabel}
           </span>
