@@ -18,12 +18,12 @@ const EV = "sokomkononi:trash-updated";
 
 export const TRASH_TYPES = [
   { key: "listings",      label: { sw: "Mali", en: "Listings" },          iconKey: "Home",        color: "#FEA406" },
-  { key: "users",         label: { sw: "Watumiaji", en: "Users" },        iconKey: "Users",       color: "#0062FD" },
+  { key: "users",         label: { sw: "Watumiaji", en: "Users" },        iconKey: "Users",       color: "#2563EB" },
   { key: "verifications", label: { sw: "Uthibitisho", en: "Verifications" }, iconKey: "ShieldCheck", color: "#2F6D4F" },
   { key: "tickets",       label: { sw: "Tiketi", en: "Tickets" },          iconKey: "Headphones",  color: "#C1502E" },
-  { key: "banners",       label: { sw: "Banner", en: "Banners" },          iconKey: "Image",       color: "#FD8706" },
-  { key: "announcements", label: { sw: "Matangazo", en: "Announcements" }, iconKey: "Megaphone",   color: "#3D8BFF" },
-  { key: "deals",         label: { sw: "Deals", en: "Deals" },             iconKey: "Handshake",   color: "#5EC494" },
+  { key: "banners",       label: { sw: "Banner", en: "Banners" },          iconKey: "Image",       color: "#D97706" },
+  { key: "announcements", label: { sw: "Matangazo", en: "Announcements" }, iconKey: "Megaphone",   color: "#7C3AED" },
+  { key: "deals",         label: { sw: "Deals", en: "Deals" },             iconKey: "Handshake",   color: "#059669" },
 ];
 
 const TYPE_ALIASES = {
@@ -184,7 +184,7 @@ export function getAllTrashTypes(o = readOverview()) {
     key: x.key,
     label: { sw: x.name, en: x.name },
     iconKey: "File",
-    color: "#626C80",
+    color: "#6B7280",
     count: Number(x.count) || 0,
     isProtected: !!x.protected,
   }));
@@ -193,7 +193,7 @@ export function getAllTrashTypes(o = readOverview()) {
 export function getTrashTypeConfig(key) {
   return (
     getAllTrashTypes().find((t) => t.key === key) || {
-      key, label: { sw: key, en: key }, iconKey: "File", color: "#626C80", count: 0, isProtected: false,
+      key, label: { sw: key, en: key }, iconKey: "File", color: "#6B7280", count: 0, isProtected: false,
     }
   );
 }

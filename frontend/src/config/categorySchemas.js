@@ -355,7 +355,7 @@ export const CATEGORY_EXTRA = {
 
 // ============================================================
 // POSTING_CONFIG — mipangilio ya fomu kwa kategoria
-// KILA CATEGORY INA titlePlaceholder YAKE
+// ⬇️ KILA CATEGORY INA titlePlaceholder YAKE
 // ============================================================
 const DEFAULT_PRICE_LABEL = { sw: "Bei (TZS)", en: "Price (TZS)" };
 

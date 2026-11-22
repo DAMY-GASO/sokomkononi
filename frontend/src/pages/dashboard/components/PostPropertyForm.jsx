@@ -2,17 +2,17 @@
 // PostPropertyForm.jsx — FINAL (B.3)
 //
 // Marekebisho yote:
-//  H1: Upload progress halisi (XHR kupitia uploadWithProgress)
-//  H2: Cancel/abort upload (AbortController)
-//  H3: Image reorder (create pekee — backend edit haina order)
-//  H4: Picha kwenye rasimu — ujumbe wazi (IndexedDB = future)
-//  H5: Warnings za detail zinaonekana kwenye "done" PIA
-//  W1: buildDetailBody imetolewa nje (faili tofauti), hakuna hardcodes
-//  W2: seller_name na contact_pref zinatumwa kwenye payload
-//  W3: Edit mode — maandishi KABLA ya picha
-//  W4: handleFeeInitiate refactor — inatumia payListingFeeWithFimiPayAsync
-//  W5: Imports zisizotumika zimeondolewa
-//  W6: Geocoding kupitia geocodeNominatim (User-Agent + rate limit)
+//  ✅ H1: Upload progress halisi (XHR kupitia uploadWithProgress)
+//  ✅ H2: Cancel/abort upload (AbortController)
+//  ✅ H3: Image reorder (create pekee — backend edit haina order)
+//  ✅ H4: Picha kwenye rasimu — ujumbe wazi (IndexedDB = future)
+//  ✅ H5: Warnings za detail zinaonekana kwenye "done" PIA
+//  ✅ W1: buildDetailBody imetolewa nje (faili tofauti), hakuna hardcodes
+//  ✅ W2: seller_name na contact_pref zinatumwa kwenye payload
+//  ✅ W3: Edit mode — maandishi KABLA ya picha
+//  ✅ W4: handleFeeInitiate refactor — inatumia payListingFeeWithFimiPayAsync
+//  ✅ W5: Imports zisizotumika zimeondolewa
+//  ✅ W6: Geocoding kupitia geocodeNominatim (User-Agent + rate limit)
 // ============================================================
 import React, { useState, useEffect, useRef } from "react";
 import {
@@ -51,7 +51,7 @@ import {
   WILAYA_SUGGESTIONS,
 } from "../../../config/categorySchemas.js";
 
-// FIX W1/W6/H1: Faili mpya za kusaidia
+// ✅ FIX W1/W6/H1: Faili mpya za kusaidia
 import { buildDetailBody } from "./buildDetailBody.js";
 import { uploadWithProgress } from "../../../api/uploadWithProgress.js";
 import { geocodeNominatim } from "../../../utils/geocodeNominatim.js";
@@ -150,7 +150,7 @@ function cleanPriceInput(v) {
   return String(v).replace(/[^0-9]/g, "");
 }
 
-// errMsg — imara zaidi (inashughulikia format zote za backend)
+// ✅ errMsg — imara zaidi (inashughulikia format zote za backend)
 function errMsg(e) {
   if (!e) return null;
   if (typeof e === "string") return e;
@@ -257,7 +257,7 @@ function draftHasContent(s) {
   );
 }
 
-// W1: Endpoint za detail (buildDetailBody inashughulikia mapping ndani yake)
+// ✅ W1: Endpoint za detail (buildDetailBody inashughulikia mapping ndani yake)
 const CATEGORY_DETAIL_ENDPOINT = {
   nyumba: "property-details",
   viwanja: "land-details",
@@ -359,7 +359,7 @@ export default function PostPropertyForm({
   const [bundleId, setBundleId] = useState(null);
   const [pendingBundlePurchase, setPendingBundlePurchase] = useState(null);
 
-  // H2: AbortController kwa ajili ya kughairi upload
+  // ✅ H2: AbortController kwa ajili ya kughairi upload
   const abortControllerRef = useRef(null);
 
   const [base, setBase] = useState(() => {
@@ -439,7 +439,7 @@ export default function PostPropertyForm({
     });
   };
 
-  // FIX W6: Geocoding kupitia geocodeNominatim (User-Agent + rate limit)
+  // ✅ FIX W6: Geocoding kupitia geocodeNominatim (User-Agent + rate limit)
   useEffect(() => {
     if (isEdit && locationString === initialLocRef.current) return;
     if (!loc.mkoa || !loc.eneo.trim()) return;
@@ -797,7 +797,7 @@ export default function PostPropertyForm({
   };
 
   const reset = () => {
-    // H2: Ghairi upload yoyote inayoendelea
+    // ✅ H2: Ghairi upload yoyote inayoendelea
     if (abortControllerRef.current) {
       try {
         abortControllerRef.current.abort();
@@ -834,7 +834,7 @@ export default function PostPropertyForm({
     setPendingBundlePurchase(null);
   };
 
-  // FIX W1: Tumia buildDetailBody kutoka faili tofauti
+  // ✅ FIX W1: Tumia buildDetailBody kutoka faili tofauti
   const getDetailPayload = () => {
     return buildDetailBody({
       categoryKey,
@@ -855,7 +855,7 @@ export default function PostPropertyForm({
     setError("");
     setUploadProgress(photos.some((p) => p.file && !p.existing) ? 0 : null);
 
-    // FIX W3: EDIT MODE — maandishi KABLA ya picha
+    // ✅ FIX W3: EDIT MODE — maandishi KABLA ya picha
     if (isEdit) {
       const payload = {
         title: effectiveTitle,
@@ -865,7 +865,7 @@ export default function PostPropertyForm({
         latitude: lat,
         longitude: lng,
         address_text: addressText,
-        // FIX W2: Ongeza seller_name na contact_pref
+        // ✅ FIX W2: Ongeza seller_name na contact_pref
         ...(base.seller_name ? { seller_name: base.seller_name } : {}),
         ...(base.contact_pref ? { contact_pref: base.contact_pref } : {}),
         attributes: {
@@ -878,7 +878,7 @@ export default function PostPropertyForm({
       };
 
       try {
-        // HATUA 1: Maandishi kwanza
+        // ✅ HATUA 1: Maandishi kwanza
         const res = await onSubmit(payload);
         if (!res?.ok) {
           setError(errMsg(res?.error) || t("Imeshindwa kuhifadhi.", "Failed to save."));
@@ -886,7 +886,7 @@ export default function PostPropertyForm({
           return;
         }
 
-        // HATUA 2: Picha (maandishi yameshafanikiwa)
+        // ✅ HATUA 2: Picha (maandishi yameshafanikiwa)
         const newFiles = photos.filter((p) => p.file && !p.existing).map((p) => p.file);
         if (newFiles.length || removedIds.length) {
           const imgRes = await syncListingImagesAsync(initialData.id, {
@@ -908,7 +908,7 @@ export default function PostPropertyForm({
           setRemovedIds([]);
         }
 
-        // HATUA 3: Detail endpoint — tumia buildDetailBody
+        // ✅ HATUA 3: Detail endpoint — tumia buildDetailBody
         const { body: detailBody, endpoint: detailEndpoint, warnings: detailWarnings } =
           getDetailPayload();
 
@@ -985,7 +985,7 @@ export default function PostPropertyForm({
     }
 
     try {
-      // FIX H1: Upload kwa XHR — progress HALISI
+      // ✅ FIX H1: Upload kwa XHR — progress HALISI
       const files = photos
         .filter((p) => p.file && !p.existing)
         .map((p) => ({
@@ -994,7 +994,7 @@ export default function PostPropertyForm({
           filename: p.file?.name || "image.jpg",
         }));
 
-      // H2: AbortController mpya kwa kila submit
+      // ✅ H2: AbortController mpya kwa kila submit
       abortControllerRef.current = new AbortController();
 
       const uploadResult = await uploadWithProgress({
@@ -1010,7 +1010,7 @@ export default function PostPropertyForm({
           latitude: lat,
           longitude: lng,
           address_text: addressText,
-          // FIX W2: seller_name na contact_pref
+          // ✅ FIX W2: seller_name na contact_pref
           ...(base.seller_name ? { seller_name: base.seller_name } : {}),
           ...(base.contact_pref ? { contact_pref: base.contact_pref } : {}),
           attributes: {
@@ -1026,7 +1026,7 @@ export default function PostPropertyForm({
         signal: abortControllerRef.current.signal,
       });
 
-      // H2: Abort
+      // ✅ H2: Abort
       if (uploadResult.error?.name === "AbortError") {
         setSubmitting(false);
         setUploadProgress(null);
@@ -1037,7 +1037,7 @@ export default function PostPropertyForm({
         throw uploadResult.error || new Error("Upload failed");
       }
 
-      // Tumia `uploadResult.data` badala ya createRes
+      // ✅ Tumia `uploadResult.data` badala ya createRes
       const created = uploadResult.data;
       const listingId = created.id;
 
@@ -1046,7 +1046,7 @@ export default function PostPropertyForm({
       removeDraft(draftStorageKey);
       setDraftSavedAt(null);
 
-      // FIX W1: Detail endpoint — tumia buildDetailBody
+      // ✅ FIX W1: Detail endpoint — tumia buildDetailBody
       const { body: detailBody, endpoint: detailEndpoint, warnings: detailWarnings } =
         getDetailPayload();
 
@@ -1171,7 +1171,7 @@ export default function PostPropertyForm({
     }
   };
 
-  // FIX W4: handleFeeInitiate inatumia store badala ya kurudia logic
+  // ✅ FIX W4: handleFeeInitiate inatumia store badala ya kurudia logic
   const handleFeeInitiate = async ({ methodKey, phone } = {}) => {
     if (!createdListing) {
       return { ok: false, error: t("Tangazo halipo.", "Listing not found.") };
@@ -1515,7 +1515,7 @@ export default function PostPropertyForm({
     );
   }
 
-  // ── DONE STAGE H5: Warnings zinaonekana hapa pia ─────────
+  // ── DONE STAGE ✅ H5: Warnings zinaonekana hapa pia ─────────
   if (!isEdit && stage === "done") {
     return (
       <div className="w-full flex items-center justify-center p-6 bg-page min-h-screen">
@@ -2080,7 +2080,7 @@ export default function PostPropertyForm({
               </div>
             )}
 
-            {/* FIX H1 + H2: Progress bar halisi + kitufe cha kughairi */}
+            {/* ✅ FIX H1 + H2: Progress bar halisi + kitufe cha kughairi */}
             {submitting && uploadProgress !== null && (
               <div
                 className="flex flex-col gap-1.5"

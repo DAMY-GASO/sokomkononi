@@ -17,7 +17,7 @@ export default function BenefitTiles() {
           <div className="icon-tile icon-tile-gold"><Icon size={16} /></div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-primary leading-tight">{title}</p>
-            <p className="text-xs text-secondary mt-0.5">{desc}</p>
+            <p className="text-[11px] text-secondary mt-0.5">{desc}</p>
           </div>
         </div>
       ))}

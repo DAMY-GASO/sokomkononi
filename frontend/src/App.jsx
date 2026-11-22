@@ -2,12 +2,12 @@
 // App.jsx
 //
 // Marekebisho:
-//  ✅ MPYA: `registerRestoreHandlers` inasajiliwa kabla ya Router
+//  MPYA: `registerRestoreHandlers` inasajiliwa kabla ya Router
 //     ili undo ya listings ifanye kazi HATA baada ya refresh
 //     (memory callbacks zinapotea, lakini handler inabaki).
-//  ✅ MPYA: `usePushSubscription` inasajili push subscription mara moja
+//  MPYA: `usePushSubscription` inasajili push subscription mara moja
 //     mtumiaji akiingia (kwa browser notifications + push).
-//  ✅ Kila kitu kingine kimebaki kama kilivyo.
+//  Kila kitu kingine kimebaki kama kilivyo.
 // ============================================================
 import React, { useEffect, Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
@@ -29,7 +29,7 @@ import { initializeCategories, hydrateCategoriesFromApi } from "./config/categor
 import { hydrateListingsFromApi, sweepGhostListings } from "./config/listingsStore.js";
 import { hydrateReservationFromApi } from "./config/feePolicy.js";
 
-// ✅ MPYA: Sajili ya restore handlers kwa undo
+// MPYA: Sajili ya restore handlers kwa undo
 import { registerRestoreHandlers } from "./config/undoStore.js";
 import { restoreListingAsync } from "./config/listingsStore.js";
 
@@ -124,7 +124,7 @@ function BrowseRoute() {
   );
 }
 
-// ⚠️ Component ndogo ili `useAuth()` iwe ndani ya providers zote
+// Component ndogo ili `useAuth()` iwe ndani ya providers zote
 function PushBootstrap() {
   const { user } = useAuth();
   usePushSubscription(user?.id);

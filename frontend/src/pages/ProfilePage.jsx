@@ -1499,7 +1499,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Badge switching (zisibonyezwe) */}
+            {/* ✅ Badge switching (zisibonyezwe) */}
             <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl">
               <span
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold ${
@@ -1523,7 +1523,7 @@ export default function ProfilePage() {
               </span>
             </div>
 
-            {/* WhatsApp + Logout */}
+            {/* ✅ WhatsApp + Logout */}
             <div className="flex items-center gap-2 flex-wrap justify-center">
               {user.phone && (
                 <a

@@ -341,7 +341,7 @@ export default function AdminProfile() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="flex flex-col gap-1.5 sm:col-span-2">
-            <span className="text-xs font-semibold text-secondary flex items-center gap-1">
+            <span className="text-[11px] font-semibold text-secondary flex items-center gap-1">
               <User size={12} />
               {t("Jina Kamili", "Full Name")}
             </span>
@@ -357,7 +357,7 @@ export default function AdminProfile() {
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-semibold text-secondary flex items-center gap-1">
+            <span className="text-[11px] font-semibold text-secondary flex items-center gap-1">
               <Mail size={12} />
               {t("Barua Pepe", "Email")}
             </span>
@@ -369,7 +369,7 @@ export default function AdminProfile() {
               className="input cursor-not-allowed"
               placeholder="admin@sokomkononi.co.tz"
             />
-            <span className="text-xs text-muted flex items-start gap-1">
+            <span className="text-[10px] text-muted flex items-start gap-1">
               <Info size={10} className="shrink-0 mt-0.5" />
               <span>
                 {t(
@@ -381,7 +381,7 @@ export default function AdminProfile() {
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-semibold text-secondary flex items-center gap-1">
+            <span className="text-[11px] font-semibold text-secondary flex items-center gap-1">
               <Phone size={12} />
               {t("Namba ya Simu", "Phone")}
             </span>
@@ -426,7 +426,7 @@ export default function AdminProfile() {
 
         <div className="grid grid-cols-1 gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-semibold text-secondary">
+            <span className="text-[11px] font-semibold text-secondary">
               {t("Nenosiri la Sasa", "Current Password")}
             </span>
             <RevealPasswordInput
@@ -444,7 +444,7 @@ export default function AdminProfile() {
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-semibold text-secondary">
+            <span className="text-[11px] font-semibold text-secondary">
               {t("Nenosiri Jipya", "New Password")}
             </span>
             <RevealPasswordInput
@@ -459,13 +459,13 @@ export default function AdminProfile() {
               className="input"
               autoComplete="new-password"
             />
-            <span className="text-xs text-muted">
+            <span className="text-[10px] text-muted">
               {t("Angalau herufi 8", "At least 8 characters")}
             </span>
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-semibold text-secondary">
+            <span className="text-[11px] font-semibold text-secondary">
               {t("Thibitisha Nenosiri Jipya", "Confirm New Password")}
             </span>
             <RevealPasswordInput
@@ -484,8 +484,8 @@ export default function AdminProfile() {
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-5">
-          <p className="text-xs text-muted flex items-start gap-1 max-w-md">
-            <Info size={12} className="shrink-0 mt-0.5" />
+          <p className="text-[10px] text-muted flex items-start gap-1 max-w-md">
+            <Info size={11} className="shrink-0 mt-0.5" />
             <span>
               {t(
                 "Baada ya kubadilisha nenosiri, utatolewa kwenye akaunti na kutakiwa kuingia tena.",
@@ -516,8 +516,8 @@ export default function AdminProfile() {
             )}
           </div>
         )}
-        <p className="text-xs text-muted flex items-start gap-1 mb-2">
-          <Info size={12} className="shrink-0 mt-0.5" />
+        <p className="text-[11px] text-muted flex items-start gap-1 mb-2">
+          <Info size={11} className="shrink-0 mt-0.5" />
           <span>
             {t(
               "Akaunti za admin zinadhibiti pesa na data za mfumo mzima. Washa 2FA ili kuilinda.",

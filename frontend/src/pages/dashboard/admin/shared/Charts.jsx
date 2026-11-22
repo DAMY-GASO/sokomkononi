@@ -1,6 +1,5 @@
 import React from "react";
 import { toneText } from "./constants.js";
-import { COLORS } from "../../components/shared.js";
 
 const FONT = "system-ui, -apple-system, Segoe UI, sans-serif";
 
@@ -99,7 +98,7 @@ export function DonutChart({
       {segments.length > 0 && (
         <ul className="flex w-full min-w-0 flex-col gap-2 sm:max-w-[260px]">
           {segments.map((s, i) => (
-            <li key={i} className="flex items-center gap-2.5 text-xs">
+            <li key={i} className="flex items-center gap-2.5 text-[12px]">
               <span
                 className="h-3 w-3 shrink-0 rounded-sm"
                 style={{ background: s.color }}
@@ -129,7 +128,7 @@ export function HBarChart({ data = [], valueFormat, emptyText = "—" }) {
         const pct = (v / max) * 100;
         return (
           <li key={i} className="min-w-0">
-            <div className="mb-1.5 flex items-center justify-between gap-2 text-xs">
+            <div className="mb-1.5 flex items-center justify-between gap-2 text-[12px]">
               <span className="truncate text-secondary">{d.label}</span>
               <span className="shrink-0 tabular-nums font-semibold text-primary">
                 {valueFormat ? valueFormat(v) : v}
@@ -140,7 +139,7 @@ export function HBarChart({ data = [], valueFormat, emptyText = "—" }) {
                 className="h-full rounded-full transition-all duration-700"
                 style={{
                   width: `${pct}%`,
-                  background: d.color || COLORS.gold,
+                  background: d.color || "#FEA406",
                 }}
               />
             </div>
@@ -187,7 +186,7 @@ export function VBarChart({
             key={i}
             className="flex h-full min-w-0 flex-1 flex-col items-center gap-1.5"
           >
-            <span className={`${textCls} text-xs tabular-nums text-muted sm:text-xs`}>
+            <span className={`${textCls} text-[9px] tabular-nums text-muted sm:text-[10px]`}>
               {tick && v > 0 ? (valueFormat ? valueFormat(v) : v) : "\u00A0"}
             </span>
             <div className="flex w-full flex-1 items-end justify-center">
@@ -195,14 +194,14 @@ export function VBarChart({
                 className="w-full max-w-[28px] rounded-t-md transition-all duration-700"
                 style={{
                   height: `${Math.max(pct, v > 0 ? 8 : 2)}%`,
-                  background: d.color || COLORS.gold,
+                  background: d.color || "#FEA406",
                   minHeight: v > 0 ? 8 : 4,
                 }}
                 title={`${d.label}: ${v}`}
               />
             </div>
             <span
-              className={`${tickEvery ? "whitespace-nowrap" : "w-full truncate"} text-center text-xs text-muted sm:text-xs`}
+              className={`${tickEvery ? "whitespace-nowrap" : "w-full truncate"} text-center text-[9px] text-muted sm:text-[10px]`}
             >
               {tick ? d.label : "\u00A0"}
             </span>
@@ -217,7 +216,7 @@ export function VBarChart({
 export function LineChart({
   data = [],
   height = 180,
-  color = COLORS.gold,
+  color = "#FEA406",
   fillOpacity = 0.18,
   valueFormat,
   emptyText = "—",
@@ -279,7 +278,7 @@ export function LineChart({
           />
         ))}
       </svg>
-      <div className="mt-1 flex justify-between px-1 text-xs text-muted">
+      <div className="mt-1 flex justify-between px-1 text-[10px] text-muted">
         <span className="truncate">{data[0]?.label}</span>
         {data.length > 2 && (
           <span className="truncate">{data[Math.floor(data.length / 2)]?.label}</span>
@@ -291,12 +290,12 @@ export function LineChart({
 }
 
 /* ── STAT MINI (used for top lists) ──────────────────────── */
-export function MiniRow({ rank, label, value, sub, color = COLORS.gold }) {
+export function MiniRow({ rank, label, value, sub, color = "#FEA406" }) {
   return (
     <div className="flex min-w-0 items-center gap-3 border-b border-[color:rgb(var(--c-hairline))] py-2.5 last:border-0">
       {rank != null && (
         <span
-          className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-bold"
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[11px] font-bold"
           style={{
             background: `${color}20`,
             color: toneText(color),
@@ -306,10 +305,10 @@ export function MiniRow({ rank, label, value, sub, color = COLORS.gold }) {
         </span>
       )}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-primary">{label}</p>
-        {sub && <p className="truncate text-xs text-secondary">{sub}</p>}
+        <p className="truncate text-[13px] font-semibold text-primary">{label}</p>
+        {sub && <p className="truncate text-[11px] text-secondary">{sub}</p>}
       </div>
-      <span className="shrink-0 tabular-nums text-sm font-semibold text-primary">
+      <span className="shrink-0 tabular-nums text-[13px] font-semibold text-primary">
         {value}
       </span>
     </div>

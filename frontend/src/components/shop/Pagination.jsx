@@ -28,7 +28,7 @@ export default function Pagination({ currentPage = 1, totalPages = 1, onChange, 
           <span key={`gap-${i}`} className="px-1 text-muted select-none">…</span>
         ) : (
           <button key={p} type="button" onClick={() => onChange?.(p)} aria-current={p === currentPage ? "page" : undefined}
-            className={cx("grid h-9 w-9 place-items-center rounded-lg text-sm font-medium transition-colors", p === currentPage ? "text-night" : "border border-[color:rgb(var(--c-hairline))] text-primary hover:bg-[color:rgb(var(--c-page))]")}
+            className={cx("grid h-9 w-9 place-items-center rounded-lg text-sm font-medium transition-colors", p === currentPage ? "text-[#011957]" : "border border-[color:rgb(var(--c-hairline))] text-primary hover:bg-[color:rgb(var(--c-page))]")}
             style={p === currentPage ? { background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)" } : undefined}>
             {p}
           </button>

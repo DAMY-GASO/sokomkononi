@@ -286,7 +286,7 @@ export default function AnnouncementsPanel() {
           style={{ background: COLORS.gold, color: COLORS.night }}
           className="flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-2 shrink-0 hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Plus size={14} />
+          <Plus size={13} />
           <span className="hidden sm:inline">
             {lang === "sw" ? "Tangazo Jipya" : "New Announcement"}
           </span>
@@ -316,7 +316,7 @@ export default function AnnouncementsPanel() {
         >
           {/* Type */}
           <div>
-            <p className="text-xs font-semibold text-secondary uppercase mb-1.5">
+            <p className="text-[10px] font-semibold text-secondary uppercase mb-1.5">
               {lang === "sw" ? "Aina ya Tangazo" : "Announcement Type"}
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -328,7 +328,7 @@ export default function AnnouncementsPanel() {
                     type="button"
                     onClick={() => setForm({ ...form, typeId: ty.id })}
                     disabled={busy.sending}
-                    className={`text-xs font-semibold px-2 sm:px-2.5 py-1 rounded-full border border-hairline whitespace-nowrap transition-colors disabled:opacity-50 ${
+                    className={`text-[10px] sm:text-[11px] font-semibold px-2 sm:px-2.5 py-1 rounded-full border border-hairline whitespace-nowrap transition-colors disabled:opacity-50 ${
                       isActive ? "chip-active" : "bg-card text-primary"
                     }`}
                   >
@@ -428,9 +428,9 @@ export default function AnnouncementsPanel() {
             className="flex items-center justify-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-2 w-full sm:w-auto sm:self-start transition-colors disabled:cursor-not-allowed"
           >
             {busy.sending ? (
-              <Loader2 size={14} className="animate-spin" />
+              <Loader2 size={13} className="animate-spin" />
             ) : (
-              <Megaphone size={14} />
+              <Megaphone size={13} />
             )}
             {form.scheduledFor
               ? lang === "sw"
@@ -454,7 +454,7 @@ export default function AnnouncementsPanel() {
             <button
               key={key}
               onClick={() => setFilter(key)}
-              className={`text-xs font-semibold px-3 py-1.5 rounded-full border border-hairline whitespace-nowrap shrink-0 ${
+              className={`text-[11px] font-semibold px-3 py-1.5 rounded-full border border-hairline whitespace-nowrap shrink-0 ${
                 filter === key ? "chip-active" : "bg-card text-primary"
               }`}
             >
@@ -482,7 +482,7 @@ export default function AnnouncementsPanel() {
                         background: `${COLORS.gold}15`,
                         color: COLORS.goldText,
                       }}
-                      className="text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
                     >
                       {getTypeLabel(a.typeId)}
                     </span>
@@ -492,7 +492,7 @@ export default function AnnouncementsPanel() {
                           background: `${COLORS.green}15`,
                           color: COLORS.successText,
                         }}
-                        className="text-xs font-bold px-2 py-0.5 rounded-full"
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                       >
                         {t("Imepangwa:", "Scheduled:")} {formatScheduled(a.scheduledFor)}
                         {" · "}
@@ -505,7 +505,7 @@ export default function AnnouncementsPanel() {
                           background: "rgb(var(--c-ink) / 0.08)",
                           color: COLORS.ink,
                         }}
-                        className="text-xs font-bold px-2 py-0.5 rounded-full"
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                       >
                         {t("Imetumwa", "Sent")}{" "}
                         {formatScheduled(a.scheduledFor || a.createdAt)}
@@ -517,13 +517,13 @@ export default function AnnouncementsPanel() {
                       const recent = Date.now() - ref < 24 * 3600 * 1000;
                       if (a.dispatchedAt) {
                         return (
-                          <span className="text-xs text-muted">
+                          <span className="text-[10px] text-muted">
                             {t("Arifa zimetumwa kwa watumiaji", "Users notified")}
                           </span>
                         );
                       }
                       return recent ? (
-                        <span className="text-xs text-muted">
+                        <span className="text-[10px] text-muted">
                           {t("Arifa zinatumwa...", "Notifying users...")}
                         </span>
                       ) : null;
@@ -536,7 +536,7 @@ export default function AnnouncementsPanel() {
                     {getMessage(a)}
                   </p>
                   {lang === "en" && a.titleEn && (
-                    <p className="text-xs text-muted mt-1 italic">
+                    <p className="text-[10px] text-muted mt-1 italic">
                       SW: {a.title}
                     </p>
                   )}

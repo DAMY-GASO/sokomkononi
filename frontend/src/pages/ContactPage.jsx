@@ -14,7 +14,6 @@ import { api } from "../api/client.js";
 import { useAuth } from "../config/authStore.js";
 import { faqs } from "../config/FaqsData.js";
 import { useContactInfo } from "../config/systemSettingsStore.js";
-import { COLORS } from "./dashboard/components/shared.js";
 
 // ── WhatsApp Icon Halisi (SVG) ─────────────────────────────
 function WhatsAppIcon({ size = 16, className = "" }) {
@@ -204,14 +203,14 @@ export default function ContactPage() {
       title: t("Barua Pepe", "Email"),
       value: email,
       href: `mailto:${email}`,
-      color: COLORS.royal,
+      color: "#0062FD",
     },
     {
       Icon: Phone,
       title: t("Simu", "Phone"),
       value: phone,
       href: `tel:${phone.replace(/\s/g, "")}`,
-      color: COLORS.green,
+      color: "#2F6D4F",
       whatsapp: `https://wa.me/${whatsappNumber}`,
     },
     {
@@ -219,14 +218,14 @@ export default function ContactPage() {
       title: t("Ofisi", "Office"),
       value: address,
       href: null,
-      color: COLORS.gold,
+      color: "#FEA406",
     },
     {
       Icon: Clock,
       title: t("Muda wa Kazi", "Business Hours"),
       value: t("Jumatatu–Jumamosi · 08:00–18:00", "Mon–Sat · 8am–6pm"),
       href: null,
-      color: COLORS.royalLight,
+      color: "#7C3AED",
     },
   ];
 
@@ -272,7 +271,7 @@ export default function ContactPage() {
                 border: "1px solid rgba(254,164,6,0.35)",
               }}
             >
-              <MessageSquare size={26} color={COLORS.gold} />
+              <MessageSquare size={26} color="#FEA406" />
             </span>
             <div>
               <h1 className="text-[clamp(1.75rem,4vw,2.5rem)] font-bold leading-tight tracking-tight text-white">
@@ -306,7 +305,7 @@ export default function ContactPage() {
                   <Icon size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold uppercase tracking-wider text-secondary">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-secondary">
                     {title}
                   </p>
                   <p className="mt-1 break-words text-sm font-semibold text-primary">
@@ -322,7 +321,7 @@ export default function ContactPage() {
                     className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white transition-transform hover:scale-110 self-center"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <WhatsAppIcon size={16} />
+                    <WhatsAppIcon size={15} />
                   </a>
                 )}
               </>
@@ -354,8 +353,8 @@ export default function ContactPage() {
           <div className="rounded-2xl border border-hairline bg-card p-6 sm:p-8">
             {sent ? (
               <div className="py-8 text-center">
-                <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-green/10">
-                  <CheckCircle2 size={32} className="text-green" />
+                <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-[#2F6D4F]/10">
+                  <CheckCircle2 size={32} className="text-[#2F6D4F]" />
                 </div>
                 <h2 className="text-xl font-bold text-primary">
                   {t("Ujumbe Umetumwa!", "Message Sent!")}
@@ -463,7 +462,7 @@ export default function ContactPage() {
                       className="textarea min-h-[140px]"
                       disabled={busy}
                     />
-                    <p className={`mt-1 text-right text-xs ${form.message.trim().length > 0 && form.message.trim().length < 10 ? "text-rust" : "text-secondary"}`}>
+                    <p className={`mt-1 text-right text-xs ${form.message.trim().length > 0 && form.message.trim().length < 10 ? "text-[#C1502E]" : "text-secondary"}`}>
                       {form.message.trim().length}/10 {t("herufi", "characters")}
                     </p>
                   </label>
@@ -475,8 +474,8 @@ export default function ContactPage() {
                   />
 
                   {error && (
-                    <div className="flex items-start gap-2 rounded-lg border border-rust/30 bg-rust/10 px-3 py-2 text-xs text-rust">
-                      <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                    <div className="flex items-start gap-2 rounded-lg border border-[#C1502E]/30 bg-[#C1502E]/10 px-3 py-2 text-xs text-[#C1502E]">
+                      <AlertTriangle size={13} className="mt-0.5 shrink-0" />
                       <span>{error}</span>
                     </div>
                   )}
@@ -484,23 +483,23 @@ export default function ContactPage() {
                   <button
                     type="submit"
                     disabled={busy}
-                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-night transition-transform active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-[#011957] transition-transform active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
                     style={{
                       background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)",
                       boxShadow: "0 8px 22px -8px rgba(254,164,6,0.55)",
                     }}
                   >
                     {busy ? (
-                      <Loader2 size={16} className="animate-spin" />
+                      <Loader2 size={15} className="animate-spin" />
                     ) : (
-                      <Send size={16} />
+                      <Send size={15} />
                     )}
                     {busy
                       ? t("Inatuma...", "Sending...")
                       : t("Tuma Ujumbe", "Send Message")}
                   </button>
 
-                  <p className="text-center text-xs leading-snug text-muted">
+                  <p className="text-center text-[11px] leading-snug text-muted">
                     {t("Kwa msaada wa haraka, angalia", "For quick help, see our")}{" "}
                     <Link
                       to="/jinsi-ya-kununua"
@@ -529,8 +528,8 @@ export default function ContactPage() {
         <div className="container py-12 sm:py-16">
           <div className="mx-auto max-w-3xl">
             <div className="mb-8 text-center">
-              <span className="inline-flex items-center gap-2 rounded-full border border-hairline bg-card px-3 py-1 text-xs font-bold uppercase tracking-wider text-secondary">
-                <HelpCircle size={14} />
+              <span className="inline-flex items-center gap-2 rounded-full border border-hairline bg-card px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-secondary">
+                <HelpCircle size={13} />
                 FAQ
               </span>
               <h2 className="mt-4 text-[clamp(1.5rem,3vw,2rem)] font-bold text-primary">
@@ -558,7 +557,7 @@ export default function ContactPage() {
                       className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left sm:px-5"
                       aria-expanded={isOpen}
                     >
-                      <span className="text-sm font-semibold text-primary sm:text-base">
+                      <span className="text-sm font-semibold text-primary sm:text-[15px]">
                         {faq.q[lang] || faq.q.sw}
                       </span>
                       <ChevronDown

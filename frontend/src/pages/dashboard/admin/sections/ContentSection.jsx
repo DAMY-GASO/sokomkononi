@@ -124,7 +124,7 @@ function SectionsEditor({
   disabled,
   sectionLabel = null,
   allowSubtitle = false,
-  allowImage = false, // MPYA: Kwa ajili ya Timu
+  allowImage = false, // ✅ MPYA: Kwa ajili ya Timu
 }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -134,7 +134,7 @@ function SectionsEditor({
       {
         id: `section-${Date.now()}`,
         icon: "FileText",
-        imageUrl: "", // MPYA
+        imageUrl: "", // ✅ MPYA
         title: { sw: "", en: "" },
         subtitle: { sw: "", en: "" },
         content: { sw: [""], en: [""] },
@@ -268,7 +268,7 @@ function SectionsEditor({
             />
           )}
 
-          {/* MPYA: Picha ya Mwanatimu */}
+          {/* ✅ MPYA: Picha ya Mwanatimu */}
           {allowImage && (
             <div className="flex flex-col gap-1.5 w-full min-w-0 mt-1">
               <label className="flex flex-col gap-1 w-full min-w-0">
@@ -803,7 +803,7 @@ function SinglePageEditor({ section, lang }) {
             disabled={saving}
             sectionLabel={t("Timu Yetu", "Our Team")}
             allowSubtitle
-            allowImage // MPYA: Ruhusu picha kwenye Timu
+            allowImage // ✅ MPYA: Ruhusu picha kwenye Timu
           />
         </>
       )}

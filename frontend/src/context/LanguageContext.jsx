@@ -22,7 +22,7 @@ const translations = {
     hero_subtext: "SokoMkononi ni jukwaa salama la kununua na kuuza nyumba, magari, viwanja na mali nyingine.",
     cta_buy: "Nunua Sasa",
     cta_sell: "Uza Sasa",
-    hero_app_teaser: "Pakua App yetu",
+    hero_app_teaser: "⬇ Pakua App yetu",
 
     // Trending Properties
     trending_heading: "Mali Zinazotrendi",
@@ -306,7 +306,7 @@ const translations = {
     hero_subtext: "SokoMkononi is a safe platform to buy and sell houses, cars, land and other properties.",
     cta_buy: "Buy Now",
     cta_sell: "Sell Item",
-    hero_app_teaser: "Download Our App",
+    hero_app_teaser: "⬇ Download Our App",
 
     // Trending Properties
     trending_heading: "Trending Properties",

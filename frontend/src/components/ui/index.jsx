@@ -52,7 +52,7 @@ export function Input({ label, hint, error, leftIcon, rightIcon, className = "",
         <input id={inputId} className={cx("input", leftIcon && "pl-10", rightIcon && "pr-10", className)} {...props} />
         {rightIcon && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted">{rightIcon}</span>}
       </span>
-      {error ? <span className="mt-1.5 block text-xs text-rust">{error}</span> : hint ? <span className="mt-1.5 block text-xs text-secondary">{hint}</span> : null}
+      {error ? <span className="mt-1.5 block text-xs text-[#C1502E]">{error}</span> : hint ? <span className="mt-1.5 block text-xs text-secondary">{hint}</span> : null}
     </label>
   );
 }
@@ -63,7 +63,7 @@ export function Textarea({ label, hint, error, className = "", id, ...props }) {
     <label htmlFor={inputId} className="block">
       {label && <span className="block mb-1.5 text-sm font-medium text-primary">{label}</span>}
       <textarea id={inputId} className={cx("textarea", className)} {...props} />
-      {error ? <span className="mt-1.5 block text-xs text-rust">{error}</span> : hint ? <span className="mt-1.5 block text-xs text-secondary">{hint}</span> : null}
+      {error ? <span className="mt-1.5 block text-xs text-[#C1502E]">{error}</span> : hint ? <span className="mt-1.5 block text-xs text-secondary">{hint}</span> : null}
     </label>
   );
 }
@@ -74,7 +74,7 @@ export function Select({ label, error, className = "", id, children, ...props })
     <label htmlFor={inputId} className="block">
       {label && <span className="block mb-1.5 text-sm font-medium text-primary">{label}</span>}
       <select id={inputId} className={cx("select pr-9", className)} {...props}>{children}</select>
-      {error && <span className="mt-1.5 block text-xs text-rust">{error}</span>}
+      {error && <span className="mt-1.5 block text-xs text-[#C1502E]">{error}</span>}
     </label>
   );
 }

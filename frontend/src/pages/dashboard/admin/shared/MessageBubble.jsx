@@ -20,7 +20,7 @@ export default function MessageBubble({ message, deal, lang = "sw" }) {
   if (message.kind === "SYSTEM" || message.sender === "system") {
     return (
       <div className="flex justify-center my-0.5">
-        <div className="max-w-[90%] rounded-xl border border-[color:rgb(var(--c-hairline))] bg-card px-2.5 py-1.5 text-center text-xs font-medium text-primary">
+        <div className="max-w-[90%] rounded-xl border border-[color:rgb(var(--c-hairline))] bg-card px-2.5 py-1.5 text-center text-[11px] font-medium text-primary">
           {systemTextOf(message, lang)}
         </div>
       </div>
@@ -50,16 +50,16 @@ export default function MessageBubble({ message, deal, lang = "sw" }) {
 
   return (
     <div className={`flex gap-2 ${isSeller ? "flex-row-reverse" : ""}`}>
-      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold" style={{ background: `${tone}22`, color: toneInk }}>
-        {isAdmin ? <Shield size={12} /> : roleLabel.charAt(0).toUpperCase()}
+      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[10px] font-bold" style={{ background: `${tone}22`, color: toneInk }}>
+        {isAdmin ? <Shield size={11} /> : roleLabel.charAt(0).toUpperCase()}
       </span>
       <div className={`min-w-0 max-w-[85%] flex-1 rounded-xl border px-2.5 py-1.5 ${isSeller ? "ml-auto" : ""}`}
            style={{ background: isAdmin ? `${COLORS.rust}0D` : isOffer ? `${COLORS.gold}14` : "rgb(var(--c-card))",
                     borderColor: isAdmin ? `${COLORS.rust}30` : isOffer ? `${COLORS.gold}40` : "rgb(var(--c-hairline))" }}>
         <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
-          <span className="text-xs font-bold uppercase tracking-wider" style={{ color: toneInk }}>{roleLabel}</span>
-          {isOffer && <span className="text-xs font-bold uppercase text-danger">• {lang === "sw" ? "Ofa" : "Offer"}</span>}
-          {when && <span className="ml-auto text-xs text-muted">{when}</span>}
+          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: toneInk }}>{roleLabel}</span>
+          {isOffer && <span className="text-[9px] font-bold uppercase text-danger">• {lang === "sw" ? "Ofa" : "Offer"}</span>}
+          {when && <span className="ml-auto text-[9px] text-muted">{when}</span>}
         </div>
         {imageUrl && (
           <a href={imageUrl} target="_blank" rel="noreferrer" className="mb-1 block">

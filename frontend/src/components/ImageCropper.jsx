@@ -17,7 +17,7 @@ export default function ImageCropper({
   file,
   lang = "sw",
   outputSize = 1080,
-  // 600KB kwa picha — picha 8 ≈ 5MB kwa jumla (haraka kwenye mtandao wa simu)
+  // ✅ 600KB kwa picha — picha 8 ≈ 5MB kwa jumla (haraka kwenye mtandao wa simu)
   maxBytes = 600 * 1024,
   onConfirm,
   onCancel,

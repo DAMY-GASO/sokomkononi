@@ -540,7 +540,7 @@ export default function PayListingFee() {
 
       {/* Listing summary card */}
       <div
-        className="rounded-2xl border bg-card p-3 sm:p-4 mb-4 flex items-start gap-3"
+        className="rounded-2xl border bg-white p-3 sm:p-4 mb-4 flex items-start gap-3"
         style={{ borderColor: COLORS.sandLine }}
       >
         <div className="shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden">
@@ -571,7 +571,7 @@ export default function PayListingFee() {
             </p>
           )}
           {listing?.postedAt && (
-            <p className="text-xs text-muted mt-0.5">
+            <p className="text-[11px] text-muted mt-0.5">
               {timeAgo(listing.postedAt, lang)}
             </p>
           )}
@@ -595,7 +595,7 @@ export default function PayListingFee() {
         >
           {isFree ? t("Bure", "Free") : formatTZS(feeAmount)}
         </p>
-        <p className="text-xs text-secondary mt-1">
+        <p className="text-[11px] text-secondary mt-1">
           {t(
             "Ada hii inalipwa mara moja tu kwa listing hii.",
             "This fee is paid once for this listing."

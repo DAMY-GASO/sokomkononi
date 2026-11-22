@@ -13,7 +13,7 @@ export default function MessageMeta({ m, mine, lang, onRetry }) {
   if (mine && sendStatus === "failed") {
     return (
       <div
-        className="flex items-center gap-1.5 mt-0.5 text-xs font-medium"
+        className="flex items-center gap-1.5 mt-0.5 text-[11px] font-medium"
         style={{ color: COLORS.rust }}
       >
         <AlertCircle size={12} />
@@ -32,31 +32,31 @@ export default function MessageMeta({ m, mine, lang, onRetry }) {
 
   return (
     <div
-      className="flex items-center gap-1 mt-0.5 text-xs"
-      style={{ color: "rgba(1,25,87,0.5)" }}
+      className="flex items-center gap-1 mt-0.5 text-[11px]"
+      style={{ color: "rgba(16,26,46,0.5)" }}
     >
       {time && <span>{time}</span>}
       {mine && sendStatus === "sending" && (
         <>
-          <Clock size={12} />
+          <Clock size={11} />
           <span>{lang === "sw" ? "Inatuma..." : "Sending..."}</span>
         </>
       )}
       {mine && sendStatus !== "sending" && (
         isRead ? (
           <CheckCheck
-            size={14}
+            size={13}
             color={COLORS.green}
             aria-label={lang === "sw" ? "Imesomwa" : "Read"}
           />
         ) : isDelivered ? (
           <CheckCheck
-            size={14}
+            size={13}
             aria-label={lang === "sw" ? "Imefika" : "Delivered"}
           />
         ) : (
           <Check
-            size={14}
+            size={13}
             aria-label={lang === "sw" ? "Imetumwa" : "Sent"}
           />
         )

@@ -1,13 +1,13 @@
 // ============================================================
 // boostPackagesStore.js — API-only via /api/boosting/packages/
 //
-// FIX #7: hydrate inatumia guarded() — dedupe, TTL, forceRefresh.
-// FIX #11 (race): hydrate ya zamani HAIANDIKI juu ya mabadiliko mapya.
+// ✅ FIX #7: hydrate inatumia guarded() — dedupe, TTL, forceRefresh.
+// ✅ FIX #11 (race): hydrate ya zamani HAIANDIKI juu ya mabadiliko mapya.
 //    hydrateGuard inazuia tu cache ya matokeo, lakini write() inatokea
 //    ndani ya _hydrate... kabla guard haijaona generation. Hapa tunatumia
 //    mutationVersion + pendingMutations: kama kuna PATCH/POST/DELETE
 //    iliyoanza au kuisha wakati GET ilikuwa njiani, GET inaachwa.
-// FIX #12: toggle inakagua kuwa seva imerudisha is_active uliyotuma.
+// ✅ FIX #12: toggle inakagua kuwa seva imerudisha is_active uliyotuma.
 // ============================================================
 import { useEffect, useState } from "react";
 import { boostingApi } from "../api/boosting.js";
@@ -83,7 +83,7 @@ export function getBoostPackage(key) {
   return read().find((p) => p.key === key);
 }
 
-// FIX #7: guarded()  +  FIX #11: stale-write protection
+// ✅ FIX #7: guarded()  +  ✅ FIX #11: stale-write protection
 async function _hydrateBoostPackagesFromApi() {
   const versionAtStart = mutationVersion;
   try {
@@ -235,7 +235,7 @@ export function toggleBoostPackageActiveAsync(key) {
       });
       const updated = norm(raw) || { ...target, isActive: nextActive };
 
-      // FIX #12: seva haikuhifadhi tulichotuma? Onyesha kosa wazi.
+      // ✅ FIX #12: seva haikuhifadhi tulichotuma? Onyesha kosa wazi.
       if (updated.isActive !== nextActive) {
         console.error("[boostPackagesStore] server did not persist is_active", {
           sent: nextActive,

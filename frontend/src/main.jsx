@@ -28,7 +28,7 @@ purgeStaleCsrfCookies();
 // Apply theme
 applyTheme(getTheme());
 
-// ✅ Register undo handlers ndani ya App au use static import hapa
+// Register undo handlers ndani ya App au use static import hapa
 // Badala ya dynamic import, tunatumia static import kwa sababu ni ndogo
 import { registerRestoreHandlers } from "./config/undoStore.js";
 import { restoreListingAsync } from "./config/listingsStore.js";

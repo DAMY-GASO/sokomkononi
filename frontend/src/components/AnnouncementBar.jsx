@@ -62,15 +62,15 @@ export default function AnnouncementBar() {
       className="w-full text-white text-xs sm:text-sm"
     >
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 flex items-center justify-center gap-2 sm:gap-3">
-        <Megaphone size={14} className="shrink-0 text-gold-ink" />
+        <Megaphone size={13} className="shrink-0 text-[#FEA406]" />
         <span className="line-clamp-2 text-center sm:line-clamp-1">{text}</span>
         {link && (
           isInternal ? (
-            <Link to={link} className="shrink-0 font-semibold text-gold-ink underline-offset-2 hover:underline">
+            <Link to={link} className="shrink-0 font-semibold text-[#FEA406] underline-offset-2 hover:underline">
               {lang === "sw" ? "Soma zaidi" : "Learn more"}
             </Link>
           ) : (
-            <a href={link} target="_blank" rel="noopener noreferrer" className="shrink-0 font-semibold text-gold-ink underline-offset-2 hover:underline">
+            <a href={link} target="_blank" rel="noopener noreferrer" className="shrink-0 font-semibold text-[#FEA406] underline-offset-2 hover:underline">
               {lang === "sw" ? "Soma zaidi" : "Learn more"}
             </a>
           )

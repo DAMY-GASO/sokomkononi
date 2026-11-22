@@ -33,7 +33,7 @@ export const NAV = [
   { key: "revenue",      label: { sw: "Mapato & Fedha",            en: "Revenue & Financial" },       icon: Wallet },
   { key: "bundles",      label: { sw: "Vifurushi vya Huduma",      en: "Service Bundles" },           icon: Package },
   { key: "promotions",   label: { sw: "Matangazo & Kampeni",       en: "Promotions & Campaigns" },    icon: Sparkles },
-  { key: "refunds",      label: { sw: "Marejesho",                   en: "Refunds" },                   icon: Receipt },   // MPYA
+  { key: "refunds",      label: { sw: "Marejesho",                   en: "Refunds" },                   icon: Receipt },   // ⬅️ MPYA
   { key: "reports",      label: { sw: "Ripoti & Uchanganuzi",      en: "Reports & Analytics" },       icon: BarChart3 },
   { key: "support",      label: { sw: "Huduma kwa Wateja",         en: "Customer Care" },             icon: Headphones },
   { key: "content",      label: { sw: "Usimamizi wa Maudhui",      en: "Content Management" },        icon: FileText },

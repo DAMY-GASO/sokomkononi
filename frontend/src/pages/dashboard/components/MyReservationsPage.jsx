@@ -2,17 +2,21 @@
 // MyReservationsPage.jsx — FINAL (B.6) — Imethibitishwa kwa backend
 //
 // Marekebisho:
-//  Polling kila sekunde 60 (usePollingRefresh)
-//  Timestamp "Imesasishwa" + Refresh button
-//  Banner ya "inaisha hivi karibuni" (< saa 1 / < saa 24)
-//  Disclaimer wazi ya "non-refundable" kwenye kila active
-//  Onyesha transaction_id (#) kwa support/refund requests
-//  Fix: onOpenDeal inatumia deal_room_id kutoka serializer
-//  History: onyesha zote (hakuna limit ya siku 30)
-//  Thibitisha: transaction_id ipo kwenye MyReservationSerializer
-//  Thibitisha: endpoint /transactions/reservations/ ipo
+//  ✅ Polling kila sekunde 60 (usePollingRefresh)
+//  ✅ Timestamp "Imesasishwa" + Refresh button
+//  ✅ Banner ya "inaisha hivi karibuni" (< saa 1 / < saa 24)
+//  ✅ Disclaimer wazi ya "non-refundable" kwenye kila active
+//  ✅ Onyesha transaction_id (#) kwa support/refund requests
+//  ✅ Fix: onOpenDeal inatumia deal_room_id kutoka serializer
+//  ✅ History: onyesha zote (hakuna limit ya siku 30)
+//  ✅ Thibitisha: transaction_id ipo kwenye MyReservationSerializer
+//  ✅ Thibitisha: endpoint /transactions/reservations/ ipo
+//  ✅ Fix: useCountdown inaitwa bila masharti (Rules of Hooks)
+//  ✅ Fix: 'now' imara (useMemo) — active/past hazihesabiwi upya kila render
+//  ✅ Fix: polling haifichi orodha (loading ni ya mara ya kwanza tu)
+//  ✅ Fix: 403 → ujumbe wa kirafiki + polling inasimama hadi mtumiaji abonyeze Sasisha
 // ============================================================
-import React, { useMemo, useState, useEffect, useCallback } from "react";
+import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
   CalendarCheck, Clock3, MapPin, ArrowRight, Inbox, CheckCircle2,
@@ -111,9 +115,10 @@ function timeAgoShort(ts, lang) {
 function useCountdown(expiresAt, lang) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
+    if (!expiresAt) return undefined;
     const iv = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(iv);
-  }, []);
+  }, [expiresAt]);
 
   if (!expiresAt) return null;
   const ms = new Date(expiresAt).getTime() - now;
@@ -192,7 +197,8 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
 
   const status = RESERVATION_STATUS[reservation.status] || RESERVATION_STATUS.pending_payment;
   const isActive = ACTIVE_STATUSES.includes(reservation.status);
-  const cd = isActive ? useCountdown(reservation.expires_at, lang) : null;
+  // Hook lazima iitwe kila mara; tunapitisha null kama si active
+  const cd = useCountdown(isActive ? reservation.expires_at : null, lang);
 
   // MyReservationSerializer inarudisha fields hizi moja kwa moja
   const listingTitle = reservation.listing_title || t("Mali", "Property");
@@ -239,7 +245,7 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
     }
     setBusy("extend");
     try {
-      // Backend: POST /transactions/{id}/extend-reservation/
+      // ✅ Backend: POST /transactions/{id}/extend-reservation/
       //    Body: { additional_hours: N }
       const res = await api.post(`/transactions/${transactionId}/extend-reservation/`, {
         additional_hours: hours,
@@ -280,7 +286,7 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
     if (!confirmed) return;
     setBusy("cancel");
     try {
-      // Backend: POST /transactions/{id}/remove-reservation/
+      // ✅ Backend: POST /transactions/{id}/remove-reservation/
       await api.post(`/transactions/${transactionId}/remove-reservation/`, {});
       alert(t("Reservation imeondolewa.", "Reservation removed."));
       onRefresh?.();
@@ -471,39 +477,63 @@ export default function MyReservationsPage() {
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [forbidden, setForbidden] = useState(false);
+  const hasLoadedRef = useRef(false);
 
-  // Backend: TransactionViewSet.reservations() → GET /transactions/reservations/
+  // ✅ Backend: TransactionViewSet.reservations() → GET /transactions/reservations/
   const fetchReservations = useCallback(async () => {
-    setLoading(true);
+    // Onyesha loader mara ya kwanza tu — polling isifiche orodha kila dakika
+    if (!hasLoadedRef.current) setLoading(true);
     setError("");
     try {
       const data = await api.get("/transactions/reservations/?page_size=100");
       const list = Array.isArray(data) ? data : data?.results || data?.data || [];
       setReservations(list);
+      setForbidden(false);
     } catch (err) {
+      const status = err?.status ?? err?.response?.status ?? err?.data?.status;
+      const code = err?.data?.error?.code || err?.data?.code;
+      const isForbidden = status === 403 || code === "PERMISSION_DENIED";
+      setForbidden(isForbidden);
       setError(
-        err?.data?.detail ||
-          err?.message ||
-          t("Imeshindwa kupakia reservations.", "Failed to load reservations.")
+        isForbidden
+          ? t(
+              "Huna ruhusa ya kuona ukurasa huu kwa sasa. Jaribu kuingia upya, au wasiliana na msaada.",
+              "You don't have permission to view this right now. Try signing in again, or contact support."
+            )
+          : err?.data?.error?.message ||
+              err?.data?.detail ||
+              err?.message ||
+              t("Imeshindwa kupakia reservations.", "Failed to load reservations.")
       );
       setReservations([]);
     } finally {
+      hasLoadedRef.current = true;
       setLoading(false);
     }
   }, [lang]);
 
-  // Polling kila sekunde 60
+  // ✅ Polling kila sekunde 60
   const { refresh, isRefreshing, lastRefreshedAt } = usePollingRefresh(
     fetchReservations,
-    { intervalMs: POLL_INTERVAL_MS, enabled: Boolean(user?.id) }
+    { intervalMs: POLL_INTERVAL_MS, enabled: Boolean(user?.id) && !forbidden }
   );
+
+  // Mtumiaji akibonyeza Sasisha baada ya 403, ruhusu jaribio jipya
+  const handleRefresh = () => {
+    setForbidden(false);
+    refresh();
+  };
 
   useEffect(() => {
     fetchReservations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  const now = new Date();
+  // 'now' inasasishwa tu orodha inapobadilika (polling kila sekunde 60)
+  // vinginevyo useMemo za active/past zingehesabiwa upya kila render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const now = useMemo(() => new Date(), [reservations]);
   const active = useMemo(
     () =>
       reservations.filter(
@@ -550,7 +580,7 @@ export default function MyReservationsPage() {
                 {t("Imesasishwa", "Updated")} {timeAgoShort(lastRefreshedAt, lang)}
               </span>
               <button
-                onClick={refresh}
+                onClick={handleRefresh}
                 disabled={isRefreshing}
                 style={{ borderColor: COLORS.sandLine, color: COLORS.night, background: "rgb(var(--c-card))" }}
                 className="text-xs font-semibold px-2 py-1 rounded-md border flex items-center gap-1 disabled:opacity-50"

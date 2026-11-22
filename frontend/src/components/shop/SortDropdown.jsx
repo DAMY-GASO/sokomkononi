@@ -19,7 +19,7 @@ export default function SortDropdown({ value = "newest", onChange, className = "
         aria-label={lang === "sw" ? "Panga kwa" : "Sort by"}
         className={
           "appearance-none rounded-lg pl-3 pr-8 py-2 text-sm font-medium " +
-          "text-primary bg-card border border-sandline " +
+          "text-primary bg-white border border-sandline " +
           "focus:outline-none focus:border-royal cursor-pointer transition-colors"
         }
       >

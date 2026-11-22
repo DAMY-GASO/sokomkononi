@@ -2,13 +2,13 @@
 // DealDetail.jsx
 //
 // Marekebisho:
-//  MPYA: props `openReserveModal` + `onReserveModalOpened`
+//  ✅ MPYA: props `openReserveModal` + `onReserveModalOpened`
 //     — inafungua ReservationModal kwenye mount kama ni true.
 //     Baada ya kufungua, inaita `onReserveModalOpened()` ili
 //     DealRooms iweze ku-reset state.
-//  MPYA: props `typing` + `onTyping` — typing indicator na
+//  ✅ MPYA: props `typing` + `onTyping` — typing indicator na
 //     typing ping kwa WebSocket.
-//  Kila kitu kingine kimebaki kama kilivyo.
+//  ✅ Kila kitu kingine kimebaki kama kilivyo.
 // ============================================================
 import React, { useEffect, useRef, useState } from "react";
 import { COLORS, formatTZS, getCategory } from "../shared";
@@ -51,7 +51,7 @@ export default function DealDetail({
   lang,
   user,
   onShowSuccess,
-  // MPYA
+  // ✅ MPYA
   openReserveModal = false,
   onReserveModalOpened,
   typing = null,
@@ -67,7 +67,7 @@ export default function DealDetail({
   const [attachPreview, setAttachPreview] = useState(null);
   const attachInputRef = useRef(null);
 
-  // MPYA: fungua ReservationModal moja kwa moja kama openReserveModal ni true
+  // ✅ MPYA: fungua ReservationModal moja kwa moja kama openReserveModal ni true
   useEffect(() => {
     if (!openReserveModal) return;
     const timer = setTimeout(() => {
@@ -189,9 +189,9 @@ export default function DealDetail({
       <div
         style={{
           background: isSeller
-            ? "rgba(254,164,6,0.14)"
+            ? "rgba(232,163,61,0.14)"
             : "rgba(47,109,79,0.08)",
-          color: isSeller ? COLORS.goldText : COLORS.green,
+          color: isSeller ? "#8A5A16" : COLORS.green,
           borderColor: COLORS.sandLine,
         }}
         className="border rounded-xl px-3.5 py-2 max-w-[90%] text-body-sm text-center font-medium"

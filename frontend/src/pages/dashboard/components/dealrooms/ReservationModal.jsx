@@ -115,7 +115,7 @@ export default function ReservationModal({ open, onClose, deal, lang, user, onCo
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60">
-      <div className="bg-card rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         <div
           className="flex items-center justify-between px-5 pt-5 pb-3 border-b"
           style={{ borderColor: COLORS.sandLine }}
@@ -131,7 +131,7 @@ export default function ReservationModal({ open, onClose, deal, lang, user, onCo
               <h3 className="text-sm font-bold text-primary">
                 {t("Hifadhi Mali Hii", "Reserve This Property")}
               </h3>
-              <p className="text-xs text-secondary">
+              <p className="text-[11px] text-secondary">
                 Reservation Fee
               </p>
             </div>
@@ -148,7 +148,7 @@ export default function ReservationModal({ open, onClose, deal, lang, user, onCo
           className="px-5 py-3 border-b"
           style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
         >
-          <p className="text-xs font-semibold text-secondary uppercase mb-1">
+          <p className="text-[11px] font-semibold text-secondary uppercase mb-1">
             {t("Mali", "Property")}
           </p>
           <p className="text-sm font-semibold text-primary line-clamp-2">
@@ -260,7 +260,7 @@ export default function ReservationModal({ open, onClose, deal, lang, user, onCo
                     className="flex-1 text-xs font-semibold px-3 py-2 rounded-full border"
                     style={{
                       background:
-                        paymentMode === "flat" ? COLORS.night : "rgb(var(--c-card))",
+                        paymentMode === "flat" ? COLORS.night : "white",
                       color:
                         paymentMode === "flat" ? COLORS.sand : COLORS.night,
                       borderColor:
@@ -276,7 +276,7 @@ export default function ReservationModal({ open, onClose, deal, lang, user, onCo
                     className="flex-1 text-xs font-semibold px-3 py-2 rounded-full border"
                     style={{
                       background:
-                        paymentMode === "credit" ? COLORS.green : "rgb(var(--c-card))",
+                        paymentMode === "credit" ? COLORS.green : "white",
                       color:
                         paymentMode === "credit" ? "white" : COLORS.night,
                       borderColor:

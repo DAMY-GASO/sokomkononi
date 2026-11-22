@@ -62,10 +62,10 @@ export default function EditableNumber({ value, onSave, min = 1, max = 8760, suf
         type="button"
         onClick={startEdit}
         disabled={disabled}
-        className="group flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-gold-ink transition-colors disabled:opacity-50"
+        className="group flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-[#FEA406] transition-colors disabled:opacity-50"
       >
         <span>{value ?? 0}{suffix ? ` ${suffix}` : ""}</span>
-        <Pencil size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+        <Pencil size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
       </button>
     );
   }
@@ -82,23 +82,23 @@ export default function EditableNumber({ value, onSave, min = 1, max = 8760, suf
           onKeyDown={handleKeyDown}
           onBlur={commit}
           disabled={saving}
-          className="w-16 rounded-md border px-2 py-1 text-sm text-center outline-none focus:border-gold"
+          className="w-16 rounded-md border px-2 py-1 text-sm text-center outline-none focus:border-[#FEA406]"
           style={{ borderColor: localError ? COLORS.rust : COLORS.sandLine }}
         />
         {suffix && <span className="text-xs text-muted">{suffix}</span>}
         {saving ? (
           <Loader2 size={12} className="animate-spin text-muted" />
         ) : (
-          <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={commit} className="p-1 text-green hover:bg-green/10 rounded">
+          <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={commit} className="p-1 text-[#2F6D4F] hover:bg-[#2F6D4F]/10 rounded">
             <Check size={12} />
           </button>
         )}
-        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={cancel} disabled={saving} className="p-1 text-muted hover:text-rust rounded">
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={cancel} disabled={saving} className="p-1 text-muted hover:text-[#C1502E] rounded">
           <X size={12} />
         </button>
       </div>
       {localError && (
-        <p className="text-xs font-semibold flex items-center gap-1" style={{ color: COLORS.rust }}>
+        <p className="text-[10px] font-semibold flex items-center gap-1" style={{ color: COLORS.rust }}>
           <AlertTriangle size={10} /> {localError}
         </p>
       )}

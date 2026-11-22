@@ -71,7 +71,7 @@ export default function PaymentProofReview({ deal, onConfirm, onReject, lang }) 
 
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
+      style={{ borderColor: COLORS.sandLine, background: "white" }}
       className="border-t px-3 sm:px-4 py-3 flex flex-col gap-3"
     >
       <div className="flex flex-col items-center text-center gap-2">
@@ -172,7 +172,7 @@ export default function PaymentProofReview({ deal, onConfirm, onReject, lang }) 
             }}
             className="flex items-center gap-1.5 text-body-sm font-semibold px-3 py-2 rounded-lg border disabled:opacity-50"
           >
-            <ThumbsDown size={14} />{" "}
+            <ThumbsDown size={13} />{" "}
             {lang === "sw" ? "Bado Sijapokea" : "Not Received Yet"}
           </button>
           <button

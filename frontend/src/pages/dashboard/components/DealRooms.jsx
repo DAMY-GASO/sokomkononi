@@ -2,14 +2,14 @@
 // src/pages/dashboard/components/DealRooms.jsx
 //
 // Marekebisho:
-//  MPYA: prop `openReserveModalOnMount` — inatumwa kwa DealDetail
+//  ✅ MPYA: prop `openReserveModalOnMount` — inatumwa kwa DealDetail
 //     wakati `?action=reserve` ipo kwenye URL (kutoka WaitingListPage).
-//  MPYA: WebSocket client kwa updates za papo hapo (badala ya polling).
-//  MPYA: typing indicator — inaonyesha "mtumiaji anaandika…".
-//  MPYA: WebSocketStatusBadge — inaonyesha hali ya muunganisho.
-//  MPYA: broadcast payload inatumiwa moja kwa moja kwa message/offer;
+//  ✅ MPYA: WebSocket client kwa updates za papo hapo (badala ya polling).
+//  ✅ MPYA: typing indicator — inaonyesha "mtumiaji anaandika…".
+//  ✅ MPYA: WebSocketStatusBadge — inaonyesha hali ya muunganisho.
+//  ✅ MPYA: broadcast payload inatumiwa moja kwa moja kwa message/offer;
 //     `deal_update` pekee inaita `fetchDealDetailAsync`.
-//  MPYA: unread count kwa kila chumba + browser notification.
+//  ✅ MPYA: unread count kwa kila chumba + browser notification.
 // ============================================================
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { COLORS } from "./shared";
@@ -97,7 +97,7 @@ export default function DealRooms({
     setSelectedId(id);
     setMobileShowDetail(true);
     setOpenReserveOnMount(false);
-    // futa unread kwa chumba hiki
+    // ✅ futa unread kwa chumba hiki
     setUnreadByRoom((prev) => ({ ...prev, [id]: 0 }));
   };
 
@@ -218,7 +218,7 @@ export default function DealRooms({
           };
         });
 
-        // ongeza unread kama si chumba active
+        // ✅ ongeza unread kama si chumba active
         if (String(roomId) !== String(wsRoomId)) {
           setUnreadByRoom((prev) => ({
             ...prev,
@@ -226,14 +226,14 @@ export default function DealRooms({
           }));
         }
 
-        // browser notification kama ruhusa imetolewa
+        // ✅ browser notification kama ruhusa imetolewa
         if (
           notificationPermissionRef.current === "granted" &&
           String(roomId) !== String(wsRoomId)
         ) {
           try {
             new Notification(p.sender_name || "Ujumbe mpya", {
-              body: p.text?.slice(0, 120) || "Picha",
+              body: p.text?.slice(0, 120) || "📎 Picha",
               icon: "/logo.webp",
               tag: `deal-${roomId}`,
             });
@@ -309,7 +309,7 @@ export default function DealRooms({
       dealsApi.markRead(selectedRoomId).catch(() => {
         delete markedReadRef.current[selectedRoomId];
       });
-      // futa unread kwa chumba hiki
+      // ✅ futa unread kwa chumba hiki
       setUnreadByRoom((prev) => ({ ...prev, [selectedRoomId]: 0 }));
     };
 
@@ -400,8 +400,8 @@ export default function DealRooms({
             className="text-body-sm mt-2 max-w-xl mx-auto"
           >
             {lang === "sw"
-              ? "Backend haipatikani."
-              : "Backend unavailable."}
+              ? "⚠️ Backend haipatikani."
+              : "⚠️ Backend unavailable."}
           </p>
         )}
       </div>

@@ -47,7 +47,7 @@ export default function AdminListingImageManager({ listing, onClose }) {
   const pickImageSrc = (img) =>
     img?.detail || img?.card || img?.image_url || img?.thumb || img?.url || null;
 
-  // Picha zinazotumwa kwenye ImageLightbox
+  // ✅ Picha zinazotumwa kwenye ImageLightbox
   const lightboxImages = images
     .map((img) => ({
       id: img.id,
@@ -96,7 +96,7 @@ export default function AdminListingImageManager({ listing, onClose }) {
           {/* Body */}
           <div className="flex-1 space-y-6 overflow-y-auto p-5">
             {error && (
-              <div className="flex items-start gap-2 rounded-lg border border-rust/30 bg-rust/10 p-3 text-xs text-rust">
+              <div className="flex items-start gap-2 rounded-lg border border-[#C1502E]/30 bg-[#C1502E]/10 p-3 text-xs text-[#C1502E]">
                 <AlertTriangle size={14} className="mt-0.5 shrink-0" />
                 <span className="min-w-0 break-words">{error}</span>
               </div>
@@ -105,15 +105,15 @@ export default function AdminListingImageManager({ listing, onClose }) {
             {/* Existing images */}
             <div>
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-secondary">
+                <h3 className="text-[11px] font-bold uppercase tracking-wider text-secondary">
                   {t(`Picha (${images.length})`, `Images (${images.length})`)}
                 </h3>
                 <button
                   onClick={fetchImages}
                   disabled={loading}
-                  className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-secondary hover:bg-[color:rgb(var(--c-page))] disabled:opacity-50"
+                  className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-secondary hover:bg-[color:rgb(var(--c-page))] disabled:opacity-50"
                 >
-                  <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+                  <RefreshCw size={11} className={loading ? "animate-spin" : ""} />
                   {t("Sasisha", "Refresh")}
                 </button>
               </div>
@@ -166,13 +166,13 @@ export default function AdminListingImageManager({ listing, onClose }) {
                         )}
 
                         {img.is_primary && (
-                          <span className="pointer-events-none absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-green px-2 py-0.5 text-xs font-bold text-white shadow-md">
-                            <Star size={10} fill="#fff" />{" "}
+                          <span className="pointer-events-none absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-[#2F6D4F] px-2 py-0.5 text-[10px] font-bold text-white shadow-md">
+                            <Star size={9} fill="#fff" />{" "}
                             {t("KUU", "PRIMARY")}
                           </span>
                         )}
 
-                        <span className="pointer-events-none absolute bottom-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
+                        <span className="pointer-events-none absolute bottom-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
                           {index + 1} / {images.length}
                         </span>
                       </div>
@@ -195,7 +195,7 @@ export default function AdminListingImageManager({ listing, onClose }) {
         </div>
       </div>
 
-      {/* ImageLightbox moja inayotumika kwa wote */}
+      {/* ✅ ImageLightbox moja inayotumika kwa wote */}
       <ImageLightbox
         images={lightboxImages}
         initialIndex={initialIndex}

@@ -8,7 +8,7 @@ import React, { useState, useEffect } from "react";
 import { Clock, Save, Check, Info, Loader2 } from "lucide-react";
 import { COLORS } from "../../shared/constants.js";
 import { useLanguage } from "../../../../../context/LanguageContext.jsx";
-// MABADILIKO: tumia async update
+// ⬇️ MABADILIKO: tumia async update
 import {
   usePlatformPolicy,
   updatePlatformPolicyAsync,
@@ -19,7 +19,7 @@ export default function PlatformPolicyPanel() {
   const [policy] = usePlatformPolicy();
   const [saved, setSaved] = useState(false);
   const [draft, setDraft] = useState(policy.listingLifetimeDays);
-  // MPYA: busy + error
+  // ⬇️ MPYA: busy + error
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -124,8 +124,8 @@ export default function PlatformPolicyPanel() {
             {t("siku", "days")}
           </span>
         </div>
-        <span className="text-xs text-muted flex items-start gap-1 leading-snug">
-          <Info size={12} className="shrink-0 mt-0.5" />
+        <span className="text-[11px] text-muted flex items-start gap-1 leading-snug">
+          <Info size={11} className="shrink-0 mt-0.5" />
           <span>
             {t(
               'Listing "live" inakuwa "expired" baada ya siku hizi. Min: 1, Max: 365.',
@@ -147,9 +147,9 @@ export default function PlatformPolicyPanel() {
           className="flex items-center justify-center gap-1.5 text-xs font-semibold rounded-lg px-4 py-2 w-full sm:w-auto transition-colors disabled:cursor-not-allowed"
         >
           {saving ? (
-            <Loader2 size={14} className="animate-spin" />
+            <Loader2 size={13} className="animate-spin" />
           ) : (
-            <Save size={14} />
+            <Save size={13} />
           )}
           {saving
             ? t("Inahifadhi...", "Saving...")
@@ -161,7 +161,7 @@ export default function PlatformPolicyPanel() {
             style={{ color: COLORS.successText }}
             className="text-xs font-semibold flex items-center gap-1"
           >
-            <Check size={14} />
+            <Check size={13} />
             {t("Imehifadhiwa", "Saved")}
           </span>
         )}

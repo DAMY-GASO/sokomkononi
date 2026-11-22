@@ -91,7 +91,7 @@ export default function ContactDrawer({
       <div className="flex-1 bg-black/40" onClick={onClose} />
 
       <div
-        className="w-full sm:w-96 sm:max-w-md h-full bg-card shadow-2xl overflow-y-auto flex flex-col"
+        className="w-full sm:w-96 sm:max-w-md h-full bg-white shadow-2xl overflow-y-auto flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -245,7 +245,7 @@ export default function ContactDrawer({
             </div>
           )}
 
-          {/* WhatsApp */}
+          {/* ✅ WhatsApp */}
           {whatsappNumber && (
             <a
               href={`https://wa.me/${whatsappNumber}`}

@@ -53,7 +53,7 @@ const icons = {
   ),
 };
 
-// Kurasa ambazo hazitakiwi kuwa na BottomNav (fomu, deal room, post).
+// ✅ Kurasa ambazo hazitakiwi kuwa na BottomNav (fomu, deal room, post).
 // Tunalinganisha mwanzo wa path tu — `includes("/new")` ilificha menyu hata
 // kwenye URL za kawaida kama /kategoria/new-homes.
 const HIDDEN_PREFIXES = [
@@ -69,11 +69,11 @@ export default function BottomNav() {
   const { t, lang } = useLanguage();
   const side = useDashboardSide();
   
-  // Pata notifications kutoka store
+  // ✅ Pata notifications kutoka store
   // useNotifications inarudisha OBJECT { notifications, unreadCount, ... }, si array
   const { notifications } = useNotifications("user", Boolean(user));
 
-  // 1. FICHA BOTTOM NAV KWENYE KURASA ZA FOMU
+  // ✅ 1. FICHA BOTTOM NAV KWENYE KURASA ZA FOMU
   const shouldHide = useMemo(() => {
     const path = location.pathname.replace(/\/+$/, "") || "/";
     if (HIDDEN_PREFIXES.some((p) => path === p || path.startsWith(p + "/"))) return true;
@@ -84,7 +84,7 @@ export default function BottomNav() {
     return false;
   }, [location.pathname]);
 
-  // 2. HESABU IDADI YA NOTIFICATIONS ZA DEALS
+  // ✅ 2. HESABU IDADI YA NOTIFICATIONS ZA DEALS
   const unreadDealCount = useMemo(() => {
     if (!Array.isArray(notifications)) return 0;
     return notifications.filter((n) => {
@@ -166,7 +166,7 @@ export default function BottomNav() {
         <span>{actionLabel}</span>
       </Link>
 
-      {/* Deals — wote (na Badge ya idadi ya notifications) */}
+      {/* ✅ Deals — wote (na Badge ya idadi ya notifications) */}
       <Link
         to={dealsLink}
         state={!user ? { from: dealsTarget } : undefined}
@@ -178,7 +178,7 @@ export default function BottomNav() {
           
           {/* Badge ya Notifications */}
           {unreadDealCount > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rust text-xs font-bold text-white shadow-sm ring-2 ring-white">
+            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white">
               {unreadDealCount > 9 ? "9+" : unreadDealCount}
             </span>
           )}

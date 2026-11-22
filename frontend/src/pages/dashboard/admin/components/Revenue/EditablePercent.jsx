@@ -98,7 +98,7 @@ export default function EditablePercent({ value, onSave, error = null }) {
           </button>
         </div>
         {errMsg && (
-          <p className="text-xs font-semibold flex items-center gap-1" style={{ color: COLORS.rust }}>
+          <p className="text-[10px] font-semibold flex items-center gap-1" style={{ color: COLORS.rust }}>
             <AlertTriangle size={10} /> {errMsg}
           </p>
         )}
@@ -110,13 +110,13 @@ export default function EditablePercent({ value, onSave, error = null }) {
     <button
       onClick={startEditing}
       className="group flex items-center justify-between gap-2 w-full min-w-0 text-left rounded-lg border-2 px-2.5 py-1.5 hover:shadow-sm"
-      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
+      style={{ borderColor: COLORS.sandLine, background: "white" }}
     >
       <span className="text-sm font-semibold truncate" style={{ color: "var(--text-primary)" }}>
         {(safeValue * 100).toFixed(1)}%
       </span>
       <span className="shrink-0 flex items-center justify-center w-7 h-7 rounded-lg" style={{ background: `${COLORS.gold}15`, color: COLORS.gold }}>
-        <Pencil size={14} />
+        <Pencil size={13} />
       </span>
     </button>
   );

@@ -196,7 +196,7 @@ export default function FilterSidebar({
         <button
           type="button"
           onClick={handleApply}
-          className="w-full py-2.5 rounded-lg font-semibold text-sm text-night transition-colors hover:opacity-90"
+          className="w-full py-2.5 rounded-lg font-semibold text-sm text-[#011957] transition-colors hover:opacity-90"
           style={{
             background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)",
           }}
@@ -217,7 +217,7 @@ export default function FilterSidebar({
   return (
     <>
       <aside className={`hidden lg:block w-64 shrink-0 ${className}`}>
-        <div className="bg-card rounded-xl border border-sandline p-5 lg:sticky lg:top-24">
+        <div className="bg-white rounded-xl border border-sandline p-5 lg:sticky lg:top-24">
           {content}
         </div>
       </aside>
@@ -225,7 +225,7 @@ export default function FilterSidebar({
       {isOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="flex-1 bg-black/50" onClick={onClose} />
-          <div className="w-80 max-w-[85%] bg-card h-full overflow-y-auto p-5">
+          <div className="w-80 max-w-[85%] bg-white h-full overflow-y-auto p-5">
             {content}
           </div>
         </div>

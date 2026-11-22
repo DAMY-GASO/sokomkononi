@@ -46,8 +46,8 @@ import { api } from "../api/client.js";
 const getWaitingStatus = (lang) => ({
   waiting: {
     label: lang === "sw" ? "Kwenye Foleni" : "In Queue",
-    color: COLORS.goldText,
-    bg: "rgba(254,164,6,0.16)",
+    color: "#8A5A16",
+    bg: "rgba(232,163,61,0.16)",
     icon: Hourglass,
   },
   notified: {
@@ -62,7 +62,7 @@ const getWaitingStatus = (lang) => ({
   cancelled: {
     label: lang === "sw" ? "Umeondoka" : "Cancelled",
     color: COLORS.night,
-    bg: "rgba(1,25,87,0.08)",
+    bg: "rgba(16,26,46,0.08)",
     icon: XCircle,
   },
   fulfilled: {
@@ -87,7 +87,7 @@ function CountdownBadge({ to, lang }) {
   if (ms <= 0) {
     return (
       <span
-        className="text-xs font-bold"
+        className="text-[11px] font-bold"
         style={{ color: COLORS.rust }}
       >
         {lang === "sw" ? "Muda umeisha" : "Expired"}
@@ -99,7 +99,7 @@ function CountdownBadge({ to, lang }) {
   const sec = Math.floor((ms % 60000) / 1000);
   return (
     <span
-      className="text-xs font-bold tabular-nums"
+      className="text-[11px] font-bold tabular-nums"
       style={{ color: COLORS.rust }}
     >
       {h}h {String(m).padStart(2, "0")}m{" "}
@@ -121,13 +121,13 @@ function WaitingListItem({ entry, onLeave, onClaim, lang, leaving, claiming }) {
 
   const handleReserveNow = () => onClaim(entry);
 
-  // Muda uliobaki wa reservation (kwa waiting na notified)
+  // ✅ Muda uliobaki wa reservation (kwa waiting na notified)
   const hasCountdown = entry.reservationExpiresAt && 
                        (entry.status === "waiting" || entry.status === "notified");
 
   return (
     <div
-      style={{ background: "rgb(var(--c-card))", borderColor: COLORS.sandLine }}
+      style={{ background: "white", borderColor: COLORS.sandLine }}
       className="rounded-xl border p-4 flex items-start gap-3"
     >
       <div
@@ -155,12 +155,12 @@ function WaitingListItem({ entry, onLeave, onClaim, lang, leaving, claiming }) {
           </div>
           <span
             style={{
-              background: status?.bg || COLORS.sand,
-              color: status?.color || COLORS.night,
+              background: status?.bg || "#F5F3EC",
+              color: status?.color || "#101A2E",
             }}
-            className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full shrink-0"
+            className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full shrink-0"
           >
-            <StatusIcon size={12} />
+            <StatusIcon size={11} />
             {status.label}
           </span>
         </div>
@@ -185,11 +185,11 @@ function WaitingListItem({ entry, onLeave, onClaim, lang, leaving, claiming }) {
           </span>
         </div>
 
-        {/* Countdown kwa Waiting na Notified */}
+        {/* ✅ Countdown kwa Waiting na Notified */}
         {hasCountdown && (
           <div className="flex items-center gap-2 mt-2">
             <Clock3 size={12} color={COLORS.rust} />
-            <span className="text-xs font-medium" style={{ color: COLORS.rust }}>
+            <span className="text-[11px] font-medium" style={{ color: COLORS.rust }}>
               {lang === "sw" ? "Reservation ya sasa inaisha baada ya:" : "Current reservation ends in:"}
             </span>
             <CountdownBadge to={entry.reservationExpiresAt} lang={lang} />
@@ -206,7 +206,7 @@ function WaitingListItem({ entry, onLeave, onClaim, lang, leaving, claiming }) {
           >
             <span
               style={{ color: COLORS.green }}
-              className="text-xs font-medium flex items-center gap-2"
+              className="text-[11px] font-medium flex items-center gap-2"
             >
               {entry.respondBy && (
                 <CountdownBadge to={entry.respondBy} lang={lang} />
@@ -219,7 +219,7 @@ function WaitingListItem({ entry, onLeave, onClaim, lang, leaving, claiming }) {
               onClick={handleReserveNow}
               disabled={claiming}
               style={{ background: COLORS.green, color: "white" }}
-              className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg shrink-0 disabled:opacity-60"
+              className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 rounded-lg shrink-0 disabled:opacity-60"
             >
               {lang === "sw" ? "Reserve Sasa" : "Reserve Now"}
               {claiming ? <Loader2 size={12} className="animate-spin" /> : <ArrowRight size={12} />}
@@ -232,9 +232,9 @@ function WaitingListItem({ entry, onLeave, onClaim, lang, leaving, claiming }) {
             onClick={() => onLeave(entry.id)}
             disabled={leaving}
             style={{ color: COLORS.rust }}
-            className="flex items-center gap-1 text-xs font-semibold mt-2.5 disabled:opacity-50"
+            className="flex items-center gap-1 text-[11px] font-semibold mt-2.5 disabled:opacity-50"
           >
-            {leaving ? <Loader2 size={12} className="animate-spin" /> : <LogOut size={12} />}{" "}
+            {leaving ? <Loader2 size={11} className="animate-spin" /> : <LogOut size={11} />}{" "}
             {lang === "sw" ? "Ondoka kwenye Foleni" : "Leave Queue"}
           </button>
         )}
@@ -400,7 +400,7 @@ export default function WaitingListPage({
         className="w-full p-4 sm:p-6 flex items-center justify-center"
       >
         <div
-          className="bg-card rounded-2xl border max-w-md w-full p-6 text-center"
+          className="bg-white rounded-2xl border max-w-md w-full p-6 text-center"
           style={{ borderColor: COLORS.sandLine }}
         >
           <div
@@ -499,7 +499,7 @@ export default function WaitingListPage({
               key={f.key}
               onClick={() => setFilter(f.key)}
               style={{
-                background: filter === f.key ? COLORS.night : "rgb(var(--c-card))",
+                background: filter === f.key ? COLORS.night : "white",
                 color:
                   filter === f.key
                     ? COLORS.sand
@@ -516,7 +516,7 @@ export default function WaitingListPage({
         {filtered.length === 0 ? (
           <div
             style={{ borderColor: COLORS.sandLine }}
-            className="rounded-2xl border-2 border-dashed p-12 text-center bg-card"
+            className="rounded-2xl border-2 border-dashed p-12 text-center bg-white"
           >
             <Clock3 size={48} className="mx-auto text-muted mb-3" />
             <h3

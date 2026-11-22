@@ -15,7 +15,7 @@ import SellerFeedback from "../seller/SellerFeedback.jsx";
 import { useAuth, logoutAsync } from "../../../config/authStore.js";
 import { ADMIN_PATH } from "../../../config/adminPath.js";
 
-// FIX: Import rolesStore — RBAC inaunganishwa sasa
+// ✅ FIX: Import rolesStore — RBAC inaunganishwa sasa
 import { useRoles, useSubAdminsWithRoles } from "../../../config/rolesStore.js";
 
 import {
@@ -69,7 +69,7 @@ import {
   leaveWaitingList,
 } from "../../../config/waitingListStore.js";
 
-// FIX: Sidebar collapse persistence key
+// ✅ FIX: Sidebar collapse persistence key
 const SIDEBAR_COLLAPSED_KEY = "sokomkononi_sidebar_collapsed_v1";
 
 function readSidebarCollapsed() {
@@ -85,7 +85,7 @@ function writeSidebarCollapsed(v) {
   } catch { /* ignore */ }
 }
 
-// FIX: Admin blocked message — constant, inatafsiriwa kwa t() panapotumika
+// ✅ FIX: Admin blocked message — constant, inatafsiriwa kwa t() panapotumika
 const ADMIN_BLOCKED_MESSAGE = {
   title: { sw: "Admin Hana Ruhusa Hapa", en: "Admin Cannot Access Here" },
   body: {
@@ -96,7 +96,7 @@ const ADMIN_BLOCKED_MESSAGE = {
   logout: { sw: "Toka na uingie kama mtumiaji", en: "Log out and sign in as a user" },
 };
 
-// FIX: RBAC — mapping ya NAV key → PERMISSION key (rolesStore)
+// ✅ FIX: RBAC — mapping ya NAV key → PERMISSION key (rolesStore)
 // `null` = daima inaonekana (hakuna kizuizi cha RBAC)
 // Ikiwa NAV key haipo kwenye mapping, default = inaonekana
 const NAV_PERMISSION_MAP = {
@@ -133,7 +133,7 @@ const NAV_PERMISSION_MAP = {
   },
 };
 
-// FIX: Permissions helper — inachuja NAV kulingana na RBAC ya mtumiaji
+// ✅ FIX: Permissions helper — inachuja NAV kulingana na RBAC ya mtumiaji
 function canAccessNavKey(side, key, user, roles, staffList) {
   // 1. Admin kamili — ruhusu kila kitu (Admin block ipo juu kwa admin property)
   if (
@@ -253,7 +253,7 @@ export default function DashboardShell() {
   const { user } = useAuth();
   const { theme, toggle: toggleTheme } = useTheme();
 
-  // FIX: RBAC — sasa umeunganishwa kikamilifu
+  // ✅ FIX: RBAC — sasa umeunganishwa kikamilifu
   const roles = useRoles();
   const staffList = useSubAdminsWithRoles();
 
@@ -266,7 +266,7 @@ export default function DashboardShell() {
     user?.isSuperuser === true ||
     user?.is_superuser === true;
 
-  // FIX: Sidebar collapsible — state imehifadhiwa kwenye localStorage
+  // ✅ FIX: Sidebar collapsible — state imehifadhiwa kwenye localStorage
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => readSidebarCollapsed());
   const toggleSidebarCollapsed = useCallback(() => {
     setSidebarCollapsed((v) => {
@@ -361,7 +361,7 @@ export default function DashboardShell() {
     };
   }, [editListingId]);
 
-  // FIX: Chuja nav items kwa RBAC (au zote kama si sub-admin)
+  // ✅ FIX: Chuja nav items kwa RBAC (au zote kama si sub-admin)
   const baseNav = side === "seller" ? SELLER_NAV : BUYER_NAV;
   const nav = useMemo(
     () =>

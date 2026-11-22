@@ -71,7 +71,7 @@ export default function BannerHero() {
           className="absolute inset-0"
           style={{
             background: hasImage
-              ? "linear-gradient(180deg, rgba(1,25,87,0.55) 0%, rgba(1,25,87,0.75) 100%)"
+              ? "linear-gradient(180deg, rgba(16,26,46,0.55) 0%, rgba(16,26,46,0.75) 100%)"
               : "transparent",
           }}
         />
@@ -102,7 +102,7 @@ export default function BannerHero() {
                 style={{
                   background: COLORS.gold,
                   color: COLORS.night,
-                  boxShadow: "0 10px 28px -10px rgba(254,164,6,0.75)",
+                  boxShadow: "0 10px 28px -10px rgba(232,163,61,0.75)",
                 }}
               >
                 {ctaText}
@@ -139,7 +139,7 @@ export default function BannerHero() {
                   key={i}
                   onClick={() => setIdx(i)}
                   className={`rounded-full transition-all ${
-                    i === idx ? "w-6 h-1.5 bg-card" : "w-1.5 h-1.5 bg-white/50 hover:bg-white/80"
+                    i === idx ? "w-6 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50 hover:bg-white/80"
                   }`}
                   aria-label={`Go to banner ${i + 1}`}
                 />

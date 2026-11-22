@@ -39,7 +39,7 @@ export default function RecentActivity({ onNavigate, side = "seller" }) {
         );
 
   return (
-    <div className="bg-card rounded-xl border border-hairline p-4 sm:p-5">
+    <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
       {/* ============================================================ */}
       {/* HEADER — CENTERED */}
       {/* ============================================================ */}
@@ -68,7 +68,7 @@ export default function RecentActivity({ onNavigate, side = "seller" }) {
               <button
                 key={a.id}
                 onClick={a.onClick}
-                className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-page transition-colors text-left"
+                className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left"
               >
                 <div
                   style={{ background: `${a.color}15` }}

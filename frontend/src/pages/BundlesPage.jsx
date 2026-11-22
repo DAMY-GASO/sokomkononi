@@ -2,8 +2,8 @@
 // BundlesPage.jsx — B.10 FINAL
 //
 // Marekebisho:
-//  Ongeza <ExpiringCreditsBanner /> kabla ya salio
-//  Kila kitu kingine kimebaki kama kilivyo
+//  ✅ Ongeza <ExpiringCreditsBanner /> kabla ya salio
+//  ✅ Kila kitu kingine kimebaki kama kilivyo
 // ============================================================
 
 import React, { useState, useRef, useCallback } from "react";
@@ -29,7 +29,7 @@ import {
 
 import { COLORS, formatTZS } from "./dashboard/components/shared";
 import PaymentGateway from "./dashboard/components/PaymentGateway";
-// MPYA
+// ✅ MPYA
 import ExpiringCreditsBanner from "./dashboard/components/ExpiringCreditsBanner.jsx";
 import { useActiveBundles } from "../config/bundlesStore.js";
 import {
@@ -448,7 +448,7 @@ export default function BundlesPage({ role = "seller" }) {
           </p>
         </div>
 
-        {/* MPYA: Expiring credits banner */}
+        {/* ✅ MPYA: Expiring credits banner */}
         <ExpiringCreditsBanner userCredits={userCredits} />
 
         {/* CREDITS BALANCE */}

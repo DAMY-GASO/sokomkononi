@@ -598,8 +598,8 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
         extraWarning={
           (isProtected || confirmDelete?.protected) &&
           t(
-            "Item hii inalindwa. Kufuta kunaweza kuathiri mfumo. Endelea tu ikiwa una uhakika.",
-            "This item is protected. Deleting may affect the system. Continue only if you are sure."
+            "⚠️ Item hii inalindwa. Kufuta kunaweza kuathiri mfumo. Endelea tu ikiwa una uhakika.",
+            "⚠️ This item is protected. Deleting may affect the system. Continue only if you are sure."
           )
         }
         confirmLabel={
@@ -625,8 +625,8 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
         extraWarning={
           (isProtected || validSelected.some((it) => it.protected)) &&
           t(
-            "Zipo items zinazolindwa. Kufuta kunaweza kuathiri mfumo. Endelea tu ikiwa una uhakika.",
-            "Some selected items are protected. Deleting may affect the system. Continue only if you are sure."
+            "⚠️ Zipo items zinazolindwa. Kufuta kunaweza kuathiri mfumo. Endelea tu ikiwa una uhakika.",
+            "⚠️ Some selected items are protected. Deleting may affect the system. Continue only if you are sure."
           )
         }
         confirmLabel={
@@ -937,8 +937,8 @@ export default function TrashSection() {
         extraWarning={
           hasProtectedTypes &&
           t(
-            "Kuna items zinalindwa kwenye sanduku hili. Zitafutwa pia. Hakikisha umezingatia usalama wa mfumo.",
-            "There are protected items in this bin. They will also be deleted. Please ensure system safety."
+            "⚠️ Kuna items zinalindwa kwenye sanduku hili. Zitafutwa pia. Hakikisha umezingatia usalama wa mfumo.",
+            "⚠️ There are protected items in this bin. They will also be deleted. Please ensure system safety."
           )
         }
         confirmLabel={
@@ -973,8 +973,8 @@ export default function TrashSection() {
           confirmEmptyType &&
           getTypeConfig(confirmEmptyType).isProtected &&
           t(
-            "Aina hii inalindwa. Kufuta zote kunaweza kuathiri mfumo. Endelea kwa tahadhari.",
-            "This type is protected. Emptying it may affect the system. Proceed with caution."
+            "⚠️ Aina hii inalindwa. Kufuta zote kunaweza kuathiri mfumo. Endelea kwa tahadhari.",
+            "⚠️ This type is protected. Emptying it may affect the system. Proceed with caution."
           )
         }
         confirmLabel={

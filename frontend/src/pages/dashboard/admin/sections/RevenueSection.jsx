@@ -3,13 +3,13 @@
 // Flat fees: listing, reservation (tiers), success.
 // Packages: boost, leading, advertisement.
 //
-// FIX #1: Hydrate MARA MOJA tu kwenye mount (si kwenye hook).
-// FIX #2: ToggleSwitch inaonyesha "INAPAKIA..." hadi loaded === true.
-// FIX #8: safeStr() — hakuna object inayofika kwenye JSX (React Error #31).
-// FIX #9: orphan ni derived (isFeeConfigOrphan) — fee rules halali
+// ✅ FIX #1: Hydrate MARA MOJA tu kwenye mount (si kwenye hook).
+// ✅ FIX #2: ToggleSwitch inaonyesha "INAPAKIA..." hadi loaded === true.
+// ✅ FIX #8: safeStr() — hakuna object inayofika kwenye JSX (React Error #31).
+// ✅ FIX #9: orphan ni derived (isFeeConfigOrphan) — fee rules halali
 //            hazifichwi kwa sababu categories zilihydrate baada ya fee rules.
-// FIX #10: addFeeConfigAsync HAIWEKI is_active kwenye PATCH (upsert).
-// Refresh button inatumia forceRefresh() kwa stores zote.
+// ✅ FIX #10: addFeeConfigAsync HAIWEKI is_active kwenye PATCH (upsert).
+// ✅ Refresh button inatumia forceRefresh() kwa stores zote.
 // ============================================================
 import React, { useState, useRef, useEffect } from "react";
 import {
@@ -39,7 +39,7 @@ import {
   hydrateListingFeeConfigsFromApi, removeFeeConfigAsync,
   updateListingFeeFlatAsync,
   updateListingFeeModeAsync, toggleListingFeeActiveAsync,
-  isFeeConfigOrphan,   // FIX #9
+  isFeeConfigOrphan,   // ✅ FIX #9
 } from "../../../../config/listingFeeStore.js";
 import {
   useLeadingFeeConfig,
@@ -138,7 +138,7 @@ function EditHint({ lang, accentColor = COLORS.gold }) {
   );
 }
 
-// FIX #2: ToggleSwitch inaonyesha "INAPAKIA..." hadi loaded === true
+// ✅ FIX #2: ToggleSwitch inaonyesha "INAPAKIA..." hadi loaded === true
 function ToggleSwitch({
   enabled,
   onToggle,
@@ -154,7 +154,7 @@ function ToggleSwitch({
   const travel = compact ? "translateX(18px)" : "translateX(24px)";
   const rest = compact ? "translateX(3px)" : "translateX(4px)";
 
-  // FIX #2: hali ya "haijulikani" — toggle disabled, grey
+  // ✅ FIX #2: hali ya "haijulikani" — toggle disabled, grey
   const isUnknown = !loaded || enabled === null || enabled === undefined;
   const isOn = enabled === true;
   const isDisabled = disabled || isUnknown;
@@ -558,7 +558,7 @@ function FeeHistoryCard({ lang }) {
 export default function RevenueSection() {
   const { lang } = useLanguage();
 
-  // FIX #9: orphan ni derived — filter inatumia isFeeConfigOrphan
+  // ✅ FIX #9: orphan ni derived — filter inatumia isFeeConfigOrphan
   const allFeeConfigs = useListingFeeConfigs();
   const listingFeeConfigs = allFeeConfigs.filter(
     (c) => !isFeeConfigOrphan(c)
@@ -583,7 +583,7 @@ export default function RevenueSection() {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // FIX #1: Hydrate MARA MOJA tu kwenye mount
+  // ✅ FIX #1: Hydrate MARA MOJA tu kwenye mount
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -620,7 +620,7 @@ export default function RevenueSection() {
     setRefreshing(true);
     setError("");
     try {
-      // Refresh inatumia forceRefresh() kwa stores zote
+      // ✅ Refresh inatumia forceRefresh() kwa stores zote
       // (bypass TTL na race protection kutoka hydrateGuard.js)
       const results = await Promise.allSettled([
         hydrateReservationFromApi.forceRefresh(),
@@ -1016,7 +1016,7 @@ export default function RevenueSection() {
   };
 
   // ── Fee config management ───────────────────────────────
-  // FIX #9: missingFeeCategories inatumia listingFeeConfigs (zilizofilter)
+  // ✅ FIX #9: missingFeeCategories inatumia listingFeeConfigs (zilizofilter)
   // badala ya hasFeeConfig — kuhakikisha consistency kati ya "inaonekana
   // kwenye list" na "inahesabiwa kama missing".
   const missingFeeCategories = activeCategories.filter((cat) => {
@@ -1263,7 +1263,7 @@ export default function RevenueSection() {
           <div className="divide-y divide-hairline">
             {listingFeeConfigs.map((c) => {
               const category = getCategory(c.key);
-              // SAFE: catLabel ni STRING kila mara
+              // ✅ SAFE: catLabel ni STRING kila mara
               const catLabel =
                 safeStr(category?.label, lang) ||
                 safeStr(c.name, lang) ||

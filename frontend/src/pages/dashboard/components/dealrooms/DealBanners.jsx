@@ -11,18 +11,18 @@ export default function DealBanners({ canReserve, deal, freeReserving, handleFre
           className="border-b px-3 sm:px-4 py-3 flex items-start gap-3"
           style={{
             background:
-              "linear-gradient(135deg, rgba(254,164,6,0.18) 0%, rgba(254,164,6,0.08) 100%)",
-            borderColor: "rgba(254,164,6,0.4)",
+              "linear-gradient(135deg, rgba(232,163,61,0.18) 0%, rgba(232,163,61,0.08) 100%)",
+            borderColor: "rgba(232,163,61,0.4)",
           }}
         >
           <div
             className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: COLORS.goldText }}
+            style={{ background: "#8A5A16" }}
           >
             <Lock size={16} color="white" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold" style={{ color: COLORS.goldText }}>
+            <p className="text-sm font-bold" style={{ color: "#8A5A16" }}>
               {lang === "sw"
                 ? "Room Imesimamishwa na Msimamizi"
                 : "Room Suspended by Admin"}
@@ -37,7 +37,7 @@ export default function DealBanners({ canReserve, deal, freeReserving, handleFre
                   : "Messages and offers are paused until review is complete."}
             </p>
             {deal.lockedByName && (
-              <p className="text-xs text-muted mt-0.5">
+              <p className="text-[11px] text-muted mt-0.5">
                 {lang === "sw" ? "Na" : "By"}: {deal.lockedByName}
               </p>
             )}
@@ -45,7 +45,7 @@ export default function DealBanners({ canReserve, deal, freeReserving, handleFre
         </div>
       )}
 
-      {/* RESERVE BANNER — wazi kwa buyer, canReserve */}
+      {/* 🛠️ RESERVE BANNER — wazi kwa buyer, canReserve */}
       {isBuyer && canReserve && !reserveModalOpen && (
         <div
           className="border-b px-3 sm:px-4 py-3 flex items-center gap-3"
@@ -91,11 +91,11 @@ export default function DealBanners({ canReserve, deal, freeReserving, handleFre
             className="shrink-0 text-xs font-bold px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 hover:opacity-90 transition-opacity disabled:opacity-60"
           >
             {freeReserving ? (
-              <Loader2 size={14} className="animate-spin" />
+              <Loader2 size={13} className="animate-spin" />
             ) : reservationEnabled ? (
-              <CreditCard size={14} />
+              <CreditCard size={13} />
             ) : (
-              <ShieldCheck size={14} />
+              <ShieldCheck size={13} />
             )}
             {reservationEnabled
               ? lang === "sw"
@@ -108,19 +108,19 @@ export default function DealBanners({ canReserve, deal, freeReserving, handleFre
         </div>
       )}
 
-      {/* PROPERTY RESERVED BANNER */}
+      {/* 🛠️ PROPERTY RESERVED BANNER */}
       {showReservedBanner && deal.status === "reserved" && (
         <div
           className="border-b px-3 sm:px-4 py-3 flex items-center gap-3"
           style={{
             background:
-              "linear-gradient(135deg, rgba(0,98,253,0.12) 0%, rgba(30,58,138,0.08) 100%)",
-            borderColor: "rgba(0,98,253,0.25)",
+              "linear-gradient(135deg, rgba(37,99,235,0.12) 0%, rgba(30,58,138,0.08) 100%)",
+            borderColor: "rgba(37,99,235,0.25)",
           }}
         >
           <div
             className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: COLORS.royal }}
+            style={{ background: "#2563EB" }}
           >
             <ShieldCheck size={18} color="white" />
           </div>
@@ -142,10 +142,10 @@ export default function DealBanners({ canReserve, deal, freeReserving, handleFre
           </div>
           <button
             onClick={() => navigate("/dashboard/buyer/reservations")}
-            style={{ background: COLORS.royal, color: "white" }}
+            style={{ background: "#2563EB", color: "white" }}
             className="shrink-0 text-xs font-bold px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 hover:opacity-90 transition-opacity"
           >
-            <ArrowRight size={14} />
+            <ArrowRight size={13} />
             {lang === "sw" ? "Ona Reservations" : "View Reservations"}
           </button>
         </div>

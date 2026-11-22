@@ -94,7 +94,7 @@ export default function PaymentStatusStrip({ deal, side, lang, onRefresh }) {
             background: mine ? COLORS.green : "rgba(120,120,120,0.18)",
             color: mine ? "white" : undefined,
           }}
-          className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full text-secondary"
+          className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full text-secondary"
         >
           {ps.stage === "disputed"
             ? t("Rufaa", "Appeal")
@@ -161,7 +161,7 @@ export default function PaymentStatusStrip({ deal, side, lang, onRefresh }) {
             className="w-full rounded-lg border bg-card text-primary px-3 py-2 text-xs outline-none resize-none"
           />
           {error && (
-            <p className="text-xs" style={{ color: COLORS.rust }}>
+            <p className="text-[11px]" style={{ color: COLORS.rust }}>
               {error}
             </p>
           )}

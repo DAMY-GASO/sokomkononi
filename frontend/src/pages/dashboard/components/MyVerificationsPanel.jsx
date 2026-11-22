@@ -4,9 +4,9 @@
 // - Upload documents
 // - Anaona status ya maombi yake
 // + Hydrate kutoka API kwenye mount
-// MPYA: Ushawishi + mahitaji ya documents wazi kwa kila aina
-// MPYA: Kigezo cha Aina ya Utambulisho (NIDA/Pasipoti/Kadi ya Mpiga Kura)
-// MPYA: Business Licence + Kadi ya Mpiga Kura kwenye documents
+// ✅ MPYA: Ushawishi + mahitaji ya documents wazi kwa kila aina
+// ✅ MPYA: Kigezo cha Aina ya Utambulisho (NIDA/Pasipoti/Kadi ya Mpiga Kura)
+// ✅ MPYA: Business Licence + Kadi ya Mpiga Kura kwenye documents
 // ============================================================
 import React, { useState, useEffect } from "react";
 import {
@@ -280,7 +280,7 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     type: side === "seller" ? "seller" : "buyer",
-    idType: "nida", // MPYA
+    idType: "nida", // ✅ MPYA
     subject: "",
     notes: "",
   });
@@ -304,7 +304,7 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
     setError("");
     const res = await addVerificationAsync({
       type: form.type,
-      idType: form.idType, // MPYA
+      idType: form.idType, // ✅ MPYA
       subject: form.subject.trim(),
       notes: form.notes.trim(),
     });
@@ -312,7 +312,7 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
     if (res.ok) {
       setForm({
         type: side === "seller" ? "seller" : "buyer",
-        idType: "nida", // reset
+        idType: "nida", // ✅ reset
         subject: "",
         notes: "",
       });
@@ -350,10 +350,10 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
           </p>
         </div>
 
-        {/* Kadi ya Ushawishi */}
+        {/* ✅ Kadi ya Ushawishi */}
         <WhyGetVerifiedCard lang={lang} type={form.type} />
 
-        {/* Kadi ya Mahitaji (Seller + Buyer zote) */}
+        {/* ✅ Kadi ya Mahitaji (Seller + Buyer zote) */}
         <RequirementsCard lang={lang} />
 
         {/* Error */}
@@ -415,7 +415,7 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
               </div>
             </label>
 
-            {/* Aina ya Utambulisho (ID Type) */}
+            {/* ✅ Aina ya Utambulisho (ID Type) */}
             <label className="flex flex-col gap-1">
               <span className="text-xs font-semibold text-secondary">
                 {t("Aina ya Utambulisho Utakaotumia", "ID Type You Will Use")}
@@ -451,7 +451,7 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
               </p>
             </label>
 
-            {/* Mahitaji maalum kwa aina iliyochaguliwa */}
+            {/* ✅ Mahitaji maalum kwa aina iliyochaguliwa */}
             <RequirementsCard lang={lang} type={form.type} compact />
 
             {/* Subject */}
@@ -574,7 +574,7 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
                     {t("Iliwasilishwa", "Submitted")} {timeAgo(r.submittedAt, lang)}
                   </p>
 
-                  {/* Onyesha Aina ya Utambulisho */}
+                  {/* ✅ Onyesha Aina ya Utambulisho */}
                   {idTypeObj && (
                     <p className="text-xs text-muted mb-2">
                       {t("Utambulisho:", "ID:")}{" "}

@@ -3,9 +3,9 @@
 // Backend: GET/PATCH /api/leading-fees/
 //          POST      /api/leading-fees/toggle/
 //
-// FIX #2: FALLBACK.is_enabled = null (haijulikani) + loaded flag.
-// FIX #5: toggle inahydrate baada ya API kufanikiwa.
-// FIX #7: hydrate inatumia guarded() — dedupe, TTL, forceRefresh.
+// ✅ FIX #2: FALLBACK.is_enabled = null (haijulikani) + loaded flag.
+// ✅ FIX #5: toggle inahydrate baada ya API kufanikiwa.
+// ✅ FIX #7: hydrate inatumia guarded() — dedupe, TTL, forceRefresh.
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -54,7 +54,7 @@ function norm(raw) {
 
 export function getLeadingFeeConfig() { return read(); }
 
-// FIX #7: guarded()
+// ✅ FIX #7: guarded()
 async function _hydrateLeadingFeeFromApi() {
   try {
     const d = await api.get("/leading-fees/");
@@ -104,7 +104,7 @@ export async function toggleLeadingFeeAsync() {
     };
     write(updated);
 
-    // FIX #5 + #7: forceRefresh — backend ndiyo source of truth
+    // ✅ FIX #5 + #7: forceRefresh — backend ndiyo source of truth
     try {
       await hydrateLeadingFeeFromApi.forceRefresh();
     } catch (e) {

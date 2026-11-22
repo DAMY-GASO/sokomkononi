@@ -1,8 +1,8 @@
 // ============================================================
 // AllListingsPage.jsx — /mali-zote
-// Grid & List zote zinatumia ListingCard (picha zinaonekana)
-// MPYA: Filter (category, bei, eneo, verified, featured)
-// MPYA: URL params sync (?category=X&sort=price_low&min=..&max=..&eneo=..)
+// ✅ Grid & List zote zinatumia ListingCard (picha zinaonekana)
+// ✅ MPYA: Filter (category, bei, eneo, verified, featured)
+// ✅ MPYA: URL params sync (?category=X&sort=price_low&min=..&max=..&eneo=..)
 //    → link inaweza kushirikiwa na back/forward inafanya kazi
 // ============================================================
 import React, { useMemo, useState, useEffect } from "react";
@@ -269,7 +269,7 @@ export default function AllListingsPage() {
               <SlidersHorizontal size={14} />
               {t("Vichujio", "Filters")}
               {activeFilterCount > 0 && (
-                <span className="ml-0.5 grid h-5 min-w-[20px] place-items-center rounded-full bg-[color:rgb(var(--c-gold))] px-1 text-xs font-bold text-white">
+                <span className="ml-0.5 grid h-5 min-w-[20px] place-items-center rounded-full bg-[color:rgb(var(--c-gold))] px-1 text-[11px] font-bold text-white">
                   {activeFilterCount}
                 </span>
               )}
@@ -394,7 +394,7 @@ export default function AllListingsPage() {
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="text-sm font-medium text-rust hover:underline"
+                  className="text-sm font-medium text-[#C1502E] hover:underline"
                 >
                   {t("Safisha vichujio", "Clear filters")}
                 </button>
@@ -418,7 +418,7 @@ export default function AllListingsPage() {
             )}
             {locationFilter.trim() && (
               <Chip
-                label={`${locationFilter.trim()}`}
+                label={`📍 ${locationFilter.trim()}`}
                 onRemove={() => updateParams({ eneo: "" })}
                 removeLabel={t("Ondoa", "Remove")}
               />
@@ -461,7 +461,7 @@ export default function AllListingsPage() {
             <button
               type="button"
               onClick={clearFilters}
-              className="text-xs font-medium text-rust hover:underline"
+              className="text-xs font-medium text-[#C1502E] hover:underline"
             >
               {t("Safisha zote", "Clear all")}
             </button>
@@ -481,7 +481,7 @@ export default function AllListingsPage() {
               <button
                 type="button"
                 onClick={clearFilters}
-                className="mt-4 rounded-lg px-5 py-2 text-sm font-semibold text-night"
+                className="mt-4 rounded-lg px-5 py-2 text-sm font-semibold text-[#011957]"
                 style={{ background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)" }}
               >
                 {t("Safisha Vichujio", "Clear Filters")}
@@ -522,7 +522,7 @@ export default function AllListingsPage() {
 
 function Chip({ label, onRemove, removeLabel }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-[color:rgb(var(--c-gold)/0.14)] px-2.5 py-1 text-xs font-medium text-[#A35F00] dark:text-gold-ink">
+    <span className="inline-flex items-center gap-1 rounded-full bg-[color:rgb(var(--c-gold)/0.14)] px-2.5 py-1 text-xs font-medium text-[#A35F00] dark:text-[#FEA406]">
       {label}
       <button type="button" onClick={onRemove} aria-label={removeLabel}>
         <X size={12} />

@@ -9,7 +9,7 @@ function fmtDate(iso) {
   if (!iso) return "—";
   try {
     return new Date(iso).toLocaleString("sw-TZ", {
-      timeZone: "Africa/Dar_es_Salaam", // Timezone Fix
+      timeZone: "Africa/Dar_es_Salaam", // ✅ Timezone Fix
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -38,7 +38,7 @@ function downloadBlob(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// Helper ya kupata jina la mtumaji
+// ✅ Helper ya kupata jina la mtumaji
 function getSenderName(message, transcript) {
   // Kama tayari tuna jina (kutoka DealRoomViewer)
   if (message.sender && message.sender !== "me" && message.sender !== "other") {
@@ -84,7 +84,7 @@ function buildTXT(transcript) {
   if (meta.agreedAt) lines.push(`  Agreed At    : ${fmtDate(meta.agreedAt)}`);
   lines.push("");
   
-  // ── Participants (Ongeza majina) ──
+  // ── Participants (✅ Ongeza majina) ──
   lines.push(`${L.participants || "Participants"}`);
   lines.push(`  Buyer  : ${deal.buyerName || "—"} (ID ${meta.buyerId || "—"})`);
   lines.push(`  Seller : ${deal.sellerName || "—"} (ID ${meta.sellerId || "—"})`);
@@ -109,7 +109,7 @@ function buildTXT(transcript) {
   lines.push("");
 
   messages.forEach((m) => {
-    const who = getSenderName(m, transcript); // Tumia jina halisi
+    const who = getSenderName(m, transcript); // ✅ Tumia jina halisi
     const prefix = m.offerAmount ? `[${L.offer || "Offer"}] ` : "";
     lines.push(`[${fmtDate(m.at || m.createdAt)}] ${who}: ${prefix}${m.text || ""}`);
     if (m.offerAmount) {
@@ -141,7 +141,7 @@ function buildCSV(transcript) {
   const rows = [header.join(",")];
 
   messages.forEach((m, i) => {
-    const senderName = getSenderName(m, transcript); // Tumia jina halisi
+    const senderName = getSenderName(m, transcript); // ✅ Tumia jina halisi
     rows.push([
       i + 1,
       m.at || m.createdAt || "",
@@ -179,7 +179,7 @@ function buildPrintableHTML(transcript) {
   const L = meta.labels || {};
 
   const rows = messages.map((m, i) => {
-    const who = getSenderName(m, transcript); // Tumia jina halisi
+    const who = getSenderName(m, transcript); // ✅ Tumia jina halisi
     const isOffer = !!m.offerAmount;
     return `
       <tr>

@@ -1,15 +1,14 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { CheckCircle2, AlertTriangle, Info, X, Loader2 } from "lucide-react";
-import { COLORS } from "../pages/dashboard/components/shared.js";
 
 const ToastContext = createContext(null);
 let _idSeq = 0;
 
 const STYLES = {
-  success: { icon: CheckCircle2, bg: "rgb(47 109 79 / .10)",   fg: COLORS.green, bar: COLORS.green },
-  error:   { icon: AlertTriangle, bg: "rgb(193 80 46 / .10)",  fg: COLORS.rust, bar: COLORS.rust },
-  warning: { icon: AlertTriangle, bg: "rgb(180 83 9 / .10)",   fg: COLORS.goldInk, bar: COLORS.goldInk },
-  info:    { icon: Info,          bg: "rgb(0 98 253 / .10)",   fg: COLORS.royal, bar: COLORS.royal },
+  success: { icon: CheckCircle2, bg: "rgb(47 109 79 / .10)",   fg: "#2F6D4F", bar: "#2F6D4F" },
+  error:   { icon: AlertTriangle, bg: "rgb(193 80 46 / .10)",  fg: "#C1502E", bar: "#C1502E" },
+  warning: { icon: AlertTriangle, bg: "rgb(180 83 9 / .10)",   fg: "#B45309", bar: "#B45309" },
+  info:    { icon: Info,          bg: "rgb(0 98 253 / .10)",   fg: "#0062FD", bar: "#0062FD" },
   loading: { icon: Loader2,       bg: "rgb(var(--c-hairline))",fg: "rgb(var(--text-secondary))", bar: "rgb(var(--c-hairline))" },
 };
 
@@ -80,13 +79,13 @@ export function ToastProvider({ children }) {
             <div key={t.id} role="status" aria-live={t.type === "error" ? "assertive" : "polite"} className="pointer-events-auto rounded-xl overflow-hidden border border-[color:rgb(var(--c-hairline))] shadow-lg bg-card animate-slide-in-right">
               <div className="flex items-start gap-3 p-3.5" style={{ borderLeft: `3px solid ${s.bar}` }}>
                 <span className="shrink-0 grid place-items-center h-8 w-8 rounded-lg" style={{ background: s.bg, color: s.fg }}>
-                  <Icon size={16} className={t.type === "loading" ? "animate-spin-slow" : ""} />
+                  <Icon size={15} className={t.type === "loading" ? "animate-spin-slow" : ""} />
                 </span>
                 <div className="flex-1 min-w-0 pt-0.5">
-                  {t.title && <p className="text-sm font-semibold text-primary truncate">{t.title}</p>}
-                  <p className="text-sm text-secondary leading-snug break-words">{t.message}</p>
+                  {t.title && <p className="text-[13px] font-semibold text-primary truncate">{t.title}</p>}
+                  <p className="text-[13px] text-secondary leading-snug break-words">{t.message}</p>
                   {t.action && (
-                    <button onClick={() => { t.action.onClick?.(); dismiss(t.id); }} className="mt-1.5 text-xs font-semibold hover:underline" style={{ color: s.fg }}>{t.action.label}</button>
+                    <button onClick={() => { t.action.onClick?.(); dismiss(t.id); }} className="mt-1.5 text-[12px] font-semibold hover:underline" style={{ color: s.fg }}>{t.action.label}</button>
                   )}
                 </div>
                 <button onClick={() => dismiss(t.id)} className="shrink-0 -mr-1 -mt-1 grid h-7 w-7 place-items-center rounded-full text-muted hover:text-primary hover:bg-[color:rgb(var(--c-hairline))] transition-colors" aria-label="Close">

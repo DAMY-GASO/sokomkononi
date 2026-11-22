@@ -18,8 +18,8 @@ export const getDealStatus = (lang) => ({
   },
   pending: {
     label: lang === "sw" ? "Inasubiri" : "Pending",
-    bg: "rgba(254,164,6,0.16)",
-    fg: "#A35F00",
+    bg: "rgba(232,163,61,0.16)",
+    fg: "#8A5A16",
   },
   negotiating: {
     label: lang === "sw" ? "Inaendelea" : "Negotiating",
@@ -28,8 +28,8 @@ export const getDealStatus = (lang) => ({
   },
   offer_sent: {
     label: lang === "sw" ? "Ofa Imetumwa" : "Offer Sent",
-    bg: "rgba(254,164,6,0.16)",
-    fg: "#A35F00",
+    bg: "rgba(232,163,61,0.16)",
+    fg: "#8A5A16",
   },
   accepted: {
     label: lang === "sw" ? "Imekubaliwa" : "Accepted",
@@ -43,7 +43,7 @@ export const getDealStatus = (lang) => ({
   },
   reserved: {
     label: lang === "sw" ? "Kipindi cha Ukaguzi" : "Inspection Period",
-    bg: "rgba(1,25,87,0.08)",
+    bg: "rgba(16,26,46,0.08)",
     fg: COLORS.night,
   },
   awaiting_final_payment: {
@@ -51,13 +51,13 @@ export const getDealStatus = (lang) => ({
       lang === "sw"
         ? "Tayari kwa Malipo ya Mwisho"
         : "Ready for Final Payment",
-    bg: "rgba(0,98,253,0.12)",
-    fg: "#0062FD",
+    bg: "rgba(37,99,235,0.12)",
+    fg: "#2563EB",
   },
   payment_proof_submitted: {
     label: lang === "sw" ? "Uthibitisho Umetumwa" : "Proof Submitted",
-    bg: "rgba(254,164,6,0.16)",
-    fg: "#A35F00",
+    bg: "rgba(232,163,61,0.16)",
+    fg: "#8A5A16",
   },
   completed: {
     label: lang === "sw" ? "Imekamilika" : "Completed",
@@ -74,7 +74,7 @@ export const getDealStatus = (lang) => ({
   },
   cancelled: {
     label: lang === "sw" ? "Imeghairiwa" : "Cancelled",
-    bg: "rgba(1,25,87,0.08)",
+    bg: "rgba(16,26,46,0.08)",
     fg: COLORS.night,
   },
 });

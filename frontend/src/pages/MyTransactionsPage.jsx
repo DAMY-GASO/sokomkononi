@@ -106,7 +106,7 @@ const STATUS_META = {
   },
 };
 
-// Period options
+// ⬇️ Period options
 const PERIOD_OPTIONS = [
   { key: "today", label: { sw: "Leo", en: "Today" }, days: 0 },
   { key: "week", label: { sw: "Wiki Hii", en: "This Week" }, days: 7 },
@@ -116,7 +116,7 @@ const PERIOD_OPTIONS = [
   { key: "all", label: { sw: "Zote", en: "All Time" }, days: null },
 ];
 
-// Timezone Helper
+// ✅ Timezone Helper
 const formatDateTZ = (dateString) => {
   if (!dateString) return "";
   const d = new Date(dateString);
@@ -921,7 +921,7 @@ export default function MyTransactionsPage() {
                     </p>
                   )}
                   <p className="text-xs text-muted mt-1">
-                    {tr.ref} · {formatDateTZ(tr.at)} {/* Tumia formatDateTZ */}
+                    {tr.ref} · {formatDateTZ(tr.at)} {/* ✅ Tumia formatDateTZ */}
                   </p>
                 </div>
 

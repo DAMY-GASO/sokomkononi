@@ -97,7 +97,7 @@ export default function TwoFactorCard({ lang, onStatusChange }) {
 
   if (loading) {
     return (
-      <div className="bg-card rounded-xl border border-hairline p-5 text-center">
+      <div className="bg-white rounded-xl border border-gray-100 p-5 text-center">
         <Loader2 size={20} className="animate-spin mx-auto text-muted" />
       </div>
     );
@@ -105,7 +105,7 @@ export default function TwoFactorCard({ lang, onStatusChange }) {
 
   if (loadError) {
     return (
-      <div className="bg-card rounded-xl border border-hairline p-5 text-center">
+      <div className="bg-white rounded-xl border border-gray-100 p-5 text-center">
         <p className="text-sm mb-2" style={{ color: COLORS.rust }}>
           {t("Imeshindwa kupakia hali ya 2FA.", "Couldn't load your 2FA status.")}
         </p>
@@ -119,7 +119,7 @@ export default function TwoFactorCard({ lang, onStatusChange }) {
 
   if (status?.unsupported) {
     return (
-      <div className="bg-card rounded-xl border border-hairline p-5">
+      <div className="bg-white rounded-xl border border-gray-100 p-5">
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 rounded-lg flex items-center justify-center"
                style={{ background: `${COLORS.rust}15` }}>
@@ -139,7 +139,7 @@ export default function TwoFactorCard({ lang, onStatusChange }) {
   }
 
   return (
-    <div className="bg-card rounded-xl border border-hairline p-5">
+    <div className="bg-white rounded-xl border border-gray-100 p-5">
       <div className="flex items-center gap-3 mb-3">
         <div className="w-10 h-10 rounded-lg flex items-center justify-center"
              style={{ background: `${COLORS.green}15` }}>
@@ -148,7 +148,7 @@ export default function TwoFactorCard({ lang, onStatusChange }) {
         <div className="flex-1">
           <h3 className="h-card flex items-center gap-2">
             {t("Uthibitishaji wa Hatua Mbili", "Two-Factor Authentication")}
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                   style={{
                     background: status?.enabled ? `${COLORS.green}20` : `${COLORS.rust}20`,
                     color: status?.enabled ? COLORS.green : COLORS.rust,
@@ -192,10 +192,10 @@ export default function TwoFactorCard({ lang, onStatusChange }) {
                  style={{ borderColor: COLORS.sandLine }} />
           )}
           {setup.secret && (
-            <div className="flex items-center gap-2 text-xs bg-page rounded-lg p-2">
+            <div className="flex items-center gap-2 text-xs bg-gray-50 rounded-lg p-2">
               <span className="font-mono break-all flex-1">{setup.secret}</span>
               <button onClick={() => navigator.clipboard.writeText(setup.secret)}
-                className="p-1.5 rounded hover:bg-page"
+                className="p-1.5 rounded hover:bg-gray-100"
                 aria-label="Copy secret">
                 <Copy size={12} />
               </button>

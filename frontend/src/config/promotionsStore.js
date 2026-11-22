@@ -74,7 +74,7 @@ function normListing(raw) {
     price: raw.price != null ? Number(raw.price) : null,
     daysRemaining: Number(raw.daysRemaining ?? raw.days_remaining) || 0,
     date: raw.date || raw.created_at || null,
-    // Hali ya promotion
+    // ⬇️ Hali ya promotion
     status: raw.status || "ACTIVE",
     paused_by_admin: Boolean(raw.paused_by_admin),
     admin_note: raw.admin_note || "",

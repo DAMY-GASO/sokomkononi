@@ -1,9 +1,9 @@
 // ============================================================
 // AdvertiseSasa.jsx (production + bundle + credits + packages)
-// + PENDING/ACTIVE status — inaonyesha banner iliyopo
-// + Clear existing kabla ya request mpya
-// + Defensive: data.pending &&, console.log, timeout
-// + FIXED: Inaonyesha Listing Picker hata kama banner ipo, na kitufe cha "Change Listing"
+// + ✅ PENDING/ACTIVE status — inaonyesha banner iliyopo
+// + ✅ Clear existing kabla ya request mpya
+// + ✅ Defensive: data.pending &&, console.log, timeout
+// + ✅ FIXED: Inaonyesha Listing Picker hata kama banner ipo, na kitufe cha "Change Listing"
 // ============================================================
 import React, { useState, useEffect, useMemo } from "react";
 import {
@@ -67,7 +67,7 @@ function ListingPicker({ listings, selectedId, onSelect, activeBannerListingIds,
             onClick={() => onSelect(l.id)}
             style={{
               borderColor: active ? COLORS.gold : COLORS.sandLine,
-              background: active ? "rgba(254,164,6,0.08)" : "white",
+              background: active ? "rgba(232,163,61,0.08)" : "white",
             }}
             className="flex items-center gap-3 p-3 rounded-xl border text-left transition-colors"
           >
@@ -77,7 +77,7 @@ function ListingPicker({ listings, selectedId, onSelect, activeBannerListingIds,
             <div className="flex-1 min-w-0">
               <p className="text-primary text-sm font-semibold truncate">{l.title}</p>
               <p className="text-secondary flex items-center gap-1 text-body-sm">
-                <MapPin size={12} /> {l.location}
+                <MapPin size={11} /> {l.location}
               </p>
             </div>
             {advertising && (
@@ -85,7 +85,7 @@ function ListingPicker({ listings, selectedId, onSelect, activeBannerListingIds,
                 style={{ background: "rgba(193,80,46,0.14)", color: COLORS.rust }}
                 className="flex items-center gap-1 text-body-sm font-semibold px-2 py-1 rounded-full shrink-0"
               >
-                <Megaphone size={12} /> {lang === "sw" ? "Tayari inatangazwa" : "Already advertised"}
+                <Megaphone size={11} /> {lang === "sw" ? "Tayari inatangazwa" : "Already advertised"}
               </span>
             )}
           </button>
@@ -113,7 +113,7 @@ function AdvertisementPackageCard({ pkg, selected, onSelect, lang, free = false 
       onClick={() => onSelect(pkg.id)}
       style={{
         borderColor: selected ? COLORS.gold : COLORS.sandLine,
-        background: "rgb(var(--c-card))",
+        background: "white",
       }}
       className="relative flex flex-col items-center text-center gap-3 p-4 rounded-2xl border w-full"
     >
@@ -177,7 +177,7 @@ function AdsBundleCard({ bundle, selected, onSelect, lang }) {
       onClick={() => onSelect(bundle.id)}
       style={{
         borderColor: selected ? COLORS.gold : COLORS.sandLine,
-        background: "rgb(var(--c-card))",
+        background: "white",
       }}
       className="relative flex flex-col items-center text-center gap-3 p-4 rounded-2xl border w-full"
     >
@@ -268,7 +268,7 @@ export default function AdvertiseSasa({
 
   // ── hali ya banner iliyopo ──
   const [existingBanner, setExistingBanner] = useState(null);
-  // Anza na true kama kuna listing — inazuia "onekana → futika → onekana"
+  // ✅ Anza na true kama kuna listing — inazuia "onekana → futika → onekana"
   const [loadingBannerStatus, setLoadingBannerStatus] = useState(() => Boolean(selectedId));
   const [statusTick, setStatusTick] = useState(0); // kwa kitufe cha "Jaribu tena"
 
@@ -283,7 +283,7 @@ export default function AdvertiseSasa({
     ]).then(() => { if (!cancelled) setHydrated(true); });
     return () => { cancelled = true; };
   }, []);
-  // Kama packages tayari zipo (cache/store), usionyeshe spinner kabisa
+  // ✅ Kama packages tayari zipo (cache/store), usionyeshe spinner kabisa
   const pageReady = hydrated || advertisementPackages.length > 0;
 
   useEffect(() => {
@@ -330,7 +330,7 @@ export default function AdvertiseSasa({
       return setExistingBanner(null);
     };
 
-    // Kama tuna cache, onyesha papo hapo (bila loading) kisha refresh kimya
+    // ✅ Kama tuna cache, onyesha papo hapo (bila loading) kisha refresh kimya
     const cached = peekPurchaseStatus("banners", selectedId);
     if (cached !== undefined) {
       apply(cached);
@@ -359,7 +359,7 @@ export default function AdvertiseSasa({
   const selectedListing = liveListings.find((l) => l.id === selectedId);
   const alreadyAdvertising = selectedListing ? activeBannerListingIds.has(selectedListing.id) : false;
   
-  // canAdvertise inazuia malipo kama tayari kuna tangazo
+  // ✅ canAdvertise inazuia malipo kama tayari kuna tangazo
   const canAdvertise =
     Boolean(selectedListing) &&
     !alreadyAdvertising &&
@@ -623,7 +623,7 @@ export default function AdvertiseSasa({
 
     return (
       <div className="w-full flex items-center justify-center p-6" style={{ background: COLORS.sand, minHeight: "600px" }}>
-        <div className="max-w-md w-full text-center bg-card rounded-2xl border p-8" style={{ borderColor: COLORS.sandLine }}>
+        <div className="max-w-md w-full text-center bg-white rounded-2xl border p-8" style={{ borderColor: COLORS.sandLine }}>
           <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: COLORS.rust }}>
             <Megaphone color="white" size={24} />
           </div>
@@ -695,7 +695,7 @@ export default function AdvertiseSasa({
             </span>
             <button
               onClick={() => setStatusTick((n) => n + 1)}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-card border shadow-sm shrink-0"
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border shadow-sm shrink-0"
               style={{ borderColor: COLORS.rust, color: COLORS.rust }}
             >
               {t("Jaribu tena", "Retry")}
@@ -743,7 +743,7 @@ export default function AdvertiseSasa({
                   setSelectedId(null); 
                 }
               }}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-card border shadow-sm shrink-0"
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border shadow-sm shrink-0"
               style={{ borderColor: COLORS.green, color: COLORS.green }}
             >
               {t("Chagua Mali Nyingine", "Change Listing")}
@@ -766,10 +766,10 @@ export default function AdvertiseSasa({
 
         {/* Credit banner */}
         {hasCredit && stage !== "paying" && !existingBanner && (
-          <div className="rounded-xl bg-green/10 border border-green/25 px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
+          <div className="rounded-xl bg-[#2F6D4F]/10 border border-[#2F6D4F]/25 px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
             <div className="flex items-center gap-2">
               <Wallet size={16} color={COLORS.green} />
-              <span className="text-sm text-green font-medium">
+              <span className="text-sm text-[#2F6D4F] font-medium">
                 {t(
                   `Una Ads Credits ${adsCreditRemaining}`,
                   `You have ${adsCreditRemaining} Ads Credits`
@@ -779,7 +779,7 @@ export default function AdvertiseSasa({
             <button
               onClick={handleUseCredit}
               disabled={!canAdvertise || busy}
-              className="text-body-sm font-semibold px-3 py-2 rounded-lg bg-green text-white disabled:opacity-50"
+              className="text-body-sm font-semibold px-3 py-2 rounded-lg bg-[#2F6D4F] text-white disabled:opacity-50"
             >
               {busy ? <Loader2 size={14} className="animate-spin" /> : t("Tumia Credit", "Use Credit")}
             </button>
@@ -825,7 +825,7 @@ export default function AdvertiseSasa({
                 onClick={() => setPaymentMode("flat")}
                 className="flex-1 sm:flex-none text-xs font-semibold px-4 py-2 rounded-full border transition-colors"
                 style={{
-                  background: paymentMode === "flat" ? COLORS.night : "rgb(var(--c-card))",
+                  background: paymentMode === "flat" ? COLORS.night : "white",
                   color: paymentMode === "flat" ? COLORS.sand : COLORS.night,
                   borderColor: paymentMode === "flat" ? COLORS.night : COLORS.sandLine,
                 }}
@@ -837,7 +837,7 @@ export default function AdvertiseSasa({
                   onClick={() => setPaymentMode("bundle")}
                   className="flex-1 sm:flex-none text-xs font-semibold px-4 py-2 rounded-full border transition-colors"
                   style={{
-                    background: paymentMode === "bundle" ? COLORS.night : "rgb(var(--c-card))",
+                    background: paymentMode === "bundle" ? COLORS.night : "white",
                     color: paymentMode === "bundle" ? COLORS.sand : COLORS.night,
                     borderColor: paymentMode === "bundle" ? COLORS.night : COLORS.sandLine,
                   }}
@@ -893,7 +893,7 @@ export default function AdvertiseSasa({
             )}
 
             <div className="rounded-2xl border p-4 flex flex-col items-center text-center gap-3 mb-4"
-                 style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}>
+                 style={{ borderColor: COLORS.sandLine, background: "white" }}>
               <div>
                 <p className="text-secondary text-body-sm mb-0.5">{t("Jumla ya Malipo", "Total Payment")}</p>
                 <p className="text-lg font-bold" style={{ color: COLORS.rust }}>
@@ -919,16 +919,16 @@ export default function AdvertiseSasa({
                 disabled={!canProceed || busy}
                 style={{
                   background: canProceed && !busy ? COLORS.gold : COLORS.sandLine,
-                  color: canProceed && !busy ? COLORS.night : "rgba(1,25,87,0.4)",
+                  color: canProceed && !busy ? COLORS.night : "rgba(16,26,46,0.4)",
                 }}
                 className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm disabled:cursor-not-allowed"
               >
                 {busy ? (
-                  <Loader2 size={16} className="animate-spin" />
+                  <Loader2 size={15} className="animate-spin" />
                 ) : paymentMode === "flat" ? (
-                  <Megaphone size={16} />
+                  <Megaphone size={15} />
                 ) : (
-                  <Package size={16} />
+                  <Package size={15} />
                 )}
                 {feeDisabled
                   ? t("Tangaza Sasa (BURE)", "Advertise Now (FREE)")

@@ -15,7 +15,7 @@ import { useTheme } from "../config/themeStore.js";
 import AnnouncementBar from "./AnnouncementBar.jsx";
 import { cx } from "./ui";
 
-// SAFE: hakikisha ni string kila mara (React Error #31 fix)
+// ✅ SAFE: hakikisha ni string kila mara (React Error #31 fix)
 function safeStr(v) {
   if (v == null) return "";
   if (typeof v === "string") return v;
@@ -88,7 +88,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
   const { theme, toggle: handleTheme } = useTheme();
   const navRef = useRef(null);
 
-  // SAFE: getCatLabel sasa inarudisha STRING kila mara
+  // ✅ SAFE: getCatLabel sasa inarudisha STRING kila mara
   const getCatLabel = (cat) => {
     if (!cat) return "";
     const labelLang = safeStr(cat.label?.[lang]);
@@ -108,7 +108,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
     return "";
   };
 
-  // SAFE: getCatKey sasa inarudisha STRING kila mara
+  // ✅ SAFE: getCatKey sasa inarudisha STRING kila mara
   const getCatKey = (cat) => {
     if (!cat) return "";
     const key = safeStr(cat.key);

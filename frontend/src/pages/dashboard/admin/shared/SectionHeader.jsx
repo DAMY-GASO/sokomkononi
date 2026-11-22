@@ -6,7 +6,7 @@ export default function SectionHeader({ title, subtitle, eyebrow, action }) {
   return (
     <header className="mb-6 flex flex-col items-center text-center">
       {eyebrow && (
-        <span className="inline-flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: "rgb(var(--c-gold-ink))" }}>
+        <span className="inline-flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: "rgb(var(--c-gold-ink))" }}>
           <span className="inline-block h-px w-5 bg-current" />
           {eyebrow}
           <span className="inline-block h-px w-5 bg-current" />

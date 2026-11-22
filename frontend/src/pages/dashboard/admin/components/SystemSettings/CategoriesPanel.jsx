@@ -227,18 +227,18 @@ export default function CategoriesPanel() {
   const [error, setError] = useState("");
   const [reordering, setReordering] = useState(false);
 
-  // MPYA: search + filter
+  // ⬇️ MPYA: search + filter
   const [query, setQuery] = useState("");
   const [filterTab, setFilterTab] = useState("all");
 
-  // MPYA: bulk selection
+  // ⬇️ MPYA: bulk selection
   const [selected, setSelected] = useState(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // MPYA: takwimu
+  // ⬇️ MPYA: takwimu
   const [statsOpen, setStatsOpen] = useState(false);
   const [stats, setStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(false);

@@ -2,7 +2,7 @@
 // verificationsStore.js — API-only via /api/verifications/
 // User verification (SELLER, BUYER) pekee.
 // Chaguo B: Both inahesabiwa automatically kutoka listings + deals.
-// MPYA: idType (NIDA/PASSPORT/VOTER) inatumwa na kusomwa.
+// ✅ MPYA: idType (NIDA/PASSPORT/VOTER) inatumwa na kusomwa.
 // Events zinatumwa: auth-updated, users-updated, verifications-updated
 // ============================================================
 import { useEffect, useState } from "react";
@@ -22,7 +22,7 @@ export const VERIFICATION_STATUSES = [
   { key: "rejected", label: { sw: "Zimekataliwa", en: "Rejected" } },
 ];
 
-// MPYA: Aina za kitambulisho
+// ✅ MPYA: Aina za kitambulisho
 export const VERIFICATION_ID_TYPES = [
   { key: "nida", label: { sw: "Kadi ya NIDA", en: "NIDA Card" } },
   { key: "passport", label: { sw: "Pasipoti", en: "Passport" } },
@@ -32,7 +32,7 @@ export const VERIFICATION_ID_TYPES = [
 const API_TO_KEY = { SELLER: "seller", BUYER: "buyer" };
 const KEY_TO_API = { seller: "SELLER", buyer: "BUYER" };
 
-// MPYA: mapping ya id_type kati ya API (uppercase) na frontend (lowercase)
+// ✅ MPYA: mapping ya id_type kati ya API (uppercase) na frontend (lowercase)
 const ID_TYPE_TO_API = {
   nida: "NIDA",
   passport: "PASSPORT",
@@ -67,7 +67,7 @@ function norm(raw) {
   return {
     id: raw.id,
     type: API_TO_KEY[raw.type] || raw.type,
-    // MPYA: idType (lowercase kwa frontend)
+    // ✅ MPYA: idType (lowercase kwa frontend)
     idType: API_TO_ID_TYPE[raw.id_type] || (raw.id_type || "nida").toLowerCase(),
     idTypeDisplay: raw.id_type_display || null,
     userId: raw.user,
@@ -120,7 +120,7 @@ const _CREATABLE = new Set(VERIFICATION_CREATE_TYPES.map((v) => v.key));
 
 export async function addVerificationAsync({
   type,
-  idType = "nida",        // MPYA
+  idType = "nida",        // ✅ MPYA
   subject,
   subjectId,
   notes = "",
@@ -139,7 +139,7 @@ export async function addVerificationAsync({
   try {
     const raw = await api.post("/verifications/", {
       type: KEY_TO_API[type] || type,
-      id_type: ID_TYPE_TO_API[idType] || "NIDA",   // MPYA
+      id_type: ID_TYPE_TO_API[idType] || "NIDA",   // ✅ MPYA
       subject,
       subject_id: subjectId,
       notes,

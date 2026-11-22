@@ -1,7 +1,7 @@
 // ============================================================
 // listingFeeStore.js — API-only via /api/listings/fee-rules/
 //
-// FIX #9: `orphan` sasa ni DERIVED (function), si cached field.
+// ✅ FIX #9: `orphan` sasa ni DERIVED (function), si cached field.
 //            Ina-compute upya kila render kutoka categories za sasa.
 //            Hii inaepuka fee rules halali kufichwa kwa sababu
 //            categories zilihydrate baada ya fee rules.
@@ -65,7 +65,7 @@ export function hasFeeConfig(categoryKey) {
 }
 
 // ============================================================
-// FIX #9: ORPHAN HELPER — derived, si cached
+// ✅ FIX #9: ORPHAN HELPER — derived, si cached
 //
 // Fee config inachukuliwa "orphan" tu kama:
 //   - Categories zimepakiwa (getCategories() si tupu), NA
@@ -166,7 +166,7 @@ function safeNumber(v) {
 
 // ============================================================
 // NORMALIZER
-// FIX #9: HAKUNA `orphan` field — ni derived (isFeeConfigOrphan).
+// ✅ FIX #9: HAKUNA `orphan` field — ni derived (isFeeConfigOrphan).
 // ============================================================
 function norm(raw) {
   if (!raw) return null;
@@ -364,7 +364,7 @@ export async function toggleListingFeeActiveAsync(key) {
 
 // ============================================================
 // ADD — upsert (PATCH kama ipo, POST kama haipo)
-// FIX #10: PATCH HAIWEKI is_active. POST inaweka is_active: true.
+// ✅ FIX #10: PATCH HAIWEKI is_active. POST inaweka is_active: true.
 // ============================================================
 export async function addFeeConfigAsync({
   category_key,
@@ -547,7 +547,7 @@ export async function removeFeeConfigAsync(key) {
 }
 
 export async function cleanupOrphanFeeConfigsAsync() {
-  // FIX #9: tumia derived helper
+  // ✅ FIX #9: tumia derived helper
   const orphans = read().filter((c) => isFeeConfigOrphan(c));
   if (orphans.length === 0) return { ok: true, removed: 0 };
   const results = await Promise.allSettled(

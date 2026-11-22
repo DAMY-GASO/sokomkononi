@@ -70,7 +70,7 @@ export async function addSearchAsync(search) {
 export function addSearch(search) { return addSearchAsync(search); }
 
 // ============================================================
-// MPYA — Sasisha search iliyopo (PATCH /searches/{id}/)
+// ✅ MPYA — Sasisha search iliyopo (PATCH /searches/{id}/)
 // Backend inaruhusu PATCH (http_method_names ina "patch").
 // ============================================================
 export async function updateSearchAsync(id, patch) {

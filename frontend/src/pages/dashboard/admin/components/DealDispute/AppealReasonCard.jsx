@@ -55,19 +55,19 @@ export default function AppealReasonCard({ deal, lang }) {
       className="border rounded-lg px-3 py-2.5"
     >
       <div className="flex items-center gap-1.5 mb-1">
-        <AlertTriangle size={14} color={COLORS.rust} />
-        <p className="text-xs font-bold uppercase" style={{ color: COLORS.rust }}>
+        <AlertTriangle size={13} color={COLORS.rust} />
+        <p className="text-[11px] font-bold uppercase" style={{ color: COLORS.rust }}>
           {t("Sababu ya Rufaa", "Appeal Reason")}
         </p>
       </div>
       <p className="text-xs font-semibold text-primary">{r.title}</p>
-      {r.detail && <p className="text-xs text-secondary mt-0.5">{r.detail}</p>}
+      {r.detail && <p className="text-[11px] text-secondary mt-0.5">{r.detail}</p>}
       {raw.disputeNote && (
-        <p className="text-xs text-primary mt-1.5 rounded-md border border-[color:rgb(var(--c-hairline))] bg-card px-2 py-1.5">
+        <p className="text-[11px] text-primary mt-1.5 rounded-md border border-[color:rgb(var(--c-hairline))] bg-card px-2 py-1.5">
           “{raw.disputeNote}”
         </p>
       )}
-      <p className="text-xs text-muted mt-1.5">
+      <p className="text-[10px] text-muted mt-1.5">
         {t("Majaribio ya uthibitisho", "Proof attempts")}: {raw.proofAttempts ?? 0}/3
       </p>
     </div>

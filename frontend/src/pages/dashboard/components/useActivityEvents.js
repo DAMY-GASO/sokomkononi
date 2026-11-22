@@ -34,7 +34,7 @@ import {
 // ============================================================
 const BUNDLE_TYPE_META = {
   boost: { icon: Rocket, color: COLORS.gold },
-  leading: { icon: TrendingUp, color: "#0062FD" },
+  leading: { icon: TrendingUp, color: "#2563EB" },
   ads: { icon: Megaphone, color: COLORS.rust },
   listing: { icon: PlusCircle, color: COLORS.green },
   reservation: { icon: CreditCard, color: COLORS.green },
@@ -256,7 +256,7 @@ export function useActivityEvents(side = "seller", onNavigate = () => {}) {
           },
           leading: {
             icon: TrendingUp,
-            color: "#0062FD",
+            color: "#2563EB",
             titleSw: `Umefuta ada ya leading — "${tx.title || tx.property}"`,
             titleEn: `You paid leading fee — "${tx.title || tx.property}"`,
           },

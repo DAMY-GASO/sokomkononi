@@ -60,10 +60,10 @@ function EditableName({ value, onSave, disabled, placeholder }) {
         type="button"
         onClick={() => !disabled && setEditing(true)}
         disabled={disabled}
-        className="group flex items-center gap-1.5 text-sm font-medium text-primary hover:text-gold-ink transition-colors disabled:opacity-50"
+        className="group flex items-center gap-1.5 text-sm font-medium text-primary hover:text-[#FEA406] transition-colors disabled:opacity-50"
       >
         <span className="truncate">{value || placeholder || "—"}</span>
-        <Pencil size={12} className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+        <Pencil size={11} className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
       </button>
     );
   }
@@ -82,7 +82,7 @@ function EditableName({ value, onSave, disabled, placeholder }) {
         onBlur={commit}
         disabled={saving}
         placeholder={placeholder}
-        className="w-full max-w-[200px] rounded-md border px-2 py-1 text-sm outline-none focus:border-gold"
+        className="w-full max-w-[200px] rounded-md border px-2 py-1 text-sm outline-none focus:border-[#FEA406]"
         style={{ borderColor: COLORS.sandLine }}
       />
       {saving ? (
@@ -92,7 +92,7 @@ function EditableName({ value, onSave, disabled, placeholder }) {
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           onClick={commit}
-          className="p-1 text-green hover:bg-green/10 rounded transition-colors shrink-0"
+          className="p-1 text-[#2F6D4F] hover:bg-[#2F6D4F]/10 rounded transition-colors shrink-0"
         >
           <Check size={12} />
         </button>
@@ -102,7 +102,7 @@ function EditableName({ value, onSave, disabled, placeholder }) {
         onMouseDown={(e) => e.preventDefault()}
         onClick={cancel}
         disabled={saving}
-        className="p-1 text-muted hover:text-rust rounded transition-colors shrink-0"
+        className="p-1 text-muted hover:text-[#C1502E] rounded transition-colors shrink-0"
       >
         <X size={12} />
       </button>
@@ -137,12 +137,12 @@ export default function PackageRow({
           disabled={isUpdatingName}
           placeholder={t("Jina la package", "Package name")}
         />
-        <p className="text-xs text-muted mt-0.5">
+        <p className="text-[10px] text-muted mt-0.5">
           {pkg.hours}h ({pkg.days} {t("siku", "days")})
           {pkg.pricing?.discount_percent > 0 && (
             <span
               style={{ background: `${COLORS.rust}15`, color: COLORS.rust }}
-              className="ml-1.5 text-xs font-bold px-1.5 py-0.5 rounded-full"
+              className="ml-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
             >
               -{pkg.pricing.discount_percent}%
             </span>
@@ -154,7 +154,7 @@ export default function PackageRow({
       <div className="flex items-center gap-2">
         <div className="flex flex-col items-end gap-0.5">
           {pkg.pricing?.discount_percent > 0 && (
-            <span className="text-xs text-muted">
+            <span className="text-[10px] text-muted">
               {t("Baada ya punguzo", "After discount")}: {formatTZS(pkg.pricing.final_price)} (−{pkg.pricing.discount_percent}%)
             </span>
           )}
@@ -171,7 +171,7 @@ export default function PackageRow({
           onClick={onToggle}
           disabled={isToggling}
           className="relative inline-flex items-center h-5 w-9 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-          style={{ background: (pkg.isActive ?? pkg.active ?? true) ? COLORS.green : COLORS.sandLine }}
+          style={{ background: (pkg.isActive ?? pkg.active ?? true) ? COLORS.green : "#D1D5DB" }}
         >
           <span
             className="inline-block h-3.5 w-3.5 rounded-full bg-white shadow transform transition-transform"
@@ -184,7 +184,7 @@ export default function PackageRow({
             type="button"
             onClick={onDelete}
             disabled={isDeleting}
-            className="p-1.5 text-muted hover:text-rust rounded-lg hover:bg-rust/10 transition-colors disabled:opacity-50"
+            className="p-1.5 text-muted hover:text-[#C1502E] rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
             aria-label={t("Futa", "Delete")}
           >
             {isDeleting ? (

@@ -13,11 +13,11 @@ import { Link } from "react-router-dom";
 import { AlertTriangle, ArrowRight } from "lucide-react";
 
 const COLORS = {
-  night: COLORS.night,
-  sand: COLORS.sand,
+  night: "#101A2E",
+  sand: "#F5F3EC",
   sandLine: "#E8E3D5",
-  rust: COLORS.rust,
-  green: COLORS.green,
+  rust: "#C1502E",
+  green: "#2F6D4F",
 };
 
 export default function ErrorCallout({ info, onDismiss }) {
@@ -88,7 +88,7 @@ export default function ErrorCallout({ info, onDismiss }) {
             className="inline-flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2 rounded-lg"
           >
             {cta.label || cta.to}
-            <ArrowRight size={14} />
+            <ArrowRight size={13} />
           </Link>
         </div>
       )}

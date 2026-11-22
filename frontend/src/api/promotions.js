@@ -13,7 +13,7 @@ export const promotionsApi = {
     toggle: (id) => api.post(`/banners/campaigns/${id}/toggle/`, {}),
   },
 
-  // MPYA: Admin actions kwa promotions
+  // ⬇️ MPYA: Admin actions kwa promotions
   admin: {
     pause: (type, id, reason = "") =>
       api.post(`/admin/promotions/${type}/${id}/pause/`, { reason }),

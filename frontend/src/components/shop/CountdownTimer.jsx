@@ -40,13 +40,13 @@ export default function CountdownTimer({ targetMs, tone = "auto" }) {
             className={`w-11 h-11 sm:w-14 sm:h-14 grid place-items-center rounded-lg text-lg sm:text-2xl font-bold tabular-nums ${
               onNavy
                 ? "bg-white/10 text-white"
-                : "bg-night text-gold-ink"
+                : "bg-[#011957] text-[#FEA406]"
             }`}
           >
             {String(c.v).padStart(2, "0")}
           </span>
           <span
-            className={`text-xs uppercase tracking-wider mt-1 ${
+            className={`text-[9px] sm:text-[10px] uppercase tracking-wider mt-1 ${
               onNavy ? "text-white/55" : "text-[color:rgb(var(--c-text-2))]"
             }`}
           >

@@ -7,12 +7,11 @@ import PageLoader from "../../components/PageLoader.jsx";
 import Captcha, { isCaptchaEnabled } from "../../components/Captcha.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import { getRateLimit, useLockout, lockMessage } from "../../utils/authErrors.js";
-import { COLORS } from "../dashboard/components/shared.js";
 
 const icons = {
   mail: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>),
   lock: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="10" width="16" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>),
-  check: (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={COLORS.gold} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>),
+  check: (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FEA406" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>),
   eye: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>),
   eyeOff: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><path d="M1 1l22 22" /></svg>),
 };
@@ -20,15 +19,15 @@ const icons = {
 function SkylineDecoration() {
   return (
     <svg viewBox="0 0 400 200" className="absolute bottom-0 left-0 w-full h-40 opacity-[0.18]" preserveAspectRatio="none">
-      <rect x="0" y="120" width="46" height="80" fill={COLORS.gold} />
-      <rect x="52" y="80" width="34" height="120" fill={COLORS.gold} />
-      <rect x="92" y="140" width="52" height="60" fill={COLORS.gold} />
-      <polygon points="150,100 178,60 206,100" fill={COLORS.gold} />
-      <rect x="150" y="100" width="56" height="100" fill={COLORS.gold} />
-      <rect x="214" y="70" width="30" height="130" fill={COLORS.gold} />
-      <rect x="250" y="130" width="60" height="70" fill={COLORS.gold} />
-      <rect x="316" y="95" width="40" height="105" fill={COLORS.gold} />
-      <rect x="362" y="150" width="38" height="50" fill={COLORS.gold} />
+      <rect x="0" y="120" width="46" height="80" fill="#FEA406" />
+      <rect x="52" y="80" width="34" height="120" fill="#FEA406" />
+      <rect x="92" y="140" width="52" height="60" fill="#FEA406" />
+      <polygon points="150,100 178,60 206,100" fill="#FEA406" />
+      <rect x="150" y="100" width="56" height="100" fill="#FEA406" />
+      <rect x="214" y="70" width="30" height="130" fill="#FEA406" />
+      <rect x="250" y="130" width="60" height="70" fill="#FEA406" />
+      <rect x="316" y="95" width="40" height="105" fill="#FEA406" />
+      <rect x="362" y="150" width="38" height="50" fill="#FEA406" />
     </svg>
   );
 }
@@ -186,7 +185,7 @@ export default function LoginPage() {
   const trustPoints = [t("login_trust1"), t("login_trust2"), t("login_trust3")].filter(Boolean);
 
   return (
-    <div className="min-h-screen bg-page md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
+    <div className="min-h-screen bg-gray-100 md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
       <div className="w-full max-w-md md:max-w-none my-8 md:my-0 bg-white rounded-2xl md:rounded-none shadow-xl md:shadow-none overflow-hidden grid grid-cols-1 md:grid-cols-2 md:min-h-screen">
         <div className="dark-surface flex relative bg-night text-white flex-col justify-between p-8 md:p-10 lg:p-14 overflow-hidden">
           <div className="relative z-10 grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2">
@@ -250,7 +249,7 @@ export default function LoginPage() {
                     autoFocus
                     maxLength={useRecovery ? 12 : 6}
                     placeholder={useRecovery ? "XXXXXXXXXX" : "123456"}
-                    className="w-full border border-hairline rounded-lg px-3 py-3 text-center text-xl tracking-[0.35em] focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-3 text-center text-xl tracking-[0.35em] focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
                     value={twoFaCode}
                     onChange={(e) =>
                       setTwoFaCode(
@@ -313,7 +312,7 @@ export default function LoginPage() {
                         type="email"
                         inputMode="email"
                         autoComplete="email"
-                        className="w-full border border-hairline rounded-lg pl-10 pr-3 py-2.5 focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
+                        className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
                         value={form.identifier}
                         onChange={(e) => setForm({ ...form, identifier: e.target.value })}
                       />
@@ -329,7 +328,7 @@ export default function LoginPage() {
                       <input
                         type={showPassword ? "text" : "password"}
                         autoComplete="current-password"
-                        className="w-full border border-hairline rounded-lg pl-10 pr-10 py-2.5 focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
+                        className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
                         value={form.password}
                         onChange={(e) => setForm({ ...form, password: e.target.value })}
                       />
@@ -350,7 +349,7 @@ export default function LoginPage() {
                         type="checkbox"
                         checked={remember}
                         onChange={(e) => setRemember(e.target.checked)}
-                        className="h-4 w-4 rounded border-hairline"
+                        className="h-4 w-4 rounded border-gray-300"
                       />
                       {tx("Nikumbuke", "Remember me")}
                     </label>

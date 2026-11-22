@@ -930,7 +930,7 @@ export default function AdminBundles() {
             />
           </div>
           
-          {/* FIX: Filters scroll — kitufe cha kwanza kinaonekana, scroll pande zote mbili */}
+          {/* ✅ FIX: Filters scroll — kitufe cha kwanza kinaonekana, scroll pande zote mbili */}
           <div 
             className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0 -mx-1 px-1"
             style={{

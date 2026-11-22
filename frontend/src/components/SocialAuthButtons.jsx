@@ -162,7 +162,7 @@ export default function SocialAuthButtons({ lang = "sw", onSuccess, showTerms = 
             {!googleReady && (
               <div
                 aria-hidden="true"
-                className="absolute inset-0 rounded-lg bg-page animate-pulse"
+                className="absolute inset-0 rounded-lg bg-gray-100 animate-pulse"
               />
             )}
             <div

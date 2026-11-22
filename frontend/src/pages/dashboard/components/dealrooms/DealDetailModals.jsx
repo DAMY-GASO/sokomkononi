@@ -21,7 +21,7 @@ export default function DealDetailModals({ buyerEmail, buyerPhone, contactDrawer
       {reportOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div
-            style={{ background: "rgb(var(--c-card))", borderColor: COLORS.sandLine }}
+            style={{ background: "white", borderColor: COLORS.sandLine }}
             className="rounded-2xl border w-full max-w-md p-5"
           >
             <h3 className="text-primary text-base font-bold mb-3 flex items-center gap-2">

@@ -20,7 +20,7 @@ function StepFlow({ steps, startAt = 1 }) {
               className="absolute left-[15px] top-8 bottom-0 w-px bg-[color:rgb(var(--c-hairline))]"
             />
           )}
-          <span className="relative z-10 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-night text-xs font-bold text-white">
+          <span className="relative z-10 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#011957] text-xs font-bold text-white">
             {startAt + i}
           </span>
           <div className="flex min-h-[2rem] flex-1 items-center rounded-xl bg-[color:rgb(var(--c-page))] px-4 py-1.5 text-sm font-medium text-primary">
@@ -38,14 +38,14 @@ export default function JinsiYaKununuaNaKuuza() {
   const navigate = useNavigate();
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // FIX: useLocation + useEffect ya ndani vimeondolewa kabisa.
+  // ✅ FIX: useLocation + useEffect ya ndani vimeondolewa kabisa.
   // ScrollToHash (App.jsx) ndiyo inashughulikia scrolling ya #hash pekee.
   // Hii inaepusha mgongano wa "wawili wanaoscroll" (jump / race condition).
 
   const handleBuyNow = () => user ? navigate("/dashboard/buyer") : navigate("/register?intent=buy");
   const handleSellNow = () => user ? navigate("/dashboard/post") : navigate("/register?intent=sell");
 
-  // FIX: scroll helper kwa buttons za hero (badala ya <a href="#...">)
+  // ✅ FIX: scroll helper kwa buttons za hero (badala ya <a href="#...">)
   const scrollToSection = (id) => {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -120,14 +120,14 @@ export default function JinsiYaKununuaNaKuuza() {
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            {/* FIX: buttons + scrollIntoView badala ya <a href="#..."> */}
+            {/* ✅ FIX: buttons + scrollIntoView badala ya <a href="#..."> */}
             <button
               type="button"
               onClick={() => scrollToSection("kununua")}
-              className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-night"
+              className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-[#011957]"
               style={{ background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)" }}
             >
-              <ShoppingBag size={16} />
+              <ShoppingBag size={15} />
               {t("Jinsi ya Kununua", "How to Buy")}
             </button>
             <button
@@ -135,7 +135,7 @@ export default function JinsiYaKununuaNaKuuza() {
               onClick={() => scrollToSection("kuuza")}
               className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/[0.08] px-5 py-2.5 text-sm font-semibold text-white backdrop-blur-sm hover:bg-white/[0.15]"
             >
-              <Tag size={16} />
+              <Tag size={15} />
               {t("Jinsi ya Kuuza", "How to Sell")}
             </button>
           </div>
@@ -145,10 +145,10 @@ export default function JinsiYaKununuaNaKuuza() {
       {/* ═══════════════════════════════════════════════════════
           BUY
           ═══════════════════════════════════════════════════════ */}
-      {/* FIX: scroll-mt-20 → scroll-mt-28 ili navbar + AnnouncementBar wasifunike kichwa */}
+      {/* ✅ FIX: scroll-mt-20 → scroll-mt-28 ili navbar + AnnouncementBar wasifunike kichwa */}
       <section id="kununua" className="scroll-mt-28 py-16">
         <div className="mx-auto max-w-4xl px-4 text-center">
-          <span className="text-xs font-bold uppercase tracking-[0.18em] text-[#A35F00] dark:text-gold">
+          <span className="text-xs font-bold uppercase tracking-[0.18em] text-[#A35F00] dark:text-[#FEA406]">
             {t("Kwa Mnunuzi", "For Buyers")}
           </span>
           <h2 className="mt-2 text-[clamp(1.5rem,3vw,2rem)] font-bold text-primary">
@@ -175,7 +175,7 @@ export default function JinsiYaKununuaNaKuuza() {
 
           <StepFlow steps={buyAfter} startAt={buyBefore.length + 1} />
 
-          <div className="mx-auto mt-8 max-w-2xl rounded-xl border border-green/25 bg-green/10 px-4 py-3 text-sm font-medium text-green">
+          <div className="mx-auto mt-8 max-w-2xl rounded-xl border border-[#2F6D4F]/25 bg-[#2F6D4F]/10 px-4 py-3 text-sm font-medium text-[#2F6D4F]">
             {t(
               "Hongera! Umefanikiwa kukamilisha ununuzi wa mali kupitia SokoMkononi.",
               "Congratulations! You've successfully completed a property purchase through SokoMkononi."
@@ -184,11 +184,11 @@ export default function JinsiYaKununuaNaKuuza() {
 
           <button
             onClick={handleBuyNow}
-            className="mt-8 inline-flex items-center gap-2 rounded-xl px-8 py-3.5 text-sm font-semibold text-night transition-transform hover:-translate-y-0.5"
+            className="mt-8 inline-flex items-center gap-2 rounded-xl px-8 py-3.5 text-sm font-semibold text-[#011957] transition-transform hover:-translate-y-0.5"
             style={{ background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)" }}
           >
             {t("Nunua Sasa", "Buy Now")}
-            <ChevronRight size={16} />
+            <ChevronRight size={15} />
           </button>
         </div>
       </section>
@@ -196,10 +196,10 @@ export default function JinsiYaKununuaNaKuuza() {
       {/* ═══════════════════════════════════════════════════════
           SELL
           ═══════════════════════════════════════════════════════ */}
-      {/* FIX: scroll-mt-20 → scroll-mt-28 */}
+      {/* ✅ FIX: scroll-mt-20 → scroll-mt-28 */}
       <section id="kuuza" className="scroll-mt-28 bg-[color:rgb(var(--c-page))] py-16">
         <div className="mx-auto max-w-4xl px-4 text-center">
-          <span className="text-xs font-bold uppercase tracking-[0.18em] text-green">
+          <span className="text-xs font-bold uppercase tracking-[0.18em] text-[#2F6D4F]">
             {t("Kwa Muuzaji", "For Sellers")}
           </span>
           <h2 className="mt-2 text-[clamp(1.5rem,3vw,2rem)] font-bold text-primary">
@@ -214,7 +214,7 @@ export default function JinsiYaKununuaNaKuuza() {
 
           <StepFlow steps={sellSteps} />
 
-          <div className="mx-auto mt-8 max-w-2xl rounded-xl border border-green/25 bg-green/10 px-4 py-3 text-sm font-medium text-green">
+          <div className="mx-auto mt-8 max-w-2xl rounded-xl border border-[#2F6D4F]/25 bg-[#2F6D4F]/10 px-4 py-3 text-sm font-medium text-[#2F6D4F]">
             {t(
               "Hongera! Mali yako sasa imechapishwa kwenye SokoMkononi na iko tayari kuonekana na wanunuzi.",
               "Congratulations! Your property has been published on SokoMkononi and is now visible to buyers."
@@ -223,10 +223,10 @@ export default function JinsiYaKununuaNaKuuza() {
 
           <button
             onClick={handleSellNow}
-            className="mt-8 inline-flex items-center gap-2 rounded-xl bg-green px-8 py-3.5 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
+            className="mt-8 inline-flex items-center gap-2 rounded-xl bg-[#2F6D4F] px-8 py-3.5 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
           >
             {t("Uza Sasa", "Sell Now")}
-            <ChevronRight size={16} />
+            <ChevronRight size={15} />
           </button>
         </div>
       </section>
