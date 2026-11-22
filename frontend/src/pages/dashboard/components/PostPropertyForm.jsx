@@ -1689,8 +1689,8 @@ export default function PostPropertyForm({
                   <Check size={16} />
                   <span className="font-medium leading-relaxed">
                     {t(
-                      "🎉 Chapisha tangazo lako bila malipo na anza kuuza kupitia SokoMkononi leo!",
-                      "🎉 List for free and start selling on SokoMkononi today!"
+                      "Chapisha tangazo lako bila malipo na anza kuuza kupitia SokoMkononi leo!",
+                      "List for free and start selling on SokoMkononi today!"
                     )}
                   </span>
                 </div>
