@@ -5,6 +5,7 @@
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import { isAdmin } from "./authStore.js";
 
 const ROLES_KEY = "sokomkononi_roles_v1";
 const STAFF_KEY = "sokomkononi_rbac_staff_v1";     // <-- was "sokomkononi_subadmins_v1"
@@ -208,7 +209,8 @@ export async function removeStaffAsync(id) {
 export function useRoles() {
   const [list, setList] = useState(() => getRoles());
   useEffect(() => {
-    hydrateRolesFromApi();
+    // Wasio-admin hawaruhusiwi /rbac/* (403) — usiite kwao
+    if (isAdmin()) hydrateRolesFromApi();
     const sync = () => setList(getRoles());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);
@@ -228,7 +230,8 @@ export function useRole(key) {
 export function useSubAdminsWithRoles() {
   const [list, setList] = useState(() => getSubAdmins());
   useEffect(() => {
-    hydrateRolesFromApi();
+    // Wasio-admin hawaruhusiwi /rbac/* (403) — usiite kwao
+    if (isAdmin()) hydrateRolesFromApi();
     const sync = () => setList(getSubAdmins());
     window.addEventListener("storage", sync);
     window.addEventListener(STAFF_EVENT, sync);
