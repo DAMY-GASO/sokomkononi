@@ -57,7 +57,7 @@ export default function SellerOverview({ onNavigate }) {
   const listings = useMyListings();
   const unpaidListings = useUnpaidListings();
 
-  // ✅ Chuja deals za seller pekee
+  //  Chuja deals za seller pekee
   const allDeals = useDeals(user?.id);
   const deals = useMemo(() => {
     return (allDeals || []).filter((d) => {
@@ -74,7 +74,7 @@ export default function SellerOverview({ onNavigate }) {
   const newLeadsCount = useNewLeadsCount();
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ✅ Polling moja: listings + leads
+  //  Polling moja: listings + leads
   const pollFetcher = useCallback(async () => {
     await Promise.allSettled([
       fetchMyListingsFromApi(),
@@ -145,8 +145,8 @@ export default function SellerOverview({ onNavigate }) {
       {/* GREETING + REFRESH */}
       <div className="mb-6 text-center">
         <h1 className="h-title">
-          {t(`Karibu, ${user?.name?.split(" ")[0] || "Muuzaji"} 👋`,
-             `Welcome, ${user?.name?.split(" ")[0] || "Seller"} 👋`)}
+          {t(`Karibu, ${user?.name?.split(" ")[0] || "Muuzaji"}`,
+             `Welcome, ${user?.name?.split(" ")[0] || "Seller"}`)}
         </h1>
         <p className="text-body-sm text-secondary mt-2 max-w-xl mx-auto">
           {t("Hii ni muhtasari wa mali zako, maulizio, na makubaliano.",

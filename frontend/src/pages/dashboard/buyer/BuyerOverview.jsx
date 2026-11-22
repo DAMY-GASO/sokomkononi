@@ -195,8 +195,8 @@ export default function BuyerOverview({ onNavigate }) {
       <div className="mb-6 text-center">
         <h1 className="h-title">
           {t(
-            `Karibu, ${user?.name?.split(" ")[0] || "Mnunuzi"} 👋`,
-            `Welcome, ${user?.name?.split(" ")[0] || "Buyer"} 👋`
+            `Karibu, ${user?.name?.split(" ")[0] || "Mnunuzi"}`,
+            `Welcome, ${user?.name?.split(" ")[0] || "Buyer"}`
           )}
         </h1>
         <p className="text-body-sm text-secondary mt-2 max-w-xl mx-auto">
