@@ -410,10 +410,11 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
               {user && (
                 <Link
                   to={dashboardTo}
-                  className="hidden h-10 items-center gap-1.5 rounded-full bg-gold px-3.5 text-sm font-semibold text-night keep-light transition-colors hover:bg-flame sm:inline-flex"
+                  aria-label={dashboardLabel}
+                  title={dashboardLabel}
+                  className="relative hidden h-10 w-10 place-items-center rounded-full text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white sm:grid"
                 >
-                  <LayoutDashboard size={16} />
-                  {dashboardLabel}
+                  <LayoutDashboard size={19} />
                 </Link>
               )}
 

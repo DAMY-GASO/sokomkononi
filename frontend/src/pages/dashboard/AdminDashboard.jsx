@@ -605,45 +605,39 @@ export default function AdminDashboard() {
                     aria-hidden="true"
                   />
                   <div
-                    style={{ borderColor: COLORS.sandLine }}
-                    className="absolute right-0 mt-3 w-80 max-w-[85vw] bg-card rounded-xl border shadow-xl z-50 overflow-hidden"
+                    className="absolute right-0 z-50 mt-3 w-80 max-w-[85vw] overflow-hidden rounded-xl border border-white/10 bg-night-soft shadow-xl"
                   >
-                    <div className="px-4 py-3 border-b border-hairline flex items-center justify-between">
-                      <span className="text-sm font-semibold text-primary">
+                    <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+                      <span className="text-sm font-semibold text-white">
                         {lang === "sw" ? "Taarifa Zangu" : "My Notifications"}
                       </span>
                       {unreadCount > 0 && (
-                        <span
-                          style={{ color: COLORS.rust }}
-                          className="text-xs font-semibold"
-                        >
+                        <span className="text-xs font-semibold text-[#FF8A65]">
                           {unreadCount} {lang === "sw" ? "mpya" : "new"}
                         </span>
                       )}
                     </div>
-                    <div className="max-h-80 overflow-y-auto divide-y divide-hairline">
+                    <div className="max-h-80 overflow-y-auto divide-y divide-white/10">
                       {notifications.map((n) => {
                         const Icon = ADMIN_NOTIFICATION_ICONS[n.type] || Bell;
                         return (
                           <button
                             key={n.id}
                             onClick={() => openNotification(n)}
-                            style={{
-                              background: n.read ? "white" : `${COLORS.gold}0D`,
-                            }}
-                            className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-page transition-colors"
+                            className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.06] ${
+                              n.read ? "" : "bg-gold/10"
+                            }`}
                           >
                             <div
-                              style={{ background: `${COLORS.night}0D` }}
-                              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                              className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0 mt-0.5"
                             >
-                              <Icon size={14} color={COLORS.night} />
+                              <Icon size={14} color={COLORS.gold} />
                             </div>
                             <div className="min-w-0">
-                              <p className="text-xs text-primary leading-snug">
+                              <p className="text-xs text-white leading-snug">
                                 {getLocalizedField(n.title, lang)}
                               </p>
-                              <p className="text-xs text-muted mt-1">
+                              <p className="text-xs text-white/55 mt-1">
                                 {timeAgo(n.at, lang)}
                               </p>
                             </div>
@@ -657,21 +651,20 @@ export default function AdminDashboard() {
                         );
                       })}
                       {notifications.length === 0 && (
-                        <p className="text-xs text-muted px-4 py-6 text-center">
+                        <p className="text-xs text-white/55 px-4 py-6 text-center">
                           {lang === "sw" ? "Hakuna taarifa" : "No notifications"}
                         </p>
                       )}
                     </div>
 
-                    <div className="border-t border-hairline px-4 py-2 flex items-center justify-between gap-2">
+                    <div className="border-t border-white/10 px-4 py-2 flex items-center justify-between gap-2">
                       <button
                         type="button"
                         onClick={async () => {
                           const res = await markAllNotificationsReadAsync("admin");
                           if (!res?.ok) console.warn("markAllRead failed:", res?.error);
                         }}
-                        className="text-xs font-semibold hover:underline"
-                        style={{ color: COLORS.green }}
+                        className="text-xs font-semibold text-[#6FCF97] hover:underline"
                       >
                         {lang === "sw" ? "Soma Zote" : "Mark All Read"}
                       </button>
@@ -684,8 +677,7 @@ export default function AdminDashboard() {
                           const res = await clearNotificationsAsync("admin");
                           if (!res?.ok) console.warn("clearAll failed:", res?.error);
                         }}
-                        className="text-xs font-semibold hover:underline"
-                        style={{ color: COLORS.rust }}
+                        className="text-xs font-semibold text-[#FF8A65] hover:underline"
                       >
                         {lang === "sw" ? "Futa Zote" : "Delete All"}
                       </button>
@@ -708,14 +700,14 @@ export default function AdminDashboard() {
                     className="fixed inset-0 z-40"
                     onClick={() => setProfileMenuOpen(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-64 max-w-[85vw] bg-card rounded-xl border border-hairline shadow-xl z-50 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-hairline flex items-center gap-3">
+                  <div className="absolute right-0 z-50 mt-2 w-64 max-w-[85vw] overflow-hidden rounded-xl border border-white/10 bg-night-soft shadow-xl">
+                    <div className="px-4 py-3 border-b border-white/10 flex items-center gap-3">
                       <Avatar user={user} size="lg" />
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-primary truncate">
+                        <p className="text-sm font-semibold text-white truncate">
                           {user?.name || "Admin"}
                         </p>
-                        <p className="text-xs text-secondary truncate">
+                        <p className="text-xs text-white/55 truncate">
                           {user?.email}
                         </p>
                       </div>
@@ -726,9 +718,9 @@ export default function AdminDashboard() {
                         navigate(STATE_TO_URL.profile);
                         setProfileMenuOpen(false);
                       }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-primary hover:bg-page transition-colors text-left"
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/85 hover:bg-white/[0.06] hover:text-white transition-colors text-left"
                     >
-                      <UserIcon size={16} className="text-secondary" />
+                      <UserIcon size={16} className="text-white/55" />
                       {lang === "sw" ? "Wasifu" : "Profile"}
                     </button>
 
@@ -737,20 +729,20 @@ export default function AdminDashboard() {
                         navigate(STATE_TO_URL.system);
                         setProfileMenuOpen(false);
                       }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-primary hover:bg-page transition-colors text-left"
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/85 hover:bg-white/[0.06] hover:text-white transition-colors text-left"
                     >
-                      <Settings size={16} className="text-secondary" />
+                      <Settings size={16} className="text-white/55" />
                       {lang === "sw" ? "Mipangilio" : "Settings"}
                     </button>
 
-                    <div className="border-t border-hairline" />
+                    <div className="border-t border-white/10" />
 
                     <button
                       onClick={() => {
                         setProfileMenuOpen(false);
                         handleLogout();
                       }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-rust hover:bg-rust/5 transition-colors text-left"
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#FF8A65] hover:bg-rust/20 transition-colors text-left"
                     >
                       <LogOut size={16} />
                       {lang === "sw" ? "Toka" : "Logout"}
