@@ -95,7 +95,7 @@ footer:not([role="dialog"] *):not(.card *) {
   color: rgb(var(--c-text));
 }
 /* Kadi nyeupe iliyo ndani ya hero (mf. search box) — rudisha rangi za light */
-html:not(.dark) :is(.surface-night, .bg-night, .bg-night-deep, .bg-night-soft, [data-on-night]) :is(.bg-white, .bg-card, .card, .keep-light) {
+html:not(.dark) :is(.surface-night, .bg-night, .bg-night-deep, .bg-night-soft, [data-on-night], [data-surface="sand"] > header) :is(.bg-white, .bg-card, .card, .keep-light) {
   --c-ink:      1 25 87;
   --c-text:     13 22 48;
   --c-text-2:   69 80 104;
