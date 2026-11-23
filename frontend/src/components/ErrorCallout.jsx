@@ -11,13 +11,14 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { AlertTriangle, ArrowRight } from "lucide-react";
+import { COLORS as BASE } from "../pages/dashboard/components/shared.js";
 
 const COLORS = {
-  night: COLORS.night,
-  sand: COLORS.sand,
+  night: BASE.night,
+  sand: BASE.sand,
   sandLine: "#E8E3D5",
-  rust: COLORS.rust,
-  green: COLORS.green,
+  rust: BASE.rust,
+  green: BASE.green,
 };
 
 export default function ErrorCallout({ info, onDismiss }) {
