@@ -21,35 +21,33 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: "dist",
       sourcemap: false,
-      target: "es2020", // ✅ Inasaidia sana kwa Mobile Performance
-      cssCodeSplit: true, // ✅ Inagawanya CSS kwenye chunks ndogo badala ya file moja kubwa
-      chunkSizeWarningLimit: 800, // ✅ Ongeza uwezo wa kugawanya chunks vizuri
+      target: "es2020", // Inasaidia Mobile Performance
+      cssCodeSplit: true, // CSS inagawanywa kwenye chunks ndogo
+      chunkSizeWarningLimit: 800,
       rollupOptions: {
         output: {
-          // ✅ TUNATUMIA FUNCTION BADALA YA OBJECT KWA MANUALCHUNKS
-          // Hii inaruhusu Rollup ku-group modules zote zinazohusiana (hata za dynamic import)
+          // Gawanya TU libraries za node_modules.
+          // Code ya src/ (config, api, pages) imeachwa kwa Rollup ili
+          // isitengeneze circular chunks ("Cannot access 'x' before initialization").
           manualChunks(id) {
-            // 1. Group React, Router na state management zote pamoja
-            if (id.includes("node_modules")) {
-              if (id.includes("react") || id.includes("scheduler")) {
-                return "vendor-react";
-              }
-              if (id.includes("lucide-react")) {
-                return "vendor-icons";
-              }
-              if (id.includes("recharts") || id.includes("chart")) {
-                return "vendor-charts";
-              }
-              // Libraries zingine zote za nje
-              return "vendor-other";
+            if (!id.includes("node_modules")) return;
+
+            // React core tu (match kamili, si kila kitu chenye neno "react")
+            if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) {
+              return "vendor-react";
             }
 
-            // 2. ✅ FIX: Weka API na Stores PAMOJA (app-core) ili kuepuka "Circular chunk"
-            // Kwa sababu client.js (API) inategemea adminPath.js (Store),
-            // na listingsStore.js (Store) inategemea listings.js (API).
-            if (id.includes("/src/config/") || id.includes("/src/api/")) {
-              return "app-core";
+            // Libraries nzito za charts
+            if (/node_modules\/(recharts|d3-[^/]+)\//.test(id)) {
+              return "vendor-charts";
             }
+
+            // Leaflet (ramani)
+            if (/node_modules\/leaflet\//.test(id)) {
+              return "vendor-leaflet";
+            }
+
+            // Libraries zingine zote: Rollup iamue yenyewe
           },
         },
       },
