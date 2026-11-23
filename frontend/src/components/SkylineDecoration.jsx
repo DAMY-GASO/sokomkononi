@@ -2,7 +2,7 @@
 // SkylineDecoration.jsx — shared skyline SVG for auth pages.
 // ============================================================
 import React from "react";
-import { COLORS } from "..\pages\dashboard\components\shared.js";
+import { COLORS } from "../pages/dashboard/components/shared.js";
 
 export default function SkylineDecoration({ fill = COLORS.gold }) {
   return (

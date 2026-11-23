@@ -1,6 +1,6 @@
 import React from "react";
 import { useLanguage } from "../context/LanguageContext.jsx";
-import { COLORS } from "..\pages\dashboard\components\shared.js";
+import { COLORS } from "../pages/dashboard/components/shared.js";
 
 export default function PageLoader() {
   const { lang } = useLanguage();

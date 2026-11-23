@@ -4,7 +4,7 @@ import { Heart, Eye, MapPin, ShieldCheck, ArrowRight } from "lucide-react";
 import ListingImage from "../ListingImage.jsx";
 import { isBoostActive } from "../../utils/listings.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
-import { COLORS } from "..\..\pages\dashboard\components\shared.js";
+import { COLORS } from "../../pages/dashboard/components/shared.js";
 
 function formatTZS(amount) {
   return "TZS " + Math.round(amount || 0).toLocaleString("en-US");

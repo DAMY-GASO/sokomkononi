@@ -5,7 +5,7 @@ import { useLanguage } from "../context/LanguageContext.jsx";
 import { ADMIN_PATH } from "../config/adminPath.js";
 import Captcha, { isCaptchaEnabled } from "../components/Captcha.jsx";
 import { Lock } from "lucide-react";
-import { COLORS } from "./dashboard\components\shared.js";
+import { COLORS } from "./dashboard/components/shared.js";
 
 const icons = {
   mail: (

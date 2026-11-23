@@ -2,7 +2,7 @@ import React from "react";
 import { Star, ShieldCheck, MessageSquare, Lock } from "lucide-react";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import { Section, SectionHeader, Card } from "../ui";
-import { COLORS } from "..\..\pages\dashboard\components\shared.js";
+import { COLORS } from "../../pages/dashboard/components/shared.js";
 
 const FALLBACK = [
   { name: "Mary M.",   region: "Dar es Salaam", quote: { sw: "Nilinunua laptop iliyotumika kwa bei nzuri. Tulikutana na muuzaji, nikaikagua kabla ya kulipa. Nimeridhika.", en: "I bought a used laptop at a fair price. I met the seller and checked it before paying. Very happy." } },

@@ -5,7 +5,7 @@ import ListingCardShop from "./ListingCardShop.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import { useActiveCategories, getCategoryIcon } from "../../config/categoriesStore.js";
 import { Section, Button } from "../ui";
-import { COLORS } from "..\..\pages\dashboard\components\shared.js";
+import { COLORS } from "../../pages/dashboard/components/shared.js";
 
 function endOfWeekMs() {
   const now = new Date();

@@ -1,6 +1,6 @@
 import React from "react";
 import { toneText } from "./constants.js";
-import { COLORS } from "..\..\components\shared.js";
+import { COLORS } from "../../components/shared.js";
 
 const FONT = "system-ui, -apple-system, Segoe UI, sans-serif";
 

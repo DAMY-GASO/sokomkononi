@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "./ui";
-import { COLORS } from "..\pages\dashboard\components\shared.js";
+import { COLORS } from "../pages/dashboard/components/shared.js";
 
 const ConfirmContext = createContext(null);
 

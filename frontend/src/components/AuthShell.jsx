@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext.jsx";
-import { COLORS } from "..\pages\dashboard\components\shared.js";
+import { COLORS } from "../pages/dashboard/components/shared.js";
 
 function Skyline({ fill = COLORS.gold }) {
   return (

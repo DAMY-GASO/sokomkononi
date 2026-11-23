@@ -30,7 +30,7 @@ import {
   boostTier,
   rotateByTier,
 } from "../config/listingRanking.js";
-import { COLORS } from "./dashboard\components\shared.js";
+import { COLORS } from "./dashboard/components/shared.js";
 
 // ============================================================
 // RANGI ZA BADGE (kila section ina rangi yake)

@@ -6,7 +6,7 @@ import { useActiveCategories, getCategoryIcon } from "../../config/categoriesSto
 import ListingCardShop from "./ListingCardShop.jsx";
 import CountdownTimer from "./CountdownTimer.jsx";
 import { Section, SectionHeader, Button } from "../ui";
-import { COLORS } from "..\..\pages\dashboard\components\shared.js";
+import { COLORS } from "../../pages/dashboard/components/shared.js";
 
 export default function AdvertisedSection({
   gridCols = "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4",

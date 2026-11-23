@@ -25,7 +25,7 @@ import {
 import { useSavedIds, toggleSaved } from "../config/savedStore.js";
 import { isBoostActive, isLeadingActive } from "./dashboard/components/shared";
 import ListingCardShop from "../components/shop/ListingCardShop.jsx";
-import { COLORS } from "./dashboard\components\shared.js";
+import { COLORS } from "./dashboard/components/shared.js";
 
 /* ============================================================
    Helpers

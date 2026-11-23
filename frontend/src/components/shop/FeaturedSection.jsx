@@ -5,7 +5,7 @@ import { useLanguage } from "../../context/LanguageContext.jsx";
 import { useActiveCategories, getCategoryIcon } from "../../config/categoriesStore.js";
 import ListingCardShop from "./ListingCardShop.jsx";
 import { Section, SectionHeader, Button } from "../ui";
-import { COLORS } from "..\..\pages\dashboard\components\shared.js";
+import { COLORS } from "../../pages/dashboard/components/shared.js";
 
 // cardBadge = { icon, label, bg?, ink? }
 // bg na ink ni hiari; default ni rangi ya machungwa ya awali.

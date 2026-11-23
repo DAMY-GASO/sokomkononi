@@ -6,7 +6,7 @@ import {
   resetPasswordAsync,
 } from "../../config/authStore.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
-import { COLORS } from "..\dashboard\components\shared.js";
+import { COLORS } from "../dashboard/components/shared.js";
 
 const icons = {
   mail: (

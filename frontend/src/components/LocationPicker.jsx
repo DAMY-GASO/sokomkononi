@@ -4,7 +4,7 @@ import L from "leaflet";
 import { Loader2, MapPin, Navigation } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { TZ_REGIONS, WILAYA_SUGGESTIONS } from "../config/categorySchemas.js";
-import { COLORS } from "..\pages\dashboard\components\shared.js";
+import { COLORS } from "../pages/dashboard/components/shared.js";
 
 /* ── Brand-aligned marker (data URL — no import issues in Vite) ── */
 const MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="44" viewBox="0 0 32 44">

@@ -2,8 +2,8 @@ import React from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import { MapPin } from "lucide-react";
-import { CHART } from "..\pages\dashboard\admin\shared\chartColors.js";
-import { COLORS } from "..\pages\dashboard\components\shared.js";
+import { CHART } from "../pages/dashboard/admin/shared/chartColors.js";
+import { COLORS } from "../pages/dashboard/components/shared.js";
 
 const MARKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="44" viewBox="0 0 32 44">
   <path d="M16 0C7.2 0 0 7.2 0 16c0 11.8 16 28 16 28s16-16.2 16-28C32 7.2 24.8 0 16 0z"

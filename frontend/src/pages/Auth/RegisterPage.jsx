@@ -5,7 +5,7 @@ import { useLanguage } from "../../context/LanguageContext.jsx";
 import SocialAuthButtons from "../../components/SocialAuthButtons.jsx";
 import PasswordStrengthMeter from "../../components/PasswordStrengthMeter.jsx";
 import Captcha, { isCaptchaEnabled } from "../../components/Captcha.jsx";
-import { COLORS } from "..\dashboard\components\shared.js";
+import { COLORS } from "../dashboard/components/shared.js";
 
 const icons = {
   user: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a7 7 0 0 1 14 0v1" /></svg>),

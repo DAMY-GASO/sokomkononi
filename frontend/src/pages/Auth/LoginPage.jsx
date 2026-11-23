@@ -7,7 +7,7 @@ import PageLoader from "../../components/PageLoader.jsx";
 import Captcha, { isCaptchaEnabled } from "../../components/Captcha.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import { getRateLimit, useLockout, lockMessage } from "../../utils/authErrors.js";
-import { COLORS } from "..\dashboard\components\shared.js";
+import { COLORS } from "../dashboard/components/shared.js";
 
 const icons = {
   mail: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>),

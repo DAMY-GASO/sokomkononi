@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { CheckCircle2, AlertTriangle, Info, X, Loader2 } from "lucide-react";
-import { COLORS } from "..\pages\dashboard\components\shared.js";
+import { COLORS } from "../pages/dashboard/components/shared.js";
 
 const ToastContext = createContext(null);
 let _idSeq = 0;

@@ -1,7 +1,7 @@
 import React from "react";
 import { useLanguage } from "../context/LanguageContext.jsx";
-import { CHART } from "..\pages\dashboard\admin\shared\chartColors.js";
-import { COLORS } from "..\pages\dashboard\components\shared.js";
+import { CHART } from "../pages/dashboard/admin/shared/chartColors.js";
+import { COLORS } from "../pages/dashboard/components/shared.js";
 
 const COMMON = new Set(["password","password1","12345678","123456789","qwerty123","qwertyuiop","admin123","letmein","welcome","iloveyou","abc12345","11111111","tanzania","sokomkononi","changeme","football","monkey123"]);
 

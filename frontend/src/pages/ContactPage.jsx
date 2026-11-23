@@ -14,7 +14,7 @@ import { api } from "../api/client.js";
 import { useAuth } from "../config/authStore.js";
 import { faqs } from "../config/FaqsData.js";
 import { useContactInfo } from "../config/systemSettingsStore.js";
-import { COLORS } from "./dashboard\components\shared.js";
+import { COLORS } from "./dashboard/components/shared.js";
 
 // ── WhatsApp Icon Halisi (SVG) ─────────────────────────────
 function WhatsAppIcon({ size = 16, className = "" }) {

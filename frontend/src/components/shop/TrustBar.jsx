@@ -1,7 +1,7 @@
 import React from "react";
 import { ShieldCheck, BadgeCheck, Headphones, Lock } from "lucide-react";
 import { useLanguage } from "../../context/LanguageContext.jsx";
-import { COLORS } from "..\..\pages\dashboard\components\shared.js";
+import { COLORS } from "../../pages/dashboard/components/shared.js";
 
 /**
  * TrustBar — 4 trust cards below the hero.
