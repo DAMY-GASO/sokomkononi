@@ -17,7 +17,7 @@ import CategoryBento from "../components/shop/CategoryBento.jsx";
 import TestimonialsSection from "../components/shop/TestimonialsSection.jsx";
 
 import { usePublicListings, mergeListingsFromApi } from "../config/listingsStore.js";
-// 🛠️ FIX 1: Tumia useActiveCategories badala ya Popular, ili kama admin hajaweka popular, categories zisionekane tupu
+// FIX 1: Tumia useActiveCategories badala ya Popular, ili kama admin hajaweka popular, categories zisionekane tupu
 import { useActiveCategories } from "../config/categoriesStore.js"; 
 import { useContent } from "../config/contentStore.js";
 import { useSavedIds, toggleSaved } from "../config/savedStore.js";
@@ -30,6 +30,7 @@ import {
   boostTier,
   rotateByTier,
 } from "../config/listingRanking.js";
+import { COLORS } from "./dashboard\components\shared.js";
 
 // ============================================================
 // RANGI ZA BADGE (kila section ina rangi yake)
@@ -38,7 +39,7 @@ import {
 //   Trending   → machungwa-moto   (Inavuma)      [sawa na badge ya kadi]
 // ============================================================
 const BADGE_COLORS = {
-  featured: { bg: "#011957", ink: "#FEA406" },
+  featured: { bg: "#011957", ink: COLORS.gold },
   trending: { bg: "#E8590C", ink: "#FFFFFF" },
 };
 
@@ -83,7 +84,7 @@ function ViewAllCategories({ lang }) {
     <div className="mx-auto flex max-w-7xl justify-center px-4 pb-10 pt-2 sm:px-6">
       <Link
         to="/kategoria"
-        className="inline-flex items-center gap-2 rounded-full bg-[#FEA406] px-6 py-3 text-sm font-bold text-[#011957] shadow-sm transition-transform hover:scale-[1.02]"
+        className="inline-flex items-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-bold text-night shadow-sm transition-transform hover:scale-[1.02]"
       >
         {lang === "sw" ? "Ona Kategoria Zote" : "View All Categories"}
         <ArrowRight size={16} />
@@ -113,7 +114,7 @@ function HowItWorks() {
           <Card key={title} className="relative p-7">
             <div className="mb-5 flex items-start justify-between">
               <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[rgba(1,25,87,0.06)] text-primary dark:bg-white/[0.06]"><Icon size={22} /></span>
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#FEA406] text-[#011957] text-sm font-black tabular-nums shadow-sm">0{idx + 1}</span>
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gold text-night text-sm font-black tabular-nums shadow-sm">0{idx + 1}</span>
             </div>
             <h3 className="mb-2 text-section">{title}</h3>
             <p className="text-body-sm leading-relaxed text-secondary">{body}</p>
@@ -130,7 +131,7 @@ export default function HomePage() {
   const { user } = useAuth();
   const publicListings = usePublicListings();
   
-  // 🛠️ FIX: Badilisha kuwa activeCategories
+  // FIX: Badilisha kuwa activeCategories
   const activeCategories = useActiveCategories(); 
   
   const content = useContent();
@@ -183,10 +184,10 @@ export default function HomePage() {
 
   // 2) ADVERTISED (kutoka banners)
   const advertised = useMemo(() => {
-    // 🛠️ FIX: Tumia String(l.id) ili kuunganisha vizuri na Set
+    // FIX: Tumia String(l.id) ili kuunganisha vizuri na Set
     const used = new Set(featured.map((l) => String(l.id)));
     
-    // 🛠️ FIX: Tengeneza Set ya listing IDs zilizopo kwenye banners kwa ufanisi zaidi
+    // FIX: Tengeneza Set ya listing IDs zilizopo kwenye banners kwa ufanisi zaidi
     const bannerListingIds = new Set(
       activeBanners.filter((b) => b.listingId).map((b) => String(b.listingId))
     );
@@ -197,7 +198,7 @@ export default function HomePage() {
     
     return pool
       .sort((a, b) => {
-        // 🛠️ FIX: Kosa la Typo hapa nilirekebisha. Nilikuwa nakagua String(b.id) badala ya listing id.
+        // FIX: Kosa la Typo hapa nilirekebisha. Nilikuwa nakagua String(b.id) badala ya listing id.
         const aBanner = activeBanners.find((bn) => String(bn.listingId) === String(a.id));
         const bBanner = activeBanners.find((bn) => String(bn.listingId) === String(b.id));
         const aExp = aBanner?.expiresAt ? new Date(aBanner.expiresAt).getTime() : 0;
@@ -209,7 +210,7 @@ export default function HomePage() {
 
   // 3) TRENDING (Boost)
   const boosted = useMemo(() => {
-    // 🛠️ FIX: Tumia String IDs kwenye Set
+    // FIX: Tumia String IDs kwenye Set
     const used = new Set();
     if (DEDUPE_SECTIONS) {
       featured.forEach((l) => used.add(String(l.id)));
@@ -223,7 +224,7 @@ export default function HomePage() {
 
   // 4) NEW ARRIVALS (pool nzima, kisha tunakata kwa newLimit)
   const newArrivalsPool = useMemo(() => {
-    // 🛠️ FIX: Tumia String IDs kwenye Set
+    // FIX: Tumia String IDs kwenye Set
     const used = new Set();
     if (DEDUPE_SECTIONS) {
       featured.forEach((l) => used.add(String(l.id)));
@@ -292,7 +293,7 @@ export default function HomePage() {
 
   return (
     <div className="page-clip min-h-screen bg-page">
-      {/* 🛠️ FIX: Navbar sasa inapokea activeCategories */}
+      {/* FIX: Navbar sasa inapokea activeCategories */}
       <Navbar categories={activeCategories} />
       <main>
         <BannerHero />

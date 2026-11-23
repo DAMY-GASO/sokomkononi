@@ -17,6 +17,7 @@ import {
   getCategoryIcon,
   getCategoryLabel,
 } from "../../../config/categoriesStore.js";
+import { COLORS } from "./shared.js";
 
 const REGIONS = [
   "Arusha", "Dar es Salaam", "Dodoma", "Geita", "Iringa", "Kagera", "Katavi",
@@ -70,7 +71,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-primary">
-          <SlidersHorizontal size={15} />
+          <SlidersHorizontal size={16} />
           {t("Vichujio", "Filters")}
         </h3>
         <button
@@ -179,7 +180,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
       <div className="space-y-2 border-t border-[color:rgb(var(--c-hairline))] pt-4">
         <button
           onClick={() => { setFilters(local); onClose(); }}
-          className="w-full rounded-lg py-2.5 text-sm font-semibold text-[#011957] hover:opacity-90"
+          className="w-full rounded-lg py-2.5 text-sm font-semibold text-night hover:opacity-90"
           style={{ background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)" }}
         >
           {t("Tumia Vichujio", "Apply Filters")}
@@ -358,7 +359,7 @@ export default function BrowseProperties({ lang = "sw", excludeSellerId = null }
                 border: "1px solid rgba(254,164,6,0.35)",
               }}
             >
-              <Search size={26} color="#FEA406" />
+              <Search size={26} color={COLORS.gold} />
             </span>
             <div>
               <h1 className="text-[clamp(1.75rem,4vw,2.5rem)] font-bold leading-tight tracking-tight text-white">
@@ -441,7 +442,7 @@ export default function BrowseProperties({ lang = "sw", excludeSellerId = null }
                     aria-label={t("Grid", "Grid")}
                     className="grid h-9 w-9 place-items-center"
                     style={{
-                      background: viewMode === "grid" ? "#FEA406" : "transparent",
+                      background: viewMode === "grid" ? COLORS.gold : "transparent",
                       color: viewMode === "grid" ? "#011957" : "var(--text-secondary)",
                     }}
                   >
@@ -452,7 +453,7 @@ export default function BrowseProperties({ lang = "sw", excludeSellerId = null }
                     aria-label={t("Orodha", "List")}
                     className="grid h-9 w-9 place-items-center"
                     style={{
-                      background: viewMode === "list" ? "#FEA406" : "transparent",
+                      background: viewMode === "list" ? COLORS.gold : "transparent",
                       color: viewMode === "list" ? "#011957" : "var(--text-secondary)",
                     }}
                   >
@@ -472,7 +473,7 @@ export default function BrowseProperties({ lang = "sw", excludeSellerId = null }
                   const cat = allCategories.find((c) => c.key === key);
                   const label = cat?.label?.[lang] || cat?.label?.sw || key;
                   return (
-                    <span key={key} className="inline-flex items-center gap-1 rounded-full bg-[color:rgb(var(--c-gold)/0.14)] px-2.5 py-1 text-xs font-medium text-[#A35F00] dark:text-[#FEA406]">
+                    <span key={key} className="inline-flex items-center gap-1 rounded-full bg-[color:rgb(var(--c-gold)/0.14)] px-2.5 py-1 text-xs font-medium text-[#A35F00] dark:text-gold">
                       {label}
                       <button
                         onClick={() => setFilters({ ...filters, categories: filters.categories.filter((c) => c !== key) })}
@@ -483,7 +484,7 @@ export default function BrowseProperties({ lang = "sw", excludeSellerId = null }
                     </span>
                   );
                 })}
-                <button onClick={clearFilters} className="text-xs font-medium text-[#C1502E] hover:underline">
+                <button onClick={clearFilters} className="text-xs font-medium text-rust hover:underline">
                   {t("Safisha zote", "Clear all")}
                 </button>
               </div>
@@ -534,7 +535,7 @@ export default function BrowseProperties({ lang = "sw", excludeSellerId = null }
                         className="grid h-9 w-9 place-items-center rounded-lg text-sm font-medium"
                         style={
                           page === n
-                            ? { background: "#FEA406", color: "#011957" }
+                            ? { background: COLORS.gold, color: "#011957" }
                             : { border: "1px solid rgb(var(--c-hairline))", color: "var(--text-primary)" }
                         }
                       >
@@ -565,7 +566,7 @@ export default function BrowseProperties({ lang = "sw", excludeSellerId = null }
                 </p>
                 <button
                   onClick={clearFilters}
-                  className="mt-4 rounded-lg px-5 py-2 text-sm font-semibold text-[#011957]"
+                  className="mt-4 rounded-lg px-5 py-2 text-sm font-semibold text-night"
                   style={{ background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)" }}
                 >
                   {t("Safisha Vichujio", "Clear Filters")}

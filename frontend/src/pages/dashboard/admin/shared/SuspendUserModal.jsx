@@ -70,7 +70,7 @@ export default function SuspendUserModal({ user, onClose, onConfirm, busy }) {
               )}
               className="textarea resize-none"
             />
-            <p className="text-[11px] text-muted mt-1">
+            <p className="text-xs text-muted mt-1">
               {t("Herufi 5+ zinahitajika", "5+ characters required")} ({reason.trim().length})
             </p>
           </div>

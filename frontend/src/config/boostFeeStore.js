@@ -2,10 +2,10 @@
 // boostFeeStore.js — global Boost Fee on/off switch
 // Source of truth: GET/PATCH /api/boosting/fee-config/
 //
-// ✅ FIX #2: enabled = null kabla hydrate (haijulikani).
-// ✅ FIX #5: toggle inahydrate baada ya API kufanikiwa.
-// ✅ FIX #6: toggle inatumia backend state (PATCH badala ya local flip).
-// ✅ FIX #7: hydrate inatumia guarded() — dedupe, TTL, forceRefresh.
+// FIX #2: enabled = null kabla hydrate (haijulikani).
+// FIX #5: toggle inahydrate baada ya API kufanikiwa.
+// FIX #6: toggle inatumia backend state (PATCH badala ya local flip).
+// FIX #7: hydrate inatumia guarded() — dedupe, TTL, forceRefresh.
 // ============================================================
 import { useEffect, useState } from "react";
 import { boostingApi } from "../api/boosting.js";
@@ -30,7 +30,7 @@ export function getBoostFee() {
   return state;
 }
 
-// ✅ FIX #7: guarded()
+// FIX #7: guarded()
 async function _hydrateBoostFeeFromApi() {
   try {
     const data = await boostingApi.feeConfig();
@@ -72,7 +72,7 @@ export async function toggleBoostFeeAsync() {
     console.info("[boostFeeStore] toggled:", { raw: data, enabled });
     set({ loaded: true, enabled });
 
-    // ✅ FIX #5 + #7: forceRefresh
+    // FIX #5 + #7: forceRefresh
     try {
       await hydrateBoostFeeFromApi.forceRefresh();
     } catch (e) {

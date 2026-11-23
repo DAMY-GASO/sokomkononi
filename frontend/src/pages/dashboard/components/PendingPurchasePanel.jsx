@@ -62,11 +62,11 @@ export default function PendingPurchasePanel({
   return (
     <div
       className="rounded-xl border px-4 py-3 mb-4"
-      style={{ background: "rgba(232,163,61,0.1)", borderColor: COLORS.gold }}
+      style={{ background: "rgba(254,164,6,0.1)", borderColor: COLORS.gold }}
     >
       <div className="flex items-center gap-2 mb-2">
-        <Clock size={16} color="#8A5A16" />
-        <span className="font-semibold text-sm" style={{ color: "#8A5A16" }}>
+        <Clock size={16} color={COLORS.goldText} />
+        <span className="font-semibold text-sm" style={{ color: COLORS.goldText }}>
           {t(
             `Una ${labels[module]} inayosubiri malipo`,
             `You have a pending ${labels[module]}`

@@ -113,11 +113,11 @@ export default function SellerFeedback({ side = "seller" }) {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border p-4 sm:p-5 mb-6"
+        <form onSubmit={handleSubmit} className="bg-card rounded-2xl border p-4 sm:p-5 mb-6"
               style={{ borderColor: COLORS.sandLine }}>
           {/* Type picker */}
           <div className="mb-4">
-            <p className="text-[11px] font-semibold text-secondary uppercase mb-2">
+            <p className="text-xs font-semibold text-secondary uppercase mb-2">
               {t("Aina ya Maoni", "Feedback Type")}
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -132,12 +132,12 @@ export default function SellerFeedback({ side = "seller" }) {
                     style={{
                       borderColor: active ? COLORS.gold : COLORS.sandLine,
                       background: active ? `${COLORS.gold}15` : "white",
-                      color: active ? "#8A5A16" : "var(--text-primary)",
+                      color: active ? COLORS.goldText : "var(--text-primary)",
                     }}
                     className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl border text-center"
                   >
                     <Icon size={16} />
-                    <span className="text-[11px] font-semibold">
+                    <span className="text-xs font-semibold">
                       {ft.label?.[lang] || ft.label?.sw}
                     </span>
                   </button>
@@ -148,7 +148,7 @@ export default function SellerFeedback({ side = "seller" }) {
 
           {type === "rating" && (
             <div className="mb-4">
-              <p className="text-[11px] font-semibold text-secondary uppercase mb-2">
+              <p className="text-xs font-semibold text-secondary uppercase mb-2">
                 {t("Kadiria Uzoefu", "Rate Your Experience")}
               </p>
               <div className="flex items-center gap-1.5 justify-center">
@@ -163,7 +163,7 @@ export default function SellerFeedback({ side = "seller" }) {
                     <Star
                       size={26}
                       fill={n <= rating ? COLORS.gold : "none"}
-                      color={n <= rating ? COLORS.gold : "#D1D5DB"}
+                      color={n <= rating ? COLORS.gold : COLORS.sandLine}
                     />
                   </button>
                 ))}
@@ -179,7 +179,7 @@ export default function SellerFeedback({ side = "seller" }) {
             onChange={(e) => setSubject(e.target.value)}
             placeholder={ph.subject[lang] || ph.subject.sw}
             disabled={busy}
-            className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#FEA406] mb-3"
+            className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-gold mb-3"
             style={{ borderColor: COLORS.sandLine }}
           />
 
@@ -189,7 +189,7 @@ export default function SellerFeedback({ side = "seller" }) {
             rows={7}
             placeholder={ph.message[lang] || ph.message.sw}
             disabled={busy}
-            className="w-full border rounded-lg px-3 py-2 text-sm outline-none resize-none focus:border-[#FEA406]"
+            className="w-full border rounded-lg px-3 py-2 text-sm outline-none resize-none focus:border-gold"
             style={{ borderColor: COLORS.sandLine, minHeight: 160 }}
           />
 
@@ -212,7 +212,7 @@ export default function SellerFeedback({ side = "seller" }) {
         </form>
 
         {/* My previous feedback */}
-        <div className="bg-white rounded-2xl border p-4 sm:p-5" style={{ borderColor: COLORS.sandLine }}>
+        <div className="bg-card rounded-2xl border p-4 sm:p-5" style={{ borderColor: COLORS.sandLine }}>
           <h2 className="h-card mb-4">{t("Maoni Yangu ya Nyuma", "My Previous Feedback")}</h2>
           {mine.length === 0 ? (
             <div className="rounded-xl border-2 border-dashed p-8 text-center" style={{ borderColor: COLORS.sandLine }}>
@@ -231,19 +231,19 @@ export default function SellerFeedback({ side = "seller" }) {
                     <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                       <div className="w-7 h-7 rounded-lg flex items-center justify-center"
                            style={{ background: `${COLORS.night}0D` }}>
-                        <Icon size={13} color={COLORS.night} />
+                        <Icon size={14} color={COLORS.night} />
                       </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                            style={{ background: `${COLORS.gold}20`, color: "#8A5A16" }}>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                            style={{ background: `${COLORS.gold}20`, color: COLORS.goldText }}>
                         {ft?.label?.[lang] || ft?.label?.sw}
                       </span>
                       {f.status === "answered" && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
                               style={{ background: `${COLORS.green}15`, color: COLORS.green }}>
                           <CheckCircle size={10} /> {t("Imejibiwa", "Answered")}
                         </span>
                       )}
-                      <span className="text-[10px] text-muted ml-auto">
+                      <span className="text-xs text-muted ml-auto">
                         {timeAgo(f.createdAt, lang)}
                       </span>
                     </div>
@@ -254,14 +254,14 @@ export default function SellerFeedback({ side = "seller" }) {
                         {[1,2,3,4,5].map((n) => (
                           <Star key={n} size={12}
                                 fill={n <= f.rating ? COLORS.gold : "none"}
-                                color={n <= f.rating ? COLORS.gold : "#D1D5DB"} />
+                                color={n <= f.rating ? COLORS.gold : COLORS.sandLine} />
                         ))}
                       </div>
                     )}
                     {f.adminReply && (
                       <div className="mt-2 rounded-lg px-3 py-2"
                            style={{ background: "rgba(47,109,79,0.08)", color: COLORS.green }}>
-                        <p className="text-[10px] font-bold uppercase mb-0.5">
+                        <p className="text-xs font-bold uppercase mb-0.5">
                           {t("Jibu la SokoMkononi", "SokoMkononi Reply")}
                         </p>
                         <p className="text-xs">{f.adminReply}</p>

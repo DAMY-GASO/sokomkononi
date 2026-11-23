@@ -4,6 +4,8 @@ import { adminLoginAsync, verifyAdmin2faAsync, useAuth } from "../config/authSto
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { ADMIN_PATH } from "../config/adminPath.js";
 import Captcha, { isCaptchaEnabled } from "../components/Captcha.jsx";
+import { Lock } from "lucide-react";
+import { COLORS } from "./dashboard\components\shared.js";
 
 const icons = {
   mail: (
@@ -41,15 +43,15 @@ const icons = {
 function SkylineDecoration() {
   return (
     <svg viewBox="0 0 400 200" className="absolute bottom-0 left-0 w-full h-40 opacity-[0.18]" preserveAspectRatio="none">
-      <rect x="0" y="120" width="46" height="80" fill="#FEA406" />
-      <rect x="52" y="80" width="34" height="120" fill="#FEA406" />
-      <rect x="92" y="140" width="52" height="60" fill="#FEA406" />
-      <polygon points="150,100 178,60 206,100" fill="#FEA406" />
-      <rect x="150" y="100" width="56" height="100" fill="#FEA406" />
-      <rect x="214" y="70" width="30" height="130" fill="#FEA406" />
-      <rect x="250" y="130" width="60" height="70" fill="#FEA406" />
-      <rect x="316" y="95" width="40" height="105" fill="#FEA406" />
-      <rect x="362" y="150" width="38" height="50" fill="#FEA406" />
+      <rect x="0" y="120" width="46" height="80" fill={COLORS.gold} />
+      <rect x="52" y="80" width="34" height="120" fill={COLORS.gold} />
+      <rect x="92" y="140" width="52" height="60" fill={COLORS.gold} />
+      <polygon points="150,100 178,60 206,100" fill={COLORS.gold} />
+      <rect x="150" y="100" width="56" height="100" fill={COLORS.gold} />
+      <rect x="214" y="70" width="30" height="130" fill={COLORS.gold} />
+      <rect x="250" y="130" width="60" height="70" fill={COLORS.gold} />
+      <rect x="316" y="95" width="40" height="105" fill={COLORS.gold} />
+      <rect x="362" y="150" width="38" height="50" fill={COLORS.gold} />
     </svg>
   );
 }
@@ -77,18 +79,18 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // ✅ 2FA state (hatua ya pili ya login)
+  // 2FA state (hatua ya pili ya login)
   const [step, setStep] = useState("credentials"); // "credentials" | "2fa"
   const [codeToken, setCodeToken] = useState("");
   const [code, setCode] = useState("");
   const [useRecovery, setUseRecovery] = useState(false);
   const tx = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ✅ Captcha state
+  // Captcha state
   const [captchaToken, setCaptchaToken] = useState("");
   const [captchaNonce, setCaptchaNonce] = useState(0);
 
-  // ✅ Reset captcha (token inatumika mara moja tu)
+  // Reset captcha (token inatumika mara moja tu)
   function resetCaptcha() {
     setCaptchaToken("");
     setCaptchaNonce((n) => n + 1);
@@ -102,7 +104,7 @@ export default function AdminLoginPage() {
       return;
     }
 
-    // ✅ Zuia kama captcha haijakamilika
+    // Zuia kama captcha haijakamilika
     if (isCaptchaEnabled && !captchaToken) {
       setError(
         lang === "sw"
@@ -118,11 +120,11 @@ export default function AdminLoginPage() {
     const res = await adminLoginAsync({
       identifier: form.email,
       password: form.password,
-      captcha_token: captchaToken || undefined, // ✅ Tuma token kwa backend
+      captcha_token: captchaToken || undefined, // Tuma token kwa backend
     });
     setLoading(false);
 
-    // ✅ 2FA imewashwa kwa akaunti hii → nenda hatua ya code
+    // 2FA imewashwa kwa akaunti hii → nenda hatua ya code
     if (res.requires2fa) {
       setCodeToken(res.codeToken || "");
       setCode("");
@@ -139,7 +141,7 @@ export default function AdminLoginPage() {
           t("admin_login_error_default")
         )
       );
-      resetCaptcha(); // ✅ Token ya kwanza imetumika, reset
+      resetCaptcha(); // Token ya kwanza imetumika, reset
       return;
     }
 
@@ -207,14 +209,14 @@ export default function AdminLoginPage() {
       : t("admin_login_subtext");
 
   return (
-    <div className="min-h-screen bg-gray-100 md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
+    <div className="min-h-screen bg-page md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
       <div className="w-full max-w-md md:max-w-none my-8 md:my-0 bg-white rounded-2xl md:rounded-none shadow-xl md:shadow-none overflow-hidden grid grid-cols-1 md:grid-cols-2 md:min-h-screen">
         {/* ================= LEFT PANEL - Admin Branded ================= */}
         <div className="dark-surface flex relative bg-night text-white flex-col justify-between p-8 md:p-10 lg:p-14 overflow-hidden">
           <Link to="/" className="flex items-center justify-center gap-2 relative z-10 w-full">
             <img src="/logo.webp" alt="" width={32} height={32} className="h-8 w-8 rounded-full" />
             <span className="font-bold tracking-tight">SokoMkononi</span>
-            <span className="text-[10px] font-semibold bg-gold/20 text-gold px-2 py-0.5 rounded-full ml-1">
+            <span className="text-xs font-semibold bg-gold/20 text-gold px-2 py-0.5 rounded-full ml-1">
               ADMIN
             </span>
           </Link>
@@ -234,7 +236,7 @@ export default function AdminLoginPage() {
               <ul className="mt-8 space-y-3 inline-flex flex-col items-start mx-auto">
                 {adminFeatures.map((feature, i) => (
                   <li key={i} className="flex items-center gap-2.5 text-sm text-white/80">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FEA406" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={COLORS.gold} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M20 6 9 17l-5-5" />
                     </svg>
                     {feature}
@@ -246,7 +248,7 @@ export default function AdminLoginPage() {
 
           <div className="relative z-10 border-t border-white/10 pt-6 max-w-sm mx-auto text-center">
             <p className="text-white/50 text-body-sm">
-              🔒 {t("admin_secure_access")}
+              <Lock size={12} className="inline -mt-0.5 mr-1" />{t("admin_secure_access")}
             </p>
           </div>
 
@@ -281,7 +283,7 @@ export default function AdminLoginPage() {
                       autoComplete="one-time-code"
                       inputMode={useRecovery ? "text" : "numeric"}
                       maxLength={useRecovery ? 32 : 6}
-                      className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-center font-mono tracking-widest focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
+                      className="w-full border border-hairline rounded-lg pl-10 pr-3 py-2.5 text-center font-mono tracking-widest focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
                       placeholder={useRecovery ? "xxxx-xxxx" : "000000"}
                       value={code}
                       onChange={(e) =>
@@ -341,7 +343,7 @@ export default function AdminLoginPage() {
                   <input
                     type="email"
                     autoComplete="username"
-                    className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
+                    className="w-full border border-hairline rounded-lg pl-10 pr-3 py-2.5 focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
                     placeholder="admin@sokomkononi.co.tz"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -360,7 +362,7 @@ export default function AdminLoginPage() {
                   <input
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
-                    className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
+                    className="w-full border border-hairline rounded-lg pl-10 pr-10 py-2.5 focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
                     placeholder="••••••••"
                     value={form.password}
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -376,7 +378,7 @@ export default function AdminLoginPage() {
                 </div>
               </div>
 
-              {/* ✅ CAPTCHA */}
+              {/* CAPTCHA */}
               <Captcha
                 key={captchaNonce}
                 onVerify={setCaptchaToken}

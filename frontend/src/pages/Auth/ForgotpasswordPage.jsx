@@ -6,6 +6,7 @@ import {
   resetPasswordAsync,
 } from "../../config/authStore.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
+import { COLORS } from "..\dashboard\components\shared.js";
 
 const icons = {
   mail: (
@@ -44,15 +45,15 @@ const icons = {
 function SkylineDecoration() {
   return (
     <svg viewBox="0 0 400 200" className="absolute bottom-0 left-0 w-full h-40 opacity-[0.18]" preserveAspectRatio="none">
-      <rect x="0" y="120" width="46" height="80" fill="#FEA406" />
-      <rect x="52" y="80" width="34" height="120" fill="#FEA406" />
-      <rect x="92" y="140" width="52" height="60" fill="#FEA406" />
-      <polygon points="150,100 178,60 206,100" fill="#FEA406" />
-      <rect x="150" y="100" width="56" height="100" fill="#FEA406" />
-      <rect x="214" y="70" width="30" height="130" fill="#FEA406" />
-      <rect x="250" y="130" width="60" height="70" fill="#FEA406" />
-      <rect x="316" y="95" width="40" height="105" fill="#FEA406" />
-      <rect x="362" y="150" width="38" height="50" fill="#FEA406" />
+      <rect x="0" y="120" width="46" height="80" fill={COLORS.gold} />
+      <rect x="52" y="80" width="34" height="120" fill={COLORS.gold} />
+      <rect x="92" y="140" width="52" height="60" fill={COLORS.gold} />
+      <polygon points="150,100 178,60 206,100" fill={COLORS.gold} />
+      <rect x="150" y="100" width="56" height="100" fill={COLORS.gold} />
+      <rect x="214" y="70" width="30" height="130" fill={COLORS.gold} />
+      <rect x="250" y="130" width="60" height="70" fill={COLORS.gold} />
+      <rect x="316" y="95" width="40" height="105" fill={COLORS.gold} />
+      <rect x="362" y="150" width="38" height="50" fill={COLORS.gold} />
     </svg>
   );
 }
@@ -74,9 +75,9 @@ function FieldInput({ icon, type = "text", value, onChange, label }) {
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none">{icon}</span>
         <input
           type={inputType}
-          className={`w-full border border-gray-300 rounded-lg pl-10 ${
+          className={`w-full border border-hairline rounded-lg pl-10 ${
             isPassword ? "pr-11" : "pr-3"
-          } py-2.5 focus:outline-none focus:border-[#FEA406] focus:ring-2 focus:ring-[#FEA406]/20 transition-colors`}
+          } py-2.5 focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors`}
           value={value}
           onChange={onChange}
         />
@@ -238,10 +239,10 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
+    <div className="min-h-screen bg-page md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
       <div className="w-full max-w-md md:max-w-none my-8 md:my-0 bg-white rounded-2xl md:rounded-none shadow-xl md:shadow-none overflow-hidden grid grid-cols-1 md:grid-cols-2 md:min-h-screen">
         {/* LEFT — branded */}
-        <div className="dark-surface flex relative bg-[#101A2E] text-white flex-col justify-between p-8 md:p-10 lg:p-14 overflow-hidden">
+        <div className="dark-surface flex relative bg-night text-white flex-col justify-between p-8 md:p-10 lg:p-14 overflow-hidden">
           <Link to="/" className="flex items-center justify-center gap-2 relative z-10 w-full">
             <img src="/logo.webp" alt="" width={32} height={32} className="h-8 w-8 rounded-full" />
             <span className="font-bold tracking-tight">SokoMkononi</span>
@@ -276,7 +277,7 @@ export default function ForgotPasswordPage() {
                     onChange={(e) => setEmail(e.target.value)}
                   />
 
-                  {error && <p className="text-[#C1502E] text-body-sm">{error}</p>}
+                  {error && <p className="text-rust text-body-sm">{error}</p>}
 
                   <button
                     type="submit"
@@ -288,7 +289,7 @@ export default function ForgotPasswordPage() {
                 </form>
 
                 <p className="mt-6 text-body-sm text-secondary text-center">
-                  <Link to="/login" className="text-[#2F6D4F] font-semibold hover:underline">
+                  <Link to="/login" className="text-green font-semibold hover:underline">
                     {t("forgot_back_to_login")}
                   </Link>
                 </p>
@@ -298,8 +299,8 @@ export default function ForgotPasswordPage() {
             {/* STEP: OTP */}
             {step === "otp" && (
               <>
-                <div className="w-12 h-12 rounded-full bg-[#FEA406]/20 flex items-center justify-center mb-5 mx-auto">
-                  <span className="text-[#FEA406]">{icons.mail}</span>
+                <div className="w-12 h-12 rounded-full bg-gold/20 flex items-center justify-center mb-5 mx-auto">
+                  <span className="text-gold">{icons.mail}</span>
                 </div>
 
                 <h1 className="h-title mb-1 text-center">{t("forgot_otp_heading")}</h1>
@@ -312,13 +313,13 @@ export default function ForgotPasswordPage() {
                     inputMode="numeric"
                     maxLength={6}
                     autoFocus
-                    className="w-full border border-gray-300 rounded-lg px-3 py-3 text-lg tracking-[0.5em] text-center font-semibold focus:outline-none focus:border-[#FEA406] focus:ring-2 focus:ring-[#FEA406]/20 transition-colors"
+                    className="w-full border border-hairline rounded-lg px-3 py-3 text-lg tracking-[0.5em] text-center font-semibold focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors"
                     placeholder="••••••"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                   />
 
-                  {error && <p className="text-[#C1502E] text-body-sm">{error}</p>}
+                  {error && <p className="text-rust text-body-sm">{error}</p>}
 
                   <button
                     type="submit"
@@ -334,7 +335,7 @@ export default function ForgotPasswordPage() {
                     type="button"
                     onClick={handleResend}
                     disabled={resendCooldown > 0 || loading}
-                    className="text-[#2F6D4F] font-semibold disabled:text-muted disabled:cursor-not-allowed"
+                    className="text-green font-semibold disabled:text-muted disabled:cursor-not-allowed"
                   >
                     {resendCooldown > 0
                       ? `${t("forgot_resend_otp")} (${resendCooldown}s)`
@@ -356,7 +357,7 @@ export default function ForgotPasswordPage() {
             {/* STEP: PASSWORD */}
             {step === "password" && (
               <>
-                <div className="w-12 h-12 rounded-full bg-[#2F6D4F]/10 flex items-center justify-center mb-5 mx-auto text-[#2F6D4F]">
+                <div className="w-12 h-12 rounded-full bg-green/10 flex items-center justify-center mb-5 mx-auto text-green">
                   {icons.lock}
                 </div>
 
@@ -383,7 +384,7 @@ export default function ForgotPasswordPage() {
                     onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
                   />
 
-                  {error && <p className="text-[#C1502E] text-body-sm">{error}</p>}
+                  {error && <p className="text-rust text-body-sm">{error}</p>}
 
                   <button
                     type="submit"
@@ -399,7 +400,7 @@ export default function ForgotPasswordPage() {
             {/* STEP: SUCCESS */}
             {step === "success" && (
               <div className="text-center">
-                <div className="w-14 h-14 rounded-full bg-[#2F6D4F]/10 flex items-center justify-center mb-5 mx-auto text-[#2F6D4F]">
+                <div className="w-14 h-14 rounded-full bg-green/10 flex items-center justify-center mb-5 mx-auto text-green">
                   {icons.check}
                 </div>
                 <h1 className="h-title mb-1">{t("forgot_success_heading")}</h1>

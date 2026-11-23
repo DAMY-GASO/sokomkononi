@@ -1,14 +1,14 @@
 // ============================================================
 // hydrateGuard.js — cross-store hydrate dedupe
 //
-// ✅ FIX #1 (real): forceRefresh sasa inatumia generation counter
+// FIX #1 (real): forceRefresh sasa inatumia generation counter
 //    ili matokeo ya request ya zamani (stale) yasije yakaandika
 //    lastCompleted juu ya data mpya. Hii inazuia "toggle inarudi ON"
 //    kwa sababu ya race kati ya hydrate ya zamani na forceRefresh.
 //
-// ✅ FIX #1b: wrapped() inakubali { force: true } — sawa na forceRefresh.
+// FIX #1b: wrapped() inakubali { force: true } — sawa na forceRefresh.
 //
-// ✅ FIX #1c: undefined haicachewi kwenye lastCompleted.
+// FIX #1c: undefined haicachewi kwenye lastCompleted.
 // ============================================================
 
 const inflight = new Map();
@@ -29,7 +29,7 @@ export function guarded(fn, opts = {}) {
   };
 
   const wrapped = async (...args) => {
-    // ✅ FIX #1b: inakubali { force: true } kama first arg
+    // FIX #1b: inakubali { force: true } kama first arg
     const force =
       args.length > 0 &&
       args[0] &&
@@ -41,7 +41,7 @@ export function guarded(fn, opts = {}) {
     const k = keyFor(realArgs);
 
     if (force) {
-      // ✅ FIX #1: bump generation — matokeo ya zamani hayatapokelewa
+      // FIX #1: bump generation — matokeo ya zamani hayatapokelewa
       bumpGeneration(k);
       inflight.delete(k);
       lastCompleted.delete(k);
@@ -56,9 +56,9 @@ export function guarded(fn, opts = {}) {
 
     const p = Promise.resolve(fn(...realArgs))
       .then((res) => {
-        // ✅ FIX #1: andika tu kama generation haijabadilika
+        // FIX #1: andika tu kama generation haijabadilika
         if ((generation.get(k) || 0) === myGen) {
-          // ✅ FIX #1c: usicache undefined
+          // FIX #1c: usicache undefined
           if (res !== undefined) {
             lastCompleted.set(k, { at: Date.now(), result: res });
           }
@@ -81,10 +81,10 @@ export function guarded(fn, opts = {}) {
     return p;
   };
 
-  // ✅ Bypass cache — kwa manual refresh
+  // Bypass cache — kwa manual refresh
   wrapped.forceRefresh = (...args) => wrapped({ force: true }, ...args);
 
-  // ✅ Clear cache yote (kwa logout, n.k.)
+  // Clear cache yote (kwa logout, n.k.)
   wrapped.clearCache = () => {
     inflight.clear();
     lastCompleted.clear();

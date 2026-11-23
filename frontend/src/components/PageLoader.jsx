@@ -1,5 +1,6 @@
 import React from "react";
 import { useLanguage } from "../context/LanguageContext.jsx";
+import { COLORS } from "..\pages\dashboard\components\shared.js";
 
 export default function PageLoader() {
   const { lang } = useLanguage();
@@ -12,9 +13,9 @@ export default function PageLoader() {
           <svg className="absolute inset-0 h-full w-full animate-spin-slow" viewBox="0 0 100 100" fill="none" aria-hidden="true">
             <defs>
               <linearGradient id="smk-arc" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stopColor="#0062FD" />
+                <stop offset="0" stopColor={COLORS.royal} />
                 <stop offset=".55" stopColor="#3D8BFF" />
-                <stop offset="1" stopColor="#FEA406" />
+                <stop offset="1" stopColor={COLORS.gold} />
               </linearGradient>
             </defs>
             <circle cx="50" cy="50" r="47.5" stroke="rgba(255,255,255,.08)" strokeWidth="2" />

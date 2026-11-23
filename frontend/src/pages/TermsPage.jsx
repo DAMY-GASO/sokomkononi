@@ -282,13 +282,13 @@ function AccordionSection({ section, isOpen, onToggle }) {
   const Icon = section.icon || FileText;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-xl border border-hairline overflow-hidden">
       <button
         onClick={onToggle}
         className="w-full flex items-center justify-between gap-4 p-5 text-left hover:bg-page/50 transition-colors"
       >
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="w-10 h-10 rounded-lg bg-[#FEA406]/10 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center flex-shrink-0">
             <Icon size={18} color={COLORS.gold} />
           </div>
           <h2 className="h-card">{section.title}</h2>
@@ -415,7 +415,7 @@ export default function TermsPage() {
           </Link>
 
           <div className="flex flex-col items-center text-center gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-[#FEA406]/20 flex items-center justify-center flex-shrink-0">
+            <div className="w-14 h-14 rounded-2xl bg-gold/20 flex items-center justify-center flex-shrink-0">
               <FileText size={28} color={COLORS.gold} />
             </div>
             <div>
@@ -425,7 +425,7 @@ export default function TermsPage() {
               <p className="text-white/60 text-sm mt-2 max-w-2xl mx-auto">
                 {content.subtitle}
               </p>
-              <p className="text-[#FEA406] text-body-sm mt-3 font-medium">
+              <p className="text-gold text-body-sm mt-3 font-medium">
                 {content.lastUpdated}
               </p>
             </div>
@@ -438,14 +438,14 @@ export default function TermsPage() {
         <div className="flex items-center justify-center gap-2 mb-4">
           <button
             onClick={expandAll}
-            className="text-body-sm font-medium text-[#2F6D4F] hover:underline"
+            className="text-body-sm font-medium text-green hover:underline"
           >
             {lang === "sw" ? "Fungua Zote" : "Expand All"}
           </button>
           <span className="text-muted">•</span>
           <button
             onClick={collapseAll}
-            className="text-body-sm font-medium text-[#C1502E] hover:underline"
+            className="text-body-sm font-medium text-rust hover:underline"
           >
             {lang === "sw" ? "Funga Zote" : "Collapse All"}
           </button>
@@ -462,7 +462,7 @@ export default function TermsPage() {
           ))}
         </div>
 
-        <div className="mt-8 p-5 bg-[#FEA406]/5 border border-[#FEA406]/20 rounded-xl text-center">
+        <div className="mt-8 p-5 bg-gold/5 border border-gold/20 rounded-xl text-center">
           <p className="text-body-sm text-secondary max-w-xl mx-auto">
             {lang === "sw"
               ? "Kwa maswali yoyote kuhusu sheria na masharti haya, tafadhali wasiliana nasi kupitia ukurasa wa Mawasiliano."
@@ -470,7 +470,7 @@ export default function TermsPage() {
           </p>
           <Link
             to="/mawasiliano"
-            className="inline-block mt-3 text-body-sm font-semibold text-[#FEA406] hover:underline"
+            className="inline-block mt-3 text-body-sm font-semibold text-gold hover:underline"
           >
             {lang === "sw" ? "Wasiliana Nasi →" : "Contact Us →"}
           </Link>

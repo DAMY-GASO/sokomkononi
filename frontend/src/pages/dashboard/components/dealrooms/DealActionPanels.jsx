@@ -15,7 +15,7 @@ export default function DealActionPanels({ canRespond, chatError, deal, handleOf
       {(deal.status === "negotiating" || deal.status === "offer_sent") &&
         !isLocked && (
         <div
-          style={{ borderColor: COLORS.sandLine, background: "white" }}
+          style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
           className="flex items-center gap-2 px-3 sm:px-4 py-2.5 border-t flex-wrap"
         >
           {canRespond ? (
@@ -25,7 +25,7 @@ export default function DealActionPanels({ canRespond, chatError, deal, handleOf
                 style={{ background: COLORS.green, color: "white" }}
                 className="flex items-center gap-1.5 text-body-sm font-semibold px-3 py-2 rounded-lg"
               >
-                <Check size={13} />{" "}
+                <Check size={14} />{" "}
                 {lang === "sw"
                   ? `Kubali Ofa ya ${formatTZS(deal.currentOffer)}`
                   : `Accept Offer of ${formatTZS(deal.currentOffer)}`}
@@ -38,7 +38,7 @@ export default function DealActionPanels({ canRespond, chatError, deal, handleOf
                 }}
                 className="flex items-center gap-1.5 text-body-sm font-semibold px-3 py-2 rounded-lg border"
               >
-                <X size={13} /> {lang === "sw" ? "Kataa" : "Decline"}
+                <X size={14} /> {lang === "sw" ? "Kataa" : "Decline"}
               </button>
             </>
           ) : (
@@ -58,7 +58,7 @@ export default function DealActionPanels({ canRespond, chatError, deal, handleOf
               }}
               className="flex items-center gap-1.5 text-body-sm font-semibold px-3 py-2 rounded-lg border ml-auto"
             >
-              <HandCoins size={13} />{" "}
+              <HandCoins size={14} />{" "}
               {deal.currentOffer > 0
                 ? lang === "sw"
                   ? "Toa Ofa Nyingine"
@@ -80,7 +80,7 @@ export default function DealActionPanels({ canRespond, chatError, deal, handleOf
       {/* Offer input */}
       {(isBuyer || isSeller) && offerOpen && !isLocked && (
         <div
-          style={{ borderColor: COLORS.sandLine, background: "white" }}
+          style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
           className="flex items-center gap-2 px-3 sm:px-4 py-2.5 border-t"
         >
           <input
@@ -114,7 +114,7 @@ export default function DealActionPanels({ canRespond, chatError, deal, handleOf
 
       {deal.status === "reserved" && side === "buyer" && !isLocked && (
         <div
-          style={{ borderColor: COLORS.sandLine, background: "white" }}
+          style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
           className="flex justify-center px-3 sm:px-4 py-2.5 border-t"
         >
           <button
@@ -152,7 +152,7 @@ export default function DealActionPanels({ canRespond, chatError, deal, handleOf
 
       {deal.status === "completed" && isSeller && deal.listingId && (
         <div
-          style={{ borderColor: COLORS.sandLine, background: "white" }}
+          style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
           className="flex justify-center px-3 sm:px-4 py-2.5 border-t"
         >
           <Link
@@ -161,7 +161,7 @@ export default function DealActionPanels({ canRespond, chatError, deal, handleOf
             className="flex items-center gap-1.5 text-body-sm font-semibold px-4 py-2 rounded-lg"
           >
             {lang === "sw" ? "Nenda kwenye Tangazo" : "Go to Listing"}{" "}
-            <ArrowRight size={13} />
+            <ArrowRight size={14} />
           </Link>
         </div>
       )}
@@ -170,7 +170,7 @@ export default function DealActionPanels({ canRespond, chatError, deal, handleOf
         <div
           style={{
             borderColor: COLORS.sandLine,
-            background: "rgba(16,26,46,0.04)",
+            background: "rgba(1,25,87,0.04)",
           }}
           className="flex flex-col items-center text-center gap-3 px-3 sm:px-4 py-4 border-t"
         >

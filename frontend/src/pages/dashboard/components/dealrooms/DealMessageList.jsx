@@ -66,7 +66,7 @@ export default function DealMessageList({
                 ) : (
                   <div
                     style={{
-                      background: mine ? COLORS.night : "white",
+                      background: mine ? COLORS.night : "rgb(var(--c-card))",
                       color: mine ? COLORS.sand : COLORS.night,
                       borderColor: COLORS.sandLine,
                       opacity: m.sendStatus === "sending" ? 0.7 : 1,
@@ -108,10 +108,10 @@ export default function DealMessageList({
                 <div className="flex justify-center my-1">
                   <span
                     style={{
-                      background: "rgba(16,26,46,0.06)",
-                      color: "rgba(16,26,46,0.55)",
+                      background: "rgba(1,25,87,0.06)",
+                      color: "rgba(1,25,87,0.55)",
                     }}
-                    className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
+                    className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
                   >
                     {formatDayLabel(m.at, lang)}
                   </span>

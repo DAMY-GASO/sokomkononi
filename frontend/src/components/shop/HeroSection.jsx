@@ -394,7 +394,7 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
               />
             </div>
 
-            {/* ✅ MAARUFU (POPULAR) */}
+            {/* MAARUFU (POPULAR) */}
             <div className="mt-4 w-full">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs font-medium uppercase tracking-wider shrink-0" style={{ color: HERO_MUTED }}>
@@ -461,7 +461,7 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
               </button>
             </div>
 
-            {/* ✅ MPYA: Vitufe vya Pakua App */}
+            {/* MPYA: Vitufe vya Pakua App */}
             <AppDownloadButtons lang={lang} />
 
             {/* Stats — Users, Properties, Rated */}

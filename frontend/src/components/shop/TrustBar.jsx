@@ -1,6 +1,7 @@
 import React from "react";
 import { ShieldCheck, BadgeCheck, Headphones, Lock } from "lucide-react";
 import { useLanguage } from "../../context/LanguageContext.jsx";
+import { COLORS } from "..\..\pages\dashboard\components\shared.js";
 
 /**
  * TrustBar — 4 trust cards below the hero.
@@ -17,28 +18,28 @@ export default function TrustBar() {
       Icon: ShieldCheck,
       title: t("Malipo Salama", "Secure Payment"),
       desc: t("Ulinzi wa kila muamala", "Every transaction protected"),
-      color: "#0062FD",
+      color: COLORS.royal,
       hint: t("SSL", "SSL"),
     },
     {
       Icon: BadgeCheck,
       title: t("Wauzaji Waliohakikiwa", "Verified Sellers"),
       desc: t("Uthibitisho kamili wa utambulisho", "Full identity verification"),
-      color: "#2F6D4F",
+      color: COLORS.green,
       hint: t("KYC", "KYC"),
     },
     {
       Icon: Headphones,
       title: t("Msaada wa Haraka", "Fast Support"),
       desc: t("Timu yetu iko tayari saa 24/7", "Our team is available 24/7"),
-      color: "#FEA406",
+      color: COLORS.gold,
       hint: "24/7",
     },
     {
       Icon: Lock,
       title: t("Faragha Yako", "Your Privacy"),
       desc: t("Data yako inalindwa kikamilifu", "Your data is fully protected"),
-      color: "#7C3AED",
+      color: COLORS.royalLight,
       hint: t("Siri", "Private"),
     },
   ];
@@ -80,17 +81,17 @@ export default function TrustBar() {
 
                 {/* Hint badge */}
                 <span
-                  className="absolute right-0 top-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                  className="absolute right-0 top-0 text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
                   style={{ background: `${color}15`, color }}
                 >
                   {hint}
                 </span>
 
                 <div className="min-w-0">
-                  <h3 className="text-[15px] font-semibold leading-tight text-primary">
+                  <h3 className="text-base font-semibold leading-tight text-primary">
                     {title}
                   </h3>
-                  <p className="mt-1 text-[13px] leading-snug text-secondary">
+                  <p className="mt-1 text-sm leading-snug text-secondary">
                     {desc}
                   </p>
                 </div>

@@ -116,7 +116,7 @@ function write(list) {
 function norm(raw) {
   if (!raw) return null;
   
-  // ✅ Kusoma `details_bilingual` kutoka API (kama ipo)
+  // Kusoma `details_bilingual` kutoka API (kama ipo)
   const bilingual = raw.details_bilingual || {};
   
   return {
@@ -126,7 +126,7 @@ function norm(raw) {
     adminUserId: raw.admin_user,
     target: raw.target || "",
     targetId: raw.target_id,
-    // ✅ Hifadhi details zote kwa usahihi
+    // Hifadhi details zote kwa usahihi
     details: raw.details || raw.details_sw || raw.details_en || "",
     detailsSw: raw.details_sw || bilingual.sw || "",
     detailsEn: raw.details_en || bilingual.en || "",

@@ -26,9 +26,9 @@ export default function StatTile({
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-xl border border-gray-100 ${padding} min-w-0 transition-all flex flex-col items-center text-center ${
+      className={`bg-card rounded-xl border border-hairline ${padding} min-w-0 transition-all flex flex-col items-center text-center ${
         isClickable
-          ? "cursor-pointer hover:shadow-md hover:border-gray-200"
+          ? "cursor-pointer hover:shadow-md hover:border-hairline"
           : ""
       }`}
     >

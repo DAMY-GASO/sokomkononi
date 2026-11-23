@@ -84,27 +84,27 @@ export default function ExpiringCreditsBanner({ userCredits, onDismiss }) {
     <div
       className="max-w-lg mx-auto mb-5 rounded-xl border px-3 py-3 flex items-start gap-2.5"
       style={{
-        background: isUrgent ? "rgba(193,80,46,0.10)" : "rgba(232,163,61,0.12)",
-        borderColor: isUrgent ? "rgba(193,80,46,0.35)" : "rgba(232,163,61,0.4)",
+        background: isUrgent ? "rgba(193,80,46,0.10)" : "rgba(254,164,6,0.12)",
+        borderColor: isUrgent ? "rgba(193,80,46,0.35)" : "rgba(254,164,6,0.4)",
       }}
     >
       <div
         className="grid h-8 w-8 shrink-0 place-items-center rounded-lg"
         style={{
-          background: isUrgent ? COLORS.rust : "#8A5A16",
+          background: isUrgent ? COLORS.rust : COLORS.goldText,
         }}
       >
         {isUrgent ? (
-          <AlertTriangle size={15} color="white" />
+          <AlertTriangle size={16} color="white" />
         ) : (
-          <Clock3 size={15} color="white" />
+          <Clock3 size={16} color="white" />
         )}
       </div>
 
       <div className="flex-1 min-w-0">
         <p
           className="text-sm font-bold"
-          style={{ color: isUrgent ? COLORS.rust : "#8A5A16" }}
+          style={{ color: isUrgent ? COLORS.rust : COLORS.goldText }}
         >
           {isUrgent
             ? t("Vifurushi vyako vinaisha KESHO!", "Your credits expire TOMORROW!")
@@ -125,7 +125,7 @@ export default function ExpiringCreditsBanner({ userCredits, onDismiss }) {
             );
           }).join(" · ")}
         </p>
-        <p className="text-[11px] text-muted mt-1">
+        <p className="text-xs text-muted mt-1">
           {t(
             `Jumla ya ${totalRemaining} credits zinaisha. Zitumie kabla hazijapotea.`,
             `Total of ${totalRemaining} credits expiring. Use them before they're gone.`
@@ -135,7 +135,7 @@ export default function ExpiringCreditsBanner({ userCredits, onDismiss }) {
         <button
           onClick={() => navigate("/dashboard/bundles")}
           className="mt-2 inline-flex items-center gap-1 text-xs font-bold"
-          style={{ color: isUrgent ? COLORS.rust : "#8A5A16" }}
+          style={{ color: isUrgent ? COLORS.rust : COLORS.goldText }}
         >
           {t("Nunua Vifurushi Vipya", "Buy New Bundles")}
           <ChevronRight size={12} />

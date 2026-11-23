@@ -59,10 +59,10 @@ function normalizeStatus(status) {
 }
 
 const TONES = {
-  success: "bg-[#2F6D4F]/10 text-[color:rgb(var(--c-success-text))] border-[#2F6D4F]/25",
+  success: "bg-green/10 text-[color:rgb(var(--c-success-text))] border-green/25",
   warn:    "bg-[#B45309]/10 text-[color:rgb(var(--c-warning-text))] border-[#B45309]/25",
-  danger:  "bg-[#C1502E]/10 text-[color:rgb(var(--c-danger-text))] border-[#C1502E]/25",
-  gold:    "bg-[#FEA406]/20 text-[color:rgb(var(--c-gold-ink))] border-[#FEA406]/30",
+  danger:  "bg-rust/10 text-[color:rgb(var(--c-danger-text))] border-rust/25",
+  gold:    "bg-gold/20 text-[color:rgb(var(--c-gold-ink))] border-gold/30",
   royal:   "bg-[#0062FD]/10 text-[color:rgb(var(--c-link))] border-[#0062FD]/25",
   muted:   "bg-[color:rgb(var(--c-hairline))]/60 text-secondary border-[color:rgb(var(--c-hairline))]",
 };
@@ -71,7 +71,7 @@ export default function StatusBadge({ status, lang = "sw" }) {
   const key = normalizeStatus(status);
   const c = CONFIG[key] || CONFIG.pending;
   return (
-    <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold leading-none ${TONES[c.tone] || TONES.muted}`}>
+    <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold leading-none ${TONES[c.tone] || TONES.muted}`}>
       {c.label?.[lang] || c.label?.sw || status}
     </span>
   );

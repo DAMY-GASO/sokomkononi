@@ -6,6 +6,7 @@ import { useActiveCategories, getCategoryIcon } from "../../config/categoriesSto
 import ListingCardShop from "./ListingCardShop.jsx";
 import CountdownTimer from "./CountdownTimer.jsx";
 import { Section, SectionHeader, Button } from "../ui";
+import { COLORS } from "..\..\pages\dashboard\components\shared.js";
 
 export default function AdvertisedSection({
   gridCols = "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4",
@@ -19,7 +20,7 @@ export default function AdvertisedSection({
   const getBanner = (listingId) => banners.find((b) => String(b.listingId) === String(listingId));
 
   return (
-    <Section className="bg-[#F4F7FC] dark:bg-[#011957]/20">
+    <Section className="bg-[#F4F7FC] dark:bg-night/20">
       <SectionHeader
         eyebrow={
           <span className="flex items-center gap-1.5 text-[#0062FD]">
@@ -44,8 +45,8 @@ export default function AdvertisedSection({
               <div key={l.id} className="relative">
                 {/* Badge ya bluu: Imetangazwa */}
                 <span
-                  className="absolute -top-2 -left-2 z-10 flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold shadow-md ring-1 ring-white/20"
-                  style={{ background: "#0062FD", color: "#FFFFFF" }}
+                  className="absolute -top-2 -left-2 z-10 flex items-center gap-1 rounded-md px-2 py-1 text-xs font-bold shadow-md ring-1 ring-white/20"
+                  style={{ background: COLORS.royal, color: "#FFFFFF" }}
                 >
                   <Megaphone size={10} /> {t("Imetangazwa", "Advertised")}
                 </span>

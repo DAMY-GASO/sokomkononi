@@ -10,7 +10,7 @@
 // Marekebisho ya mwisho:
 //  - usePublicListings: ondoa "sold" — haionekani public
 //  - markSoldAsync: tumia listingsApi.markSold (kwa notification)
-//  - ✅ FIX: normalizeListingFromApi — category ni STRING kila mara
+//  - FIX: normalizeListingFromApi — category ni STRING kila mara
 //    (React Error #31: "Objects are not valid as a React child")
 // ============================================================
 import { useEffect, useMemo, useState } from "react";
@@ -337,7 +337,7 @@ export function useMyListings() { return useStoreValue(getMyListings); }
 
 // ============================================================
 // usePublicListings
-// ⬇️ Marekebisho: "sold" IMEONDOLEWA — haionekani kwenye kurasa za umma.
+// Marekebisho: "sold" IMEONDOLEWA — haionekani kwenye kurasa za umma.
 // ============================================================
 export function usePublicListings() {
   const listings = useStoreValue(getPublicListings);
@@ -458,13 +458,13 @@ export function normalizeListingFromApi(raw, fallbackStatus = "pending_approval"
   }
 
   // ─────────────────────────────────────────────────────────
-  // ✅ CATEGORY — LAZIMA iwe STRING (slug)
+  // CATEGORY — LAZIMA iwe STRING (slug)
   // Backend inaweza kurudisha:
-  //   - raw.category = "nyumba" (string slug) ✅
-  //   - raw.category = 5 (FK id number) ⚠️
-  //   - raw.category = {id, name, slug} (object) ⚠️
-  //   - raw.category_slug = "nyumba" (string) ✅
-  //   - raw.category_id = 5 (number) ⚠️
+  //   - raw.category = "nyumba" (string slug) 
+  //   - raw.category = 5 (FK id number) 
+  //   - raw.category = {id, name, slug} (object) 
+  //   - raw.category_slug = "nyumba" (string) 
+  //   - raw.category_id = 5 (number) 
   // ─────────────────────────────────────────────────────────
   const categoryObj = raw.category;
 
@@ -485,14 +485,14 @@ export function normalizeListingFromApi(raw, fallbackStatus = "pending_approval"
     rawCategorySlug = String(raw.category_slug);
   }
 
-  // ✅ Normalize kwa seed key (mfano "nyumba-majengo" → "nyumba")
+  // Normalize kwa seed key (mfano "nyumba-majengo" → "nyumba")
   // Hii inahakikisha `category` ni STRING inayolingana na `cat.key`
   // kwenye categoriesStore (frontend)
   const category = rawCategorySlug
     ? (getSeedKeyFromSlug(rawCategorySlug) || rawCategorySlug)
     : null;
 
-  // ✅ categoryId — number au null, kwa filtering
+  // categoryId — number au null, kwa filtering
   let categoryId = null;
   if (categoryObj && typeof categoryObj === "object" && categoryObj.id != null) {
     const n = Number(categoryObj.id);
@@ -569,9 +569,9 @@ export function normalizeListingFromApi(raw, fallbackStatus = "pending_approval"
     title: raw.title || raw.name || "",
     description: raw.description || "",
     price: Number(raw.price) || 0,
-    // ✅ category ni STRING (slug) — sio object
+    // category ni STRING (slug) — sio object
     category,
-    // ✅ categoryId ni number au null
+    // categoryId ni number au null
     categoryId,
     location: raw.location || raw.region || raw.address || "",
     attributes: raw.attributes || {},
@@ -1093,7 +1093,7 @@ export async function publishListingAsync(id) {
 
 // ============================================================
 // MARK AS SOLD
-// ⬇️ Marekebisho: tumia listingsApi.markSold (sio updateListingAsync)
+// Marekebisho: tumia listingsApi.markSold (sio updateListingAsync)
 //    ili backend iweze kutuma notification kwa admins.
 // ============================================================
 export async function markSoldAsync(id) {
@@ -1248,7 +1248,7 @@ export async function fetchListingDetailAsync(id) {
       if (
         !inPub &&
         !inMine &&
-        ["live", "reserved"].includes(normalized.status)  // ⬅️ "sold" imeondolewa
+        ["live", "reserved"].includes(normalized.status)  // "sold" imeondolewa
       ) {
         savePublicListings([normalized, ...readKey(PUBLIC_KEY)]);
       }

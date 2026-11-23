@@ -138,7 +138,7 @@ function MethodOption({ method, selected, onSelect, disabled }) {
       disabled={disabled}
       style={{
         borderColor: selected ? COLORS.gold : COLORS.sandLine,
-        background: selected ? "rgba(232,163,61,0.08)" : "white",
+        background: selected ? "rgba(254,164,6,0.08)" : "white",
       }}
       className="flex items-center justify-center gap-3 p-3 rounded-xl border text-center transition-colors disabled:opacity-50"
     >
@@ -487,8 +487,8 @@ export default function PaymentGateway({
   const TestModeBadge = () =>
     simulated ? (
       <span
-        className="inline-block text-[10px] font-bold px-2 py-1 rounded-full"
-        style={{ background: "rgba(232,163,61,0.15)", color: "#8A5A16" }}
+        className="inline-block text-xs font-bold px-2 py-1 rounded-full"
+        style={{ background: "rgba(254,164,6,0.15)", color: COLORS.goldText }}
       >
         TEST MODE
       </span>
@@ -502,7 +502,7 @@ export default function PaymentGateway({
   if (stage === "SUCCESS") {
     return (
       <div
-        style={{ borderColor: COLORS.sandLine, background: "white" }}
+        style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
         className="rounded-2xl border p-8 text-center"
         aria-live="polite"
       >
@@ -524,7 +524,7 @@ export default function PaymentGateway({
           </p>
         )}
         {transid && (
-          <p className="text-[11px] text-muted font-mono mb-3">
+          <p className="text-xs text-muted font-mono mb-3">
             {sw ? "Kumbukumbu" : "Reference"}: {transid}
           </p>
         )}
@@ -537,12 +537,12 @@ export default function PaymentGateway({
   if (stage === "PROCESSING") {
     return (
       <div
-        style={{ borderColor: COLORS.sandLine, background: "white" }}
+        style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
         className="rounded-2xl border p-6 text-center"
         aria-live="polite"
       >
         <div
-          style={{ background: "rgba(232,163,61,0.15)" }}
+          style={{ background: "rgba(254,164,6,0.15)" }}
           className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
         >
           <Clock size={24} color={COLORS.gold} />
@@ -557,7 +557,7 @@ export default function PaymentGateway({
               : "Your payment is still being processed. If you already entered your PIN, do not pay again — press 'Check again'.")}
         </p>
         {orderId && (
-          <p className="text-[10px] text-muted font-mono mb-4">
+          <p className="text-xs text-muted font-mono mb-4">
             {sw ? "Order" : "Order"}: {orderId}
           </p>
         )}
@@ -586,7 +586,7 @@ export default function PaymentGateway({
   if (stage === "REDIRECTING") {
     return (
       <div
-        style={{ borderColor: COLORS.sandLine, background: "white" }}
+        style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
         className="rounded-2xl border p-8 text-center"
       >
         <ExternalLink size={28} className="mx-auto mb-3" color={COLORS.gold} />
@@ -595,7 +595,7 @@ export default function PaymentGateway({
             ? "Unahamishwa kwenye ukurasa wa malipo..."
             : "Redirecting to payment page..."}
         </p>
-        <p className="text-[11px] text-muted mb-4">
+        <p className="text-xs text-muted mb-4">
           {sw
             ? "Usifunge ukurasa huu."
             : "Do not close this page."}
@@ -609,7 +609,7 @@ export default function PaymentGateway({
   if (stage === "INITIATING") {
     return (
       <div
-        style={{ borderColor: COLORS.sandLine, background: "white" }}
+        style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
         className="rounded-2xl border p-8 text-center"
       >
         <Loader2 size={28} className="animate-spin mx-auto mb-3" color={COLORS.gold} />
@@ -624,14 +624,14 @@ export default function PaymentGateway({
   if (stage === "POLLING") {
     return (
       <div
-        style={{ borderColor: COLORS.sandLine, background: "white" }}
+        style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
         className="rounded-2xl border p-6 text-center"
         aria-live="polite"
       >
         {simulated && (
           <div
-            className="rounded-lg px-3 py-2 mb-3 text-[11px] font-semibold"
-            style={{ background: "rgba(232,163,61,0.12)", color: "#8A5A16" }}
+            className="rounded-lg px-3 py-2 mb-3 text-xs font-semibold"
+            style={{ background: "rgba(254,164,6,0.12)", color: COLORS.goldText }}
           >
             TEST MODE —{" "}
             {sw
@@ -661,17 +661,17 @@ export default function PaymentGateway({
           </span>
         </div>
         {pollStatus && (
-          <p className="text-[11px] text-muted mb-2">
+          <p className="text-xs text-muted mb-2">
             Status: {pollStatus}
           </p>
         )}
         {pollError && (
-          <p className="text-[11px] mb-3" style={{ color: COLORS.rust }}>
+          <p className="text-xs mb-3" style={{ color: COLORS.rust }}>
             {pollError}
           </p>
         )}
         {orderId && (
-          <p className="text-[10px] text-muted font-mono mb-4">
+          <p className="text-xs text-muted font-mono mb-4">
             {sw ? "Order" : "Order"}: {orderId}
           </p>
         )}
@@ -689,7 +689,7 @@ export default function PaymentGateway({
   if (stage === "FAILED") {
     return (
       <div
-        style={{ borderColor: COLORS.sandLine, background: "white" }}
+        style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
         className="rounded-2xl border p-6 text-center"
         aria-live="assertive"
       >
@@ -708,7 +708,7 @@ export default function PaymentGateway({
         <div className="flex flex-col sm:flex-row gap-2">
           <button
             onClick={handleCancel}
-            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-secondary"
+            className="flex-1 py-2.5 rounded-xl border border-hairline text-sm font-semibold text-secondary"
           >
             {sw ? "Ghairi" : "Cancel"}
           </button>
@@ -729,7 +729,7 @@ export default function PaymentGateway({
   // ═════════════════════════════════════════════════════════
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
       className="rounded-2xl border p-5"
     >
       <div className="flex justify-center mb-3">
@@ -758,7 +758,7 @@ export default function PaymentGateway({
         {sw ? "Chagua Njia ya Malipo" : "Choose Payment Method"}
       </p>
 
-      <p className="text-[11px] font-semibold text-secondary uppercase mb-1.5 tracking-wide">
+      <p className="text-xs font-semibold text-secondary uppercase mb-1.5 tracking-wide">
         {sw ? "Malipo ya Simu" : "Mobile Money"}
       </p>
       <div className="flex flex-col gap-2 mb-4">
@@ -773,7 +773,7 @@ export default function PaymentGateway({
         ))}
       </div>
 
-      <p className="text-[11px] font-semibold text-secondary uppercase mb-1.5 tracking-wide">
+      <p className="text-xs font-semibold text-secondary uppercase mb-1.5 tracking-wide">
         {sw ? "Kadi / Benki" : "Card / Bank"}
       </p>
       <div className="flex flex-col gap-2 mb-4">
@@ -811,7 +811,7 @@ export default function PaymentGateway({
             disabled={stage !== "SELECT"}
           />
           {phone && !phoneValid && (
-            <span className="text-[11px]" style={{ color: COLORS.rust }}>
+            <span className="text-xs" style={{ color: COLORS.rust }}>
               {sw
                 ? "Weka namba sahihi ya Tanzania (mf. 0712345678)."
                 : "Enter a valid Tanzania number (e.g. 0712345678)."}
@@ -822,7 +822,7 @@ export default function PaymentGateway({
 
       {isCard && (
         <div
-          className="rounded-lg px-3 py-2.5 mb-4 text-[11px] flex items-start gap-2"
+          className="rounded-lg px-3 py-2.5 mb-4 text-xs flex items-start gap-2"
           style={{ background: "rgba(47,109,79,0.08)", color: COLORS.green }}
         >
           <ExternalLink size={12} className="shrink-0 mt-0.5" />
@@ -850,7 +850,7 @@ export default function PaymentGateway({
         disabled={!canPay}
         style={{
           background: canPay ? COLORS.gold : COLORS.sandLine,
-          color: canPay ? COLORS.night : "rgba(16,26,46,0.4)",
+          color: canPay ? COLORS.night : "rgba(1,25,87,0.4)",
         }}
         className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm mb-3 disabled:cursor-not-allowed"
       >
@@ -864,7 +864,7 @@ export default function PaymentGateway({
       </button>
 
       <p className="text-muted flex items-start justify-center gap-1.5 text-body-sm leading-snug text-center">
-        <ShieldCheck size={13} className="shrink-0 mt-0.5" />
+        <ShieldCheck size={14} className="shrink-0 mt-0.5" />
         <span>
           {sw
             ? "Malipo yako yanalindwa. Hatuna uwezo wa kuona PIN au taarifa za kadi yako."

@@ -2,19 +2,19 @@
 // MyReservationsPage.jsx — FINAL (B.6) — Imethibitishwa kwa backend
 //
 // Marekebisho:
-//  ✅ Polling kila sekunde 60 (usePollingRefresh)
-//  ✅ Timestamp "Imesasishwa" + Refresh button
-//  ✅ Banner ya "inaisha hivi karibuni" (< saa 1 / < saa 24)
-//  ✅ Disclaimer wazi ya "non-refundable" kwenye kila active
-//  ✅ Onyesha transaction_id (#) kwa support/refund requests
-//  ✅ Fix: onOpenDeal inatumia deal_room_id kutoka serializer
-//  ✅ History: onyesha zote (hakuna limit ya siku 30)
-//  ✅ Thibitisha: transaction_id ipo kwenye MyReservationSerializer
-//  ✅ Thibitisha: endpoint /transactions/reservations/ ipo
-//  ✅ Fix: useCountdown inaitwa bila masharti (Rules of Hooks)
-//  ✅ Fix: 'now' imara (useMemo) — active/past hazihesabiwi upya kila render
-//  ✅ Fix: polling haifichi orodha (loading ni ya mara ya kwanza tu)
-//  ✅ Fix: 403 → ujumbe wa kirafiki + polling inasimama hadi mtumiaji abonyeze Sasisha
+//  Polling kila sekunde 60 (usePollingRefresh)
+//  Timestamp "Imesasishwa" + Refresh button
+//  Banner ya "inaisha hivi karibuni" (< saa 1 / < saa 24)
+//  Disclaimer wazi ya "non-refundable" kwenye kila active
+//  Onyesha transaction_id (#) kwa support/refund requests
+//  Fix: onOpenDeal inatumia deal_room_id kutoka serializer
+//  History: onyesha zote (hakuna limit ya siku 30)
+//  Thibitisha: transaction_id ipo kwenye MyReservationSerializer
+//  Thibitisha: endpoint /transactions/reservations/ ipo
+//  Fix: useCountdown inaitwa bila masharti (Rules of Hooks)
+//  Fix: 'now' imara (useMemo) — active/past hazihesabiwi upya kila render
+//  Fix: polling haifichi orodha (loading ni ya mara ya kwanza tu)
+//  Fix: 403 → ujumbe wa kirafiki + polling inasimama hadi mtumiaji abonyeze Sasisha
 // ============================================================
 import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
@@ -245,7 +245,7 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
     }
     setBusy("extend");
     try {
-      // ✅ Backend: POST /transactions/{id}/extend-reservation/
+      // Backend: POST /transactions/{id}/extend-reservation/
       //    Body: { additional_hours: N }
       const res = await api.post(`/transactions/${transactionId}/extend-reservation/`, {
         additional_hours: hours,
@@ -286,7 +286,7 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
     if (!confirmed) return;
     setBusy("cancel");
     try {
-      // ✅ Backend: POST /transactions/{id}/remove-reservation/
+      // Backend: POST /transactions/{id}/remove-reservation/
       await api.post(`/transactions/${transactionId}/remove-reservation/`, {});
       alert(t("Reservation imeondolewa.", "Reservation removed."));
       onRefresh?.();
@@ -480,7 +480,7 @@ export default function MyReservationsPage() {
   const [forbidden, setForbidden] = useState(false);
   const hasLoadedRef = useRef(false);
 
-  // ✅ Backend: TransactionViewSet.reservations() → GET /transactions/reservations/
+  // Backend: TransactionViewSet.reservations() → GET /transactions/reservations/
   const fetchReservations = useCallback(async () => {
     // Onyesha loader mara ya kwanza tu — polling isifiche orodha kila dakika
     if (!hasLoadedRef.current) setLoading(true);
@@ -513,7 +513,7 @@ export default function MyReservationsPage() {
     }
   }, [lang]);
 
-  // ✅ Polling kila sekunde 60
+  // Polling kila sekunde 60
   const { refresh, isRefreshing, lastRefreshedAt } = usePollingRefresh(
     fetchReservations,
     { intervalMs: POLL_INTERVAL_MS, enabled: Boolean(user?.id) && !forbidden }

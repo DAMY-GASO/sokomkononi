@@ -73,8 +73,8 @@ export default function LeadsSection({ onNavigate }) {
       },
       responded: {
         label: t("Imejibiwa", "Responded"),
-        bg: "rgba(37,99,235,0.12)",
-        fg: "#2563EB",
+        bg: "rgba(0,98,253,0.12)",
+        fg: COLORS.royal,
       },
       converted: {
         label: t("Imegeuka Deal", "Converted"),
@@ -83,7 +83,7 @@ export default function LeadsSection({ onNavigate }) {
       },
       ignored: {
         label: t("Imepuuzwa", "Ignored"),
-        bg: "rgba(16,26,46,0.08)",
+        bg: "rgba(1,25,87,0.08)",
         fg: COLORS.night,
       },
     };
@@ -186,7 +186,7 @@ export default function LeadsSection({ onNavigate }) {
                   key={tab.key}
                   onClick={() => setFilter(tab.key)}
                   style={{
-                    background: active ? COLORS.night : "white",
+                    background: active ? COLORS.night : "rgb(var(--c-card))",
                     color: active ? COLORS.sand : COLORS.night,
                     borderColor: COLORS.sandLine,
                   }}
@@ -196,7 +196,7 @@ export default function LeadsSection({ onNavigate }) {
                   <span
                     style={{
                       background: active
-                        ? "rgba(245,243,236,0.18)"
+                        ? "rgba(244,247,252,0.18)"
                         : COLORS.sandLine,
                       color: active ? COLORS.sand : COLORS.night,
                     }}
@@ -214,7 +214,7 @@ export default function LeadsSection({ onNavigate }) {
         {filtered.length === 0 ? (
           <div
             style={{ borderColor: COLORS.sandLine }}
-            className="rounded-2xl border-2 border-dashed p-10 text-center bg-white"
+            className="rounded-2xl border-2 border-dashed p-10 text-center bg-card"
           >
             <Inbox size={48} className="mx-auto text-muted mb-3" />
             <h3 className="text-primary font-semibold mb-1">
@@ -239,7 +239,7 @@ export default function LeadsSection({ onNavigate }) {
               return (
                 <div
                   key={lead.id}
-                  style={{ borderColor: COLORS.sandLine, background: "white" }}
+                  style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
                   className="rounded-xl border p-4"
                 >
                   {/* Header */}
@@ -248,8 +248,8 @@ export default function LeadsSection({ onNavigate }) {
                       <div className="flex items-center gap-2 flex-wrap mb-1">
                         <span
                           style={{
-                            background: status?.bg || "#F5F3EC",
-                            color: status?.fg || "#101A2E",
+                            background: status?.bg || COLORS.sand,
+                            color: status?.fg || COLORS.night,
                           }}
                           className="text-body-sm font-bold px-2 py-0.5 rounded-full shrink-0"
                         >
@@ -296,7 +296,7 @@ export default function LeadsSection({ onNavigate }) {
                         borderColor: COLORS.sandLine,
                         color: COLORS.night,
                       }}
-                      className="flex items-center gap-1.5 text-btn font-semibold px-3 py-2 rounded-lg border hover:bg-gray-50 transition-colors"
+                      className="flex items-center gap-1.5 text-btn font-semibold px-3 py-2 rounded-lg border hover:bg-page transition-colors"
                     >
                       <ExternalLink size={12} />
                       {t("Angalia Mali", "View Listing")}
@@ -323,7 +323,7 @@ export default function LeadsSection({ onNavigate }) {
                         borderColor: COLORS.sandLine,
                         color: COLORS.night,
                       }}
-                      className="flex items-center gap-1.5 text-btn font-semibold px-3 py-2 rounded-lg border hover:bg-gray-50 transition-colors"
+                      className="flex items-center gap-1.5 text-btn font-semibold px-3 py-2 rounded-lg border hover:bg-page transition-colors"
                     >
                       <MessageSquare size={12} />
                       {t("Nenda Deal Room", "Go to Deal Room")}
@@ -332,7 +332,7 @@ export default function LeadsSection({ onNavigate }) {
                     <button
                       onClick={() => handleRemove(lead.id)}
                       disabled={isBusy}
-                      className="ml-auto flex items-center gap-1 text-btn font-semibold px-2 py-2 rounded-lg text-muted hover:text-[#C1502E] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="ml-auto flex items-center gap-1 text-btn font-semibold px-2 py-2 rounded-lg text-muted hover:text-rust transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       <Trash2 size={12} />
                     </button>

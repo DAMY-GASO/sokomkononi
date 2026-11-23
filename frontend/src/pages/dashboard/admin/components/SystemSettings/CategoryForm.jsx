@@ -6,7 +6,7 @@
 // ============================================================
 
 import React, { useState, useRef } from "react";
-import { X, ImagePlus, Loader2, ChevronDown, Search } from "lucide-react";
+import { X, ImagePlus, Loader2, ChevronDown, Search, AlertTriangle } from "lucide-react";
 import { COLORS } from "../../shared/constants.js";
 import { useLanguage } from "../../../../../context/LanguageContext.jsx";
 import { AVAILABLE_ICONS } from "../../../../../config/categoriesStore.js";
@@ -598,12 +598,12 @@ export default function CategoryForm({
           <p style={{ color: COLORS.dangerText }} className="text-xs leading-relaxed">
             {lang === "sw" ? (
               <>
-                ⚠️ Baada ya kuunda category hii, <b>LAZIMA</b> uende{" "}
+                <AlertTriangle size={12} className="inline -mt-0.5 mr-1" />Baada ya kuunda category hii, <b>LAZIMA</b> uende{" "}
                 <b>Revenue &gt; Listing Fee</b> na uongeze fee config yake.
               </>
             ) : (
               <>
-                ⚠️ After creating this category, you <b>MUST</b> go to{" "}
+                <AlertTriangle size={12} className="inline -mt-0.5 mr-1" />After creating this category, you <b>MUST</b> go to{" "}
                 <b>Revenue &gt; Listing Fee</b> and add its fee config.
               </>
             )}

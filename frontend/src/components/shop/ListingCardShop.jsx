@@ -4,6 +4,7 @@ import { Heart, Eye, MapPin, ShieldCheck, ArrowRight } from "lucide-react";
 import ListingImage from "../ListingImage.jsx";
 import { isBoostActive } from "../../utils/listings.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
+import { COLORS } from "..\..\pages\dashboard\components\shared.js";
 
 function formatTZS(amount) {
   return "TZS " + Math.round(amount || 0).toLocaleString("en-US");
@@ -40,16 +41,16 @@ function getPhotos(listing) {
 // Trending kwenye HomePage (#E8590C) ili zisichanganywe na Featured/Advertised.
 function Badge({ kind, lang }) {
   const defs = {
-    new:     { label: { sw: "MPYA",        en: "NEW" },       bg: "#2F6D4F" },
-    sale:    { label: { sw: "PUNGUZO",     en: "SALE" },      bg: "#C1502E" },
-    hot:     { label: { sw: "MOTO",        en: "HOT" },       bg: "#FEA406", ink: "#011957" },
+    new:     { label: { sw: "MPYA",        en: "NEW" },       bg: COLORS.green },
+    sale:    { label: { sw: "PUNGUZO",     en: "SALE" },      bg: COLORS.rust },
+    hot:     { label: { sw: "MOTO",        en: "HOT" },       bg: COLORS.gold, ink: "#011957" },
     boost:   { label: { sw: "INAVUMA",     en: "TRENDING" },  bg: "#E8590C", ink: "#FFFFFF" },
   };
   const d = defs[kind];
   if (!d) return null;
   return (
     <span
-      className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wide"
+      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold tracking-wide"
       style={{ background: d.bg, color: d.ink || "#FFFFFF" }}
     >
       {d.label[lang] || d.label.sw}
@@ -137,7 +138,7 @@ export default function ListingCardShop({
                     ) : null
                   }
                 />
-                <span className="pointer-events-none absolute bottom-3 right-3 z-10 inline-flex items-center gap-1 rounded-full bg-black/60 backdrop-blur-sm px-2 py-0.5 text-[10px] font-medium text-white">
+                <span className="pointer-events-none absolute bottom-3 right-3 z-10 inline-flex items-center gap-1 rounded-full bg-black/60 backdrop-blur-sm px-2 py-0.5 text-xs font-medium text-white">
                   {idx + 1}/{photos.length}
                 </span>
               </div>
@@ -159,7 +160,7 @@ export default function ListingCardShop({
             <Badge key={i} kind={b} lang={lang} />
           ))}
           {verified && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-white/95 text-[#011957] shadow-sm">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-white/95 text-night shadow-sm">
               <ShieldCheck size={10} />
               {lang === "sw" ? "IMETHIBITISHWA" : "VERIFIED"}
             </span>
@@ -179,17 +180,17 @@ export default function ListingCardShop({
             className={`absolute right-2.5 top-2.5 sm:right-3 sm:top-3 z-20 flex h-10 w-10 sm:h-9 sm:w-9 items-center justify-center rounded-full border transition-colors backdrop-blur-sm ${
               isSaved
                 ? "bg-rust border-rust text-white"
-                : "bg-white/95 border-white/80 text-night hover:bg-white dark:bg-black/55 dark:border-white/25 dark:text-white dark:hover:bg-black/75"
+                : "bg-white/95 border-white/80 text-night hover:bg-card dark:bg-black/55 dark:border-white/25 dark:text-white dark:hover:bg-black/75"
             }`}
           >
-            <Heart size={15} fill={isSaved ? "currentColor" : "none"} />
+            <Heart size={16} fill={isSaved ? "currentColor" : "none"} />
           </button>
         )}
 
         {/* Hover CTA overlay */}
         <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-t from-black/70 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
           <span
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-[#011957] translate-y-3 group-hover:translate-y-0 transition-transform duration-300"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-night translate-y-3 group-hover:translate-y-0 transition-transform duration-300"
             style={{
               background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)",
             }}
@@ -201,26 +202,26 @@ export default function ListingCardShop({
 
       {/* Body */}
       <div className="flex flex-1 flex-col p-3.5 sm:p-4">
-        <p className="text-[10px] font-bold uppercase tracking-wide text-muted truncate">
+        <p className="text-xs font-bold uppercase tracking-wide text-muted truncate">
           {catLabel}
         </p>
         <h3 className="mt-1 text-sm font-semibold leading-snug text-primary line-clamp-2 min-h-[2.4rem]">
           {listing.title}
         </h3>
 
-        <div className="mt-2 flex items-center gap-3 text-[11px] text-secondary flex-wrap">
+        <div className="mt-2 flex items-center gap-3 text-xs text-secondary flex-wrap">
           <span className="flex items-center gap-1">
-            <Eye size={11} /> {(listing.views || 0).toLocaleString()}
+            <Eye size={12} /> {(listing.views || 0).toLocaleString()}
           </span>
           {listing.region && (
             <span className="flex items-center gap-1 min-w-0">
-              <MapPin size={11} className="shrink-0" />
+              <MapPin size={12} className="shrink-0" />
               <span className="truncate max-w-[130px]">{listing.region}</span>
             </span>
           )}
         </div>
 
-        <p className="mt-3 text-base sm:text-lg font-bold text-night dark:text-[#FEA406] break-words">
+        <p className="mt-3 text-base sm:text-lg font-bold text-night dark:text-gold-ink break-words">
           {formatTZS(listing.price)}
         </p>
       </div>

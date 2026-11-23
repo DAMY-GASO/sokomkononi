@@ -3,12 +3,12 @@
 // B.4 — FINAL v2
 //
 // Marekebisho:
-//  ✅ Bulk delete undo — item MOJA kwa kundi (si per-item)
-//  ✅ Single delete undo — inathibitisha { ok: false }
-//  ✅ Polling kila sekunde 60 (listings zinabaki fresh)
-//  ✅ Timestamp "Imesasishwa" + kitufe cha Refresh
-//  ✅ Analytics modal kwa kila listing
-//  ✅ Fix: duplicate inatumia category (backend inahitaji fix pia)
+//  Bulk delete undo — item MOJA kwa kundi (si per-item)
+//  Single delete undo — inathibitisha { ok: false }
+//  Polling kila sekunde 60 (listings zinabaki fresh)
+//  Timestamp "Imesasishwa" + kitufe cha Refresh
+//  Analytics modal kwa kila listing
+//  Fix: duplicate inatumia category (backend inahitaji fix pia)
 // ============================================================
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
@@ -701,7 +701,7 @@ export default function MyListings({
   const [markingSold, setMarkingSold] = useState(false);
   const [analyticsListingId, setAnalyticsListingId] = useState(null);
 
-  // ✅ Polling
+  // Polling
   const pollFetcher = useCallback(async () => {
     await fetchMyListingsFromApi({ force: true });
   }, []);
@@ -894,7 +894,7 @@ export default function MyListings({
       else failed += 1;
     }
 
-    // ✅ FIX: Undo ya bulk delete — item MOJA kwa kundi
+    // FIX: Undo ya bulk delete — item MOJA kwa kundi
     if (kind === "delete" && succeededItems.length > 0) {
       const ids = succeededItems.map((l) => l.id);
       const titles = succeededItems.map((l) => l.title).filter(Boolean);
@@ -1052,7 +1052,7 @@ export default function MyListings({
       return;
     }
 
-    // ✅ FIX: Single delete undo — thibitisha { ok } ili tusiseme "success" ikiwa imeshindwa
+    // FIX: Single delete undo — thibitisha { ok } ili tusiseme "success" ikiwa imeshindwa
     startUndo({
       type: "listing",
       id,

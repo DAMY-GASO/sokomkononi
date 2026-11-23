@@ -2,15 +2,15 @@
 // SavedPropertiesPage.jsx — B.8 FINAL
 //
 // Marekebisho:
-//  ✅ Tumia `usePublicListings()` badala ya `getListings()`
+//  Tumia `usePublicListings()` badala ya `getListings()`
 //     - Inahydrate kutoka API
 //     - Inasikiliza `sokomkononi:listings-updated`
 //     - Inareact kwa mabadiliko ya bei/status
-//  ✅ Ongeza timestamp "Ilipohifadhiwa" kwenye kila card
-//  ✅ Badge ya "Imeshuka Bei" au "Imehifadhiwa" (comparison na snapshot)
-//  ✅ Empty state ipo tayari (hakuna kubadilisha)
-//  ✅ Search ipo tayari (hakuna kubadilisha)
-//  ✅ Grid/List ipo tayari (hakuna kubadilisha)
+//  Ongeza timestamp "Ilipohifadhiwa" kwenye kila card
+//  Badge ya "Imeshuka Bei" au "Imehifadhiwa" (comparison na snapshot)
+//  Empty state ipo tayari (hakuna kubadilisha)
+//  Search ipo tayari (hakuna kubadilisha)
+//  Grid/List ipo tayari (hakuna kubadilisha)
 // ============================================================
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -37,7 +37,7 @@ export default function SavedPropertiesPage() {
   const toast = useToast();
   const savedIds = useSavedIds();
   const snapshots = useSavedSnapshots();
-  // ✅ FIX: usePublicListings() — reactive, inahydrate kutoka API
+  // FIX: usePublicListings() — reactive, inahydrate kutoka API
   const allListings = usePublicListings();
   const [viewMode, setViewMode] = useState("grid");
   const [searchQuery, setSearchQuery] = useState("");
@@ -54,7 +54,7 @@ export default function SavedPropertiesPage() {
     };
   }, []);
 
-  // ✅ Tengeneza saved listings kutoka `usePublicListings` + snapshots
+  // Tengeneza saved listings kutoka `usePublicListings` + snapshots
   const saved = useMemo(() => {
     const byId = new Map(allListings.map((l) => [String(l.id), l]));
     const result = [];
@@ -117,7 +117,7 @@ export default function SavedPropertiesPage() {
     }
   };
 
-  // ✅ Onyesha kama bei imeshuka (snapshot vs live price)
+  // Onyesha kama bei imeshuka (snapshot vs live price)
   const priceDrop = (p) => {
     if (p.removed || p.snapshotPrice == null) return null;
     const live = Number(p.price) || 0;
@@ -193,12 +193,12 @@ export default function SavedPropertiesPage() {
                   "Search in saved..."
                 )}
                 style={{
-                  background: "white",
+                  background: "rgb(var(--c-card))",
                   borderColor: COLORS.sandLine,
                   color: "var(--text-primary)",
                   WebkitAppearance: "none",
                 }}
-                className="w-full rounded-xl border pl-3 pr-10 py-2.5 text-sm outline-none text-center focus:outline-none focus-visible:outline-none focus:border-[#FEA406]"
+                className="w-full rounded-xl border pl-3 pr-10 py-2.5 text-sm outline-none text-center focus:outline-none focus-visible:outline-none focus:border-gold"
               />
               <Search
                 size={16}
@@ -212,7 +212,7 @@ export default function SavedPropertiesPage() {
               <button
                 onClick={() => setViewMode("grid")}
                 style={{
-                  background: viewMode === "grid" ? COLORS.night : "white",
+                  background: viewMode === "grid" ? COLORS.night : "rgb(var(--c-card))",
                   color:
                     viewMode === "grid"
                       ? COLORS.sand
@@ -226,7 +226,7 @@ export default function SavedPropertiesPage() {
               <button
                 onClick={() => setViewMode("list")}
                 style={{
-                  background: viewMode === "list" ? COLORS.night : "white",
+                  background: viewMode === "list" ? COLORS.night : "rgb(var(--c-card))",
                   color:
                     viewMode === "list"
                       ? COLORS.sand
@@ -251,7 +251,7 @@ export default function SavedPropertiesPage() {
         ) : filtered.length === 0 ? (
           <div
             style={{ borderColor: COLORS.sandLine }}
-            className="rounded-2xl border-2 border-dashed p-12 text-center bg-white"
+            className="rounded-2xl border-2 border-dashed p-12 text-center bg-card"
           >
             <Heart size={48} className="mx-auto text-muted mb-3" />
             <h3
@@ -301,11 +301,11 @@ export default function SavedPropertiesPage() {
                     key={p.id}
                     style={{
                       borderColor: COLORS.sandLine,
-                      background: "white",
+                      background: "rgb(var(--c-card))",
                     }}
                     className="rounded-2xl border p-4 flex flex-col gap-2 opacity-70"
                   >
-                    <div className="flex items-start gap-2 text-xs font-semibold text-[#C1502E]">
+                    <div className="flex items-start gap-2 text-xs font-semibold text-rust">
                       <AlertTriangle size={14} />
                       {t(
                         "Tangazo hili halipo tena",
@@ -325,14 +325,14 @@ export default function SavedPropertiesPage() {
                       {formatTZS(p.price)}
                     </p>
                     {p.savedAt && (
-                      <p className="text-[11px] text-muted">
+                      <p className="text-xs text-muted">
                         {t("Ilipohifadhiwa", "Saved")}{" "}
                         {timeAgo(p.savedAt, lang)}
                       </p>
                     )}
                     <button
                       onClick={() => handleRemove(p.id)}
-                      className="mt-1 self-start text-xs font-semibold text-[#C1502E] hover:underline"
+                      className="mt-1 self-start text-xs font-semibold text-rust hover:underline"
                     >
                       {t("Ondoa kwenye zilizohifadhiwa", "Remove from saved")}
                     </button>
@@ -343,7 +343,7 @@ export default function SavedPropertiesPage() {
               const cat = getCategory(p.category);
               const drop = priceDrop(p);
 
-              // ✅ Ongeza badge ya "Bei imeshuka" kwenye listing card
+              // Ongeza badge ya "Bei imeshuka" kwenye listing card
               return (
                 <div key={p.id} className="relative">
                   <ListingCard
@@ -357,7 +357,7 @@ export default function SavedPropertiesPage() {
                   />
                   {drop && (
                     <div
-                      className="absolute top-2 right-2 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold shadow-md"
+                      className="absolute top-2 right-2 flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold shadow-md"
                       style={{ background: COLORS.green, color: "white" }}
                       title={t(
                         `Bei imeshuka kutoka ${formatTZS(

@@ -7,7 +7,7 @@
 //   PATCH/DEL  /api/reservation-tiers/{id}/
 //   POST       /api/reservation-tiers/{id}/toggle/
 //
-// ✅ FIX #2: DEFAULT_SETTINGS.is_enabled = null (haijulikani) + loaded flag.
+// FIX #2: DEFAULT_SETTINGS.is_enabled = null (haijulikani) + loaded flag.
 //            Toggle haionyeshwi ON hadi hydrate ikamilike.
 // ============================================================
 import { useEffect, useState } from "react";
@@ -18,7 +18,7 @@ const SETTINGS_KEY = "sokomkononi_reservation_settings_v1";
 const TIERS_KEY = "sokomkononi_reservation_tiers_v1";
 const EV = "sokomkononi:reservation-updated";
 
-// ✅ FIX #2: is_enabled = null (haijulikani) — si true
+// FIX #2: is_enabled = null (haijulikani) — si true
 const DEFAULT_SETTINGS = {
   is_enabled: null,
   loaded: false,
@@ -82,12 +82,12 @@ function writeTiers(list) {
 function normSettings(raw) {
   if (!raw) return null;
   return {
-    // ✅ FIX #2: is_enabled inaweza kuwa null kama backend haikurudisha
+    // FIX #2: is_enabled inaweza kuwa null kama backend haikurudisha
     is_enabled:
       raw.is_enabled === undefined || raw.is_enabled === null
         ? null
         : raw.is_enabled !== false,
-    loaded: true, // ✅ FIX #2: hydrate imefanikiwa
+    loaded: true, // FIX #2: hydrate imefanikiwa
     updated_at: raw.updated_at || null,
   };
 }
@@ -138,7 +138,7 @@ async function _hydrateReservationFromApi() {
     }
   } catch (err) {
     console.warn("[feePolicy] settings hydrate failed:", err?.message);
-    // ✅ FIX #2: usibadilishe is_enabled kuwa true — ibaki null,
+    // FIX #2: usibadilishe is_enabled kuwa true — ibaki null,
     //    lakini weka loaded: true ili UI ionyeshe "imeshindwa"
     //    (si "inapakia" milele)
     writeSettings({
@@ -156,7 +156,7 @@ async function _hydrateReservationFromApi() {
     result.tiers = norm;
   } catch (err) {
     console.warn("[feePolicy] tiers hydrate failed:", err?.message);
-    // ✅ Fallback TU baada ya API kushindikana na localStorage iko empty
+    // Fallback TU baada ya API kushindikana na localStorage iko empty
     if (readTiers().length === 0) {
       console.info("[feePolicy] using fallback tiers (API unavailable)");
       writeTiers(FALLBACK_TIERS);
@@ -168,7 +168,7 @@ async function _hydrateReservationFromApi() {
   return result;
 }
 
-// ✅ guarded() — dedupes concurrent calls, TTL 1.5s
+// guarded() — dedupes concurrent calls, TTL 1.5s
 //    (fix #1 real: race protection kwa forceRefresh)
 export const hydrateReservationFromApi = guarded(_hydrateReservationFromApi, {
   key: "feePolicy:hydrate",
@@ -176,13 +176,13 @@ export const hydrateReservationFromApi = guarded(_hydrateReservationFromApi, {
 
 // ============================================================
 // SETTINGS — toggle
-// ✅ FIX #2: haifanyi chochote kama loaded === false
-// ✅ FIX #5: inahydrate baada ya toggle kufanikiwa
+// FIX #2: haifanyi chochote kama loaded === false
+// FIX #5: inahydrate baada ya toggle kufanikiwa
 // ============================================================
 export async function toggleReservationFeeAsync() {
   const cur = readSettings();
 
-  // ✅ FIX #2: usiruhusu toggle kabla hydrate
+  // FIX #2: usiruhusu toggle kabla hydrate
   if (!cur.loaded || cur.is_enabled === null) {
     return {
       ok: false,
@@ -206,7 +206,7 @@ export async function toggleReservationFeeAsync() {
     };
     writeSettings(updated);
 
-    // ✅ FIX #5: hydrate baada ya toggle — backend ndiyo source of truth
+    // FIX #5: hydrate baada ya toggle — backend ndiyo source of truth
     try {
       await hydrateReservationFromApi.forceRefresh();
     } catch (e) {
@@ -364,11 +364,11 @@ export function useActiveReservationTiers() {
 
 // ============================================================
 // CALC — fee kwa tier fulani (hours) au 0 kama disabled
-// ✅ FIX #2: is_enabled === null → 0 (haijulikani = usitoze)
+// FIX #2: is_enabled === null → 0 (haijulikani = usitoze)
 // ============================================================
 export function calcReservationFee(hours) {
   const settings = readSettings();
-  // ✅ FIX #2: null (haijulikani) au false → 0
+  // FIX #2: null (haijulikani) au false → 0
   if (settings.is_enabled !== true) return 0;
 
   const tiers = readTiers();

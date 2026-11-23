@@ -5,6 +5,7 @@ import { useLanguage } from "../../context/LanguageContext.jsx";
 import { useActiveCategories, getCategoryIcon } from "../../config/categoriesStore.js";
 import ListingCardShop from "./ListingCardShop.jsx";
 import { Section, SectionHeader, Button } from "../ui";
+import { COLORS } from "..\..\pages\dashboard\components\shared.js";
 
 // cardBadge = { icon, label, bg?, ink? }
 // bg na ink ni hiari; default ni rangi ya machungwa ya awali.
@@ -44,9 +45,9 @@ export default function FeaturedSection({ gridCols = "grid-cols-2 sm:grid-cols-3
             return (
               <div key={l.id} className="relative">
                 <span
-                  className="absolute -top-2 -left-2 z-10 flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold shadow-md ring-1 ring-white/20"
+                  className="absolute -top-2 -left-2 z-10 flex items-center gap-1 rounded-md px-2 py-1 text-xs font-bold shadow-md ring-1 ring-white/20"
                   style={{
-                    background: cardBadge.bg || "#FEA406",
+                    background: cardBadge.bg || COLORS.gold,
                     color: cardBadge.ink || "#011957",
                   }}
                 >
@@ -64,10 +65,10 @@ export default function FeaturedSection({ gridCols = "grid-cols-2 sm:grid-cols-3
               type="button"
               onClick={onLoadMore}
               disabled={loadingMore}
-              className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-[#011957] shadow-sm transition-transform hover:scale-[1.02] disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-night shadow-sm transition-transform hover:scale-[1.02] disabled:opacity-60"
               style={{ background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)" }}
             >
-              {loadingMore ? <Loader2 size={15} className="animate-spin" /> : null}
+              {loadingMore ? <Loader2 size={16} className="animate-spin" /> : null}
               {loadMoreLabel || t("Ona Zaidi", "Load More")}
             </button>
           </div>

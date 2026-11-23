@@ -1,6 +1,6 @@
 // src/config/leadingPackagesStore.js
 // ============================================================
-// ✅ FIX #11 (race): hydrate ya zamani HAIANDIKI juu ya mabadiliko mapya.
+// FIX #11 (race): hydrate ya zamani HAIANDIKI juu ya mabadiliko mapya.
 //    hydrateGuard inazuia tu cache ya matokeo; write() hutokea ndani ya
 //    _hydrate... kabla guard haijaona generation. mutationVersion +
 //    pendingMutations: kama mutation ilianza/iliisha wakati GET ilikuwa

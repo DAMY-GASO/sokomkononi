@@ -209,7 +209,7 @@ export async function hydrateContactInfoFromApi() {
       phone: d?.phone || DEFAULT_CONTACT.phone,
       whatsapp: d?.whatsapp || DEFAULT_CONTACT.whatsapp,
       address: d?.address || DEFAULT_CONTACT.address,
-      // ✅ Socials mpya
+      // Socials mpya
       facebook: d?.facebook || "",
       instagram: d?.instagram || "",
       x: d?.x || "",
@@ -228,7 +228,7 @@ export async function saveContactInfoAsync(info) {
     phone: info.phone || "",
     whatsapp: info.whatsapp || "",
     address: info.address || "",
-    // ✅ Socials mpya
+    // Socials mpya
     facebook: info.facebook || "",
     instagram: info.instagram || "",
     x: info.x || "",

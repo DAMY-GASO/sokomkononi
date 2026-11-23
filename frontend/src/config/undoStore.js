@@ -2,14 +2,14 @@
 // undoStore.js — Undo window kwa items zilizofutwa
 //
 // Marekebisho:
-//  ✅ Support ya bulk undo: `onRestore` inaweza kurejesha items nyingi
+//  Support ya bulk undo: `onRestore` inaweza kurejesha items nyingi
 //     kwa pamoja (mfano, listings zote kwa `ids` array).
-//  ✅ `restoreUndo` inathibitisha `{ ok }` ya `onRestore` — kama
+//  `restoreUndo` inathibitisha `{ ok }` ya `onRestore` — kama
 //     `onRestore` inarudisha `{ ok: false }`, tunarudisha `{ ok: false }`
 //     (badala ya "success" ya uongo).
-//  ✅ Fallback handlers kupitia `registerRestoreHandlers` — inaruhusu
+//  Fallback handlers kupitia `registerRestoreHandlers` — inaruhusu
 //     undo baada ya refresh (memory callbacks zinapotea).
-//  ✅ Export ya `getPendingCallbacks()` kwa debugging.
+//  Export ya `getPendingCallbacks()` kwa debugging.
 // ============================================================
 import { useEffect, useState } from "react";
 

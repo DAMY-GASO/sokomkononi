@@ -125,12 +125,12 @@ const SELLER_TIPS = [
 // COLOR MAP
 // ============================================================
 const COLOR_MAP = {
-  gray: { bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
-  gold: { bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
+  gray: { bg: "rgba(1,25,87,0.08)", fg: COLORS.night },
+  gold: { bg: "rgba(254,164,6,0.16)", fg: COLORS.goldText },
   rust: { bg: "rgba(193,80,46,0.12)", fg: COLORS.rust },
   green: { bg: "rgba(47,109,79,0.12)", fg: COLORS.green },
-  blue: { bg: "rgba(37,99,235,0.12)", fg: "#2563EB" },
-  night: { bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
+  blue: { bg: "rgba(0,98,253,0.12)", fg: COLORS.royal },
+  night: { bg: "rgba(1,25,87,0.08)", fg: COLORS.night },
 };
 
 // ============================================================
@@ -187,7 +187,7 @@ function MyTicketCard({ ticket, lang, defaultExpanded = false, onRefresh }) {
     }
   };
 
-  // ✅ Reopen
+  // Reopen
   const handleReopen = async () => {
     if (reopening) return;
     setReopening(true);
@@ -217,7 +217,7 @@ function MyTicketCard({ ticket, lang, defaultExpanded = false, onRefresh }) {
   return (
     <div
       id={`ticket-${ticket.id}`}
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
       className="rounded-xl border overflow-hidden w-full"
     >
       <div className="p-3 sm:p-4 w-full">
@@ -231,18 +231,18 @@ function MyTicketCard({ ticket, lang, defaultExpanded = false, onRefresh }) {
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap mb-1">
-              <span className="text-[10px] font-bold text-muted">
+              <span className="text-xs font-bold text-muted">
                 {ticket.code || ticket.id}
               </span>
               <span
                 style={{ background: catColors.bg, color: catColors.fg }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                className="text-xs font-bold px-2 py-0.5 rounded-full"
               >
                 {category?.label?.[lang] || ticket.category}
               </span>
               <span
                 style={{ background: statusColors.bg, color: statusColors.fg }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                className="text-xs font-bold px-2 py-0.5 rounded-full"
               >
                 {status?.label?.[lang] || ticket.status}
               </span>
@@ -254,7 +254,7 @@ function MyTicketCard({ ticket, lang, defaultExpanded = false, onRefresh }) {
 
             <div className="flex items-center gap-2 mt-1 text-xs text-secondary flex-wrap">
               <span className="flex items-center gap-1">
-                <Clock size={11} />
+                <Clock size={12} />
                 {timeAgo(ticket.updatedAt || ticket.createdAt, lang)}
               </span>
               {ticket.messages?.length > 0 && (
@@ -268,7 +268,7 @@ function MyTicketCard({ ticket, lang, defaultExpanded = false, onRefresh }) {
                   </span>
                 </>
               )}
-              {/* ✅ SLA Countdown */}
+              {/* SLA Countdown */}
               <SlaCountdown
                 deadline={ticket.slaDeadline}
                 status={ticket.status}
@@ -302,7 +302,7 @@ function MyTicketCard({ ticket, lang, defaultExpanded = false, onRefresh }) {
           )}
 
           <div>
-            <p className="text-[10px] font-semibold text-secondary uppercase mb-2">
+            <p className="text-xs font-semibold text-secondary uppercase mb-2">
               {t("Mazungumzo", "Conversation")}
             </p>
             <div className="flex flex-col gap-2 max-h-72 overflow-y-auto pr-1">
@@ -330,9 +330,9 @@ function MyTicketCard({ ticket, lang, defaultExpanded = false, onRefresh }) {
                       className="border rounded-2xl px-3 py-2 max-w-[85%] text-xs"
                     >
                       <p
-                        className="font-semibold mb-0.5 text-[10px] uppercase"
+                        className="font-semibold mb-0.5 text-xs uppercase"
                         style={{
-                          color: isAdmin ? COLORS.rust : "rgba(245,243,236,0.6)",
+                          color: isAdmin ? COLORS.rust : "rgba(244,247,252,0.6)",
                         }}
                       >
                         {isAdmin
@@ -341,11 +341,11 @@ function MyTicketCard({ ticket, lang, defaultExpanded = false, onRefresh }) {
                       </p>
                       <p className="leading-relaxed break-words">{msg.text}</p>
                       <p
-                        className="text-[10px] mt-1"
+                        className="text-xs mt-1"
                         style={{
                           color: isAdmin
                             ? "var(--text-muted)"
-                            : "rgba(245,243,236,0.5)",
+                            : "rgba(244,247,252,0.5)",
                         }}
                       >
                         {timeAgo(msg.at, lang)}
@@ -369,7 +369,7 @@ function MyTicketCard({ ticket, lang, defaultExpanded = false, onRefresh }) {
                 placeholder={t("Andika jibu...", "Type a reply...")}
                 disabled={sending}
                 style={{ borderColor: COLORS.sandLine }}
-                className="flex-1 rounded-full border px-3 py-2 text-xs outline-none bg-white disabled:opacity-50"
+                className="flex-1 rounded-full border px-3 py-2 text-xs outline-none bg-card disabled:opacity-50"
               />
               <button
                 onClick={handleSendReply}
@@ -396,7 +396,7 @@ function MyTicketCard({ ticket, lang, defaultExpanded = false, onRefresh }) {
           {/* Reopen (kama imefungwa) */}
           {isClosed && (
             <div className="flex flex-col items-center gap-2">
-              <p className="text-[11px] text-muted text-center">
+              <p className="text-xs text-muted text-center">
                 {t(
                   "Ticket hii imefungwa. Kama unahitaji msaada zaidi, fungua tena.",
                   "This ticket is closed. If you need more help, reopen it."
@@ -409,7 +409,7 @@ function MyTicketCard({ ticket, lang, defaultExpanded = false, onRefresh }) {
                 style={{
                   borderColor: COLORS.rust,
                   color: COLORS.rust,
-                  background: "white",
+                  background: "rgb(var(--c-card))",
                 }}
               >
                 {reopening ? (
@@ -453,12 +453,12 @@ export default function SafetySupportSection({ side = "buyer" }) {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ✅ Hydrate tickets kwenye mount
+  // Hydrate tickets kwenye mount
   useEffect(() => {
     hydrateTicketsFromApi();
   }, []);
 
-  // ✅ Scroll kwenda kwenye ticket iliyochaguliwa
+  // Scroll kwenda kwenye ticket iliyochaguliwa
   useEffect(() => {
     if (!focusedTicketId) return;
     const timer = setTimeout(() => {
@@ -662,7 +662,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
 
         {/* REPORT FORM */}
         <div
-          style={{ borderColor: COLORS.sandLine, background: "white" }}
+          style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
           className="rounded-2xl border p-4 sm:p-5 mb-4"
         >
           <div className="flex flex-col items-center text-center gap-2 mb-4">
@@ -698,7 +698,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
                 style={{ background: COLORS.rust, color: "white" }}
                 className="flex items-center gap-1.5 text-btn font-semibold px-4 py-2.5 rounded-lg"
               >
-                <Flag size={13} />
+                <Flag size={14} />
                 {content.reportStartLabel}
               </button>
             </div>
@@ -737,7 +737,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
                 onChange={(e) => setReportSubject(e.target.value)}
                 placeholder={t("Kichwa (hiari)...", "Subject (optional)...")}
                 style={{ borderColor: COLORS.sandLine }}
-                className="border rounded-lg px-3 py-2 text-sm outline-none bg-white"
+                className="border rounded-lg px-3 py-2 text-sm outline-none bg-card"
               />
 
               <textarea
@@ -746,7 +746,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
                 placeholder={content.reportDetailsPlaceholder}
                 rows={4}
                 style={{ borderColor: COLORS.sandLine }}
-                className="border rounded-lg px-3 py-2 text-sm outline-none resize-none bg-white"
+                className="border rounded-lg px-3 py-2 text-sm outline-none resize-none bg-card"
               />
 
               <div className="flex items-center gap-2">
@@ -774,7 +774,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
                     color:
                       reportDetails.trim() && !sendingReport
                         ? "white"
-                        : "rgba(16,26,46,0.4)",
+                        : "rgba(1,25,87,0.4)",
                   }}
                   className="flex-1 flex items-center justify-center gap-2 text-btn font-semibold px-3 py-2 rounded-lg disabled:cursor-not-allowed"
                 >
@@ -789,7 +789,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
         {/* MY REPORTS */}
         {tickets.length > 0 && (
           <div
-            style={{ borderColor: COLORS.sandLine, background: "white" }}
+            style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
             className="rounded-2xl border p-4 sm:p-5 mb-4"
           >
             <div className="flex flex-col items-center text-center gap-2 mb-4">
@@ -826,7 +826,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
 
         {/* FAQ */}
         <div
-          style={{ borderColor: COLORS.sandLine, background: "white" }}
+          style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
           className="rounded-2xl border p-4 sm:p-5 mb-4"
         >
           <div className="flex flex-col items-center text-center gap-2 mb-4">
@@ -834,7 +834,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
               style={{ background: `${COLORS.gold}15` }}
               className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
             >
-              <BookOpen size={18} color="#8A5A16" />
+              <BookOpen size={18} color={COLORS.goldText} />
             </div>
             <div>
               <p className="text-primary h-card">
@@ -854,7 +854,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
                 >
                   <button
                     onClick={() => setOpenFaq(isOpen ? null : i)}
-                    className="w-full flex items-center justify-between gap-3 px-3 py-3 text-left hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center justify-between gap-3 px-3 py-3 text-left hover:bg-page transition-colors"
                   >
                     <span className="text-primary h-card">
                       {item.q?.[lang] || item.q?.sw}
@@ -881,7 +881,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
 
         {/* CONTACT */}
         <div
-          style={{ borderColor: COLORS.sandLine, background: "white" }}
+          style={{ borderColor: COLORS.sandLine, background: "rgb(var(--c-card))" }}
           className="rounded-2xl border p-4 sm:p-5"
         >
           <div className="flex flex-col items-center text-center gap-2 mb-4">
@@ -904,14 +904,14 @@ export default function SafetySupportSection({ side = "buyer" }) {
           <div className="flex flex-col gap-2 max-w-md mx-auto">
             <a
               href="mailto:support@sokomkononi.co.tz"
-              className="flex items-center justify-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center justify-center gap-3 px-3 py-2.5 rounded-lg hover:bg-page transition-colors"
             >
               <Mail size={16} className="text-muted" />
               <span className="text-body-sm text-secondary">
                 support@sokomkononi.co.tz
               </span>
             </a>
-            <div className="flex items-center justify-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors">
+            <div className="flex items-center justify-center gap-3 px-3 py-2.5 rounded-lg hover:bg-page transition-colors">
               <Phone size={16} className="text-muted" />
               <a
                 href="tel:+255743895038"

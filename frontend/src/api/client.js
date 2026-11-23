@@ -43,7 +43,7 @@ function getLang() {
   return v === "en" ? "en" : "sw";
 }
 
-// ✅ Ujumbe safi kwa 413 (body kubwa mno) — hautegemei HTML ya nginx/proxy
+// Ujumbe safi kwa 413 (body kubwa mno) — hautegemei HTML ya nginx/proxy
 function tooLargeMessage() {
   return getLang() === "sw"
     ? "Picha ni kubwa mno kwa jumla. Punguza idadi au ukubwa wa picha, kisha jaribu tena."
@@ -181,7 +181,7 @@ export class ApiError extends Error {
     const firstDetail =
       Array.isArray(env?.details) && typeof env.details[0] === "string" ? env.details[0] : null;
     const msg =
-      // ✅ 413: ujumbe safi, bila kujali server/proxy imerudisha nini
+      // 413: ujumbe safi, bila kujali server/proxy imerudisha nini
       (status === 413 && tooLargeMessage()) ||
       firstField ||
       firstDetail ||
@@ -208,12 +208,12 @@ export class ApiError extends Error {
 }
 
 // ============================================================
-// ✅ FIX: Tofautisha external abort na timeout
+// FIX: Tofautisha external abort na timeout
 // ============================================================
 async function fetchWithTimeout(url, options, timeoutMs = DEFAULT_TIMEOUT_MS) {
   const controller = new AbortController();
   const external = options?.signal;
-  let timedOut = false;   // ⬅️ flag ya kutofautisha
+  let timedOut = false;   // flag ya kutofautisha
 
   const onAbort = () => controller.abort();
   if (external) {
@@ -229,7 +229,7 @@ async function fetchWithTimeout(url, options, timeoutMs = DEFAULT_TIMEOUT_MS) {
     return await fetch(url, { ...options, signal: controller.signal });
   } catch (err) {
     if (err.name === "AbortError") {
-      // ⬇️ Kama ni external abort (sio timeout), rethrow kama AbortError
+      // Kama ni external abort (sio timeout), rethrow kama AbortError
       if (external?.aborted || !timedOut) {
         const abortErr = new Error("Aborted");
         abortErr.name = "AbortError";
@@ -259,7 +259,7 @@ async function parseResponse(res) {
   if (ct.includes("text/html")) {
     const html = await res.text();
 
-    // ✅ 413 kutoka nginx/proxy — usionyeshe HTML wala <title> ghafi
+    // 413 kutoka nginx/proxy — usionyeshe HTML wala <title> ghafi
     if (res.status === 413) {
       return { detail: tooLargeMessage(), htmlLength: html.length };
     }

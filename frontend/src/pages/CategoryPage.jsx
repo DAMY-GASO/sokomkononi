@@ -25,6 +25,7 @@ import {
 import { useSavedIds, toggleSaved } from "../config/savedStore.js";
 import { isBoostActive, isLeadingActive } from "./dashboard/components/shared";
 import ListingCardShop from "../components/shop/ListingCardShop.jsx";
+import { COLORS } from "./dashboard\components\shared.js";
 
 /* ============================================================
    Helpers
@@ -89,7 +90,7 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-primary">
-          <SlidersHorizontal size={15} />
+          <SlidersHorizontal size={16} />
           {t(lang, "Vichujio", "Filters")}
         </h3>
         <button
@@ -173,7 +174,7 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
       <div className="space-y-2 border-t border-[color:rgb(var(--c-hairline))] pt-4">
         <button
           onClick={handleApply}
-          className="w-full rounded-lg py-2.5 text-sm font-semibold text-[#011957] transition-colors hover:opacity-90"
+          className="w-full rounded-lg py-2.5 text-sm font-semibold text-night transition-colors hover:opacity-90"
           style={{ background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)" }}
         >
           {t(lang, "Tumia Vichujio", "Apply Filters")}
@@ -374,7 +375,7 @@ export default function CategoryPage() {
           </p>
           <Link
             to="/kategoria"
-            className="inline-block rounded-xl px-6 py-2.5 text-sm font-semibold text-[#011957]"
+            className="inline-block rounded-xl px-6 py-2.5 text-sm font-semibold text-night"
             style={{ background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)" }}
           >
             {t(lang, "Ona Categories Zote", "View All Categories")}
@@ -456,7 +457,7 @@ export default function CategoryPage() {
                 border: "1px solid rgba(254,164,6,0.35)",
               }}
             >
-              <CategoryIcon size={28} color="#FEA406" />
+              <CategoryIcon size={28} color={COLORS.gold} />
             </span>
 
             <div className="max-w-2xl">
@@ -541,7 +542,7 @@ export default function CategoryPage() {
                     aria-label={t(lang, "Grid", "Grid")}
                     className="grid h-9 w-9 place-items-center transition-colors"
                     style={{
-                      background: viewMode === "grid" ? "#FEA406" : "transparent",
+                      background: viewMode === "grid" ? COLORS.gold : "transparent",
                       color: viewMode === "grid" ? "#011957" : "var(--text-secondary)",
                     }}
                   >
@@ -552,7 +553,7 @@ export default function CategoryPage() {
                     aria-label={t(lang, "Orodha", "List")}
                     className="grid h-9 w-9 place-items-center transition-colors"
                     style={{
-                      background: viewMode === "list" ? "#FEA406" : "transparent",
+                      background: viewMode === "list" ? COLORS.gold : "transparent",
                       color: viewMode === "list" ? "#011957" : "var(--text-secondary)",
                     }}
                   >
@@ -569,7 +570,7 @@ export default function CategoryPage() {
                   {t(lang, "Vichujio vilivyotumika:", "Active filters:")}
                 </span>
                 {searchQuery && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[color:rgb(var(--c-gold)/0.14)] px-2.5 py-1 text-xs font-medium text-[#A35F00] dark:text-[#FEA406]">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[color:rgb(var(--c-gold)/0.14)] px-2.5 py-1 text-xs font-medium text-[#A35F00] dark:text-gold">
                     "{searchQuery}"
                     <button onClick={() => setSearchQuery("")} aria-label={t(lang, "Ondoa", "Remove")}>
                       <X size={12} />
@@ -577,8 +578,8 @@ export default function CategoryPage() {
                   </span>
                 )}
                 {(filters.location || "").trim() && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[color:rgb(var(--c-gold)/0.14)] px-2.5 py-1 text-xs font-medium text-[#A35F00] dark:text-[#FEA406]">
-                    <MapPin size={11} />
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[color:rgb(var(--c-gold)/0.14)] px-2.5 py-1 text-xs font-medium text-[#A35F00] dark:text-gold">
+                    <MapPin size={12} />
                     {filters.location.trim()}
                     <button onClick={() => setFilters({ ...filters, location: "" })} aria-label={t(lang, "Ondoa", "Remove")}>
                       <X size={12} />
@@ -586,7 +587,7 @@ export default function CategoryPage() {
                   </span>
                 )}
                 {filters.verified && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[#2F6D4F]/14 px-2.5 py-1 text-xs font-medium text-[#2F6D4F]">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-green/14 px-2.5 py-1 text-xs font-medium text-green">
                     {t(lang, "Zilizothibitishwa", "Verified")}
                     <button onClick={() => setFilters({ ...filters, verified: false })} aria-label={t(lang, "Ondoa", "Remove")}>
                       <X size={12} />
@@ -594,7 +595,7 @@ export default function CategoryPage() {
                   </span>
                 )}
                 {filters.featured && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[color:rgb(var(--c-gold)/0.14)] px-2.5 py-1 text-xs font-medium text-[#A35F00] dark:text-[#FEA406]">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[color:rgb(var(--c-gold)/0.14)] px-2.5 py-1 text-xs font-medium text-[#A35F00] dark:text-gold">
                     {t(lang, "Featured", "Featured")}
                     <button onClick={() => setFilters({ ...filters, featured: false })} aria-label={t(lang, "Ondoa", "Remove")}>
                       <X size={12} />
@@ -606,7 +607,7 @@ export default function CategoryPage() {
                     setFilters({ ...EMPTY_FILTERS });
                     setSearchQuery("");
                   }}
-                  className="text-xs font-medium text-[#C1502E] hover:underline"
+                  className="text-xs font-medium text-rust hover:underline"
                 >
                   {t(lang, "Safisha zote", "Clear all")}
                 </button>
@@ -658,7 +659,7 @@ export default function CategoryPage() {
                         className="grid h-9 w-9 place-items-center rounded-lg text-sm font-medium transition-colors"
                         style={
                           safePage === page
-                            ? { background: "#FEA406", color: "#011957" }
+                            ? { background: COLORS.gold, color: "#011957" }
                             : {
                                 border: "1px solid rgb(var(--c-hairline))",
                                 color: "var(--text-primary)",
@@ -699,7 +700,7 @@ export default function CategoryPage() {
                     setFilters({ ...EMPTY_FILTERS });
                     setSearchQuery("");
                   }}
-                  className="mt-4 rounded-lg px-5 py-2 text-sm font-semibold text-[#011957]"
+                  className="mt-4 rounded-lg px-5 py-2 text-sm font-semibold text-night"
                   style={{ background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)" }}
                 >
                   {t(lang, "Safisha Vichujio", "Clear Filters")}

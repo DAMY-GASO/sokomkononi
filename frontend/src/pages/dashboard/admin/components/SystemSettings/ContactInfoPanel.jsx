@@ -129,7 +129,7 @@ export default function ContactInfoPanel() {
       <hr className="border-hairline my-1" />
 
       {/* Social Media */}
-      <p className="text-[11px] font-semibold text-secondary uppercase tracking-wide">
+      <p className="text-xs font-semibold text-secondary uppercase tracking-wide">
         {t("Mitandao ya Kijamii (URL)", "Social Media (URLs)")}
       </p>
 
@@ -178,7 +178,7 @@ export default function ContactInfoPanel() {
           }}
           className="flex items-center justify-center gap-1.5 text-xs font-semibold rounded-lg px-4 py-2 w-full sm:w-auto transition-colors disabled:cursor-not-allowed"
         >
-          {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
           {saving ? t("Inahifadhi...", "Saving...") : t("Hifadhi", "Save")}
         </button>
         {saved && (
@@ -186,7 +186,7 @@ export default function ContactInfoPanel() {
             style={{ color: COLORS.successText }}
             className="text-xs font-semibold flex items-center gap-1"
           >
-            <Check size={13} /> {t("Imehifadhiwa", "Saved")}
+            <Check size={14} /> {t("Imehifadhiwa", "Saved")}
           </span>
         )}
       </div>

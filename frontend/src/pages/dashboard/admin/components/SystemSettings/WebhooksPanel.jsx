@@ -167,7 +167,7 @@ export default function WebhooksPanel() {
                   onClick={() => handleToggle(w.id)}
                   disabled={isToggling || isRemoving}
                   style={{ color: w.active ? COLORS.successText : "rgb(var(--c-text-3))" }}
-                  className="text-[10px] sm:text-[11px] font-semibold px-2 py-1 rounded-full border border-hairline whitespace-nowrap transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                  className="text-xs font-semibold px-2 py-1 rounded-full border border-hairline whitespace-nowrap transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                 >
                   {isToggling && <Loader2 size={10} className="animate-spin" />}
                   {w.active
@@ -235,9 +235,9 @@ export default function WebhooksPanel() {
             className="flex items-center justify-center gap-1 text-xs font-semibold rounded-lg px-3 py-2 w-full sm:w-auto shrink-0 transition-colors disabled:cursor-not-allowed"
           >
             {busy.adding ? (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
             ) : (
-              <Plus size={13} />
+              <Plus size={14} />
             )}
             {lang === "sw" ? "Ongeza" : "Add"}
           </button>

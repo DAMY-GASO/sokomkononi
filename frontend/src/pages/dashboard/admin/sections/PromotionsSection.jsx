@@ -10,7 +10,7 @@
 //  - isPaused prop inaonyesha "IMESIMAMISHWA" badge
 //  - actionBusy inazuia double-click
 //  - Cancel modal inaonyesha refund preview
-//  - ✅ "Revenue by Type" IMEONDOLEWA — mapato yako Overview
+//  - "Revenue by Type" IMEONDOLEWA — mapato yako Overview
 // ============================================================
 
 import React, { useState } from "react";
