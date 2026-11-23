@@ -13,8 +13,8 @@
 // ============================================================
 import React, { createContext, useCallback, useContext, useRef, useState } from "react";
 import { useLanguage } from "./LanguageContext.jsx";
-import { CHART } from "..\pages\dashboard\admin\shared\chartColors.js";
-import { COLORS } from "..\pages\dashboard\components\shared.js";
+import { CHART } from "../pages/dashboard/admin/shared/chartColors.js";
+import { COLORS } from "../pages/dashboard/components/shared.js";
 
 const AttributionContext = createContext(null);
 
