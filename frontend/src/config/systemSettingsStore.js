@@ -188,6 +188,7 @@ const DEFAULT_CONTACT = {
   instagram: "",
   x: "",
   linkedin: "",
+  tiktok: "",
   youtube: "",
 };
 
@@ -214,6 +215,7 @@ export async function hydrateContactInfoFromApi() {
       instagram: d?.instagram || "",
       x: d?.x || "",
       linkedin: d?.linkedin || "",
+      tiktok: d?.tiktok || "",
       youtube: d?.youtube || "",
     });
     return { ok: true };
@@ -233,6 +235,7 @@ export async function saveContactInfoAsync(info) {
     instagram: info.instagram || "",
     x: info.x || "",
     linkedin: info.linkedin || "",
+    tiktok: info.tiktok || "",
     youtube: info.youtube || "",
   };
   try {
